@@ -21,10 +21,10 @@ git merge --ff-only "origin/$BRANCH"
 
 # Test OpenResty configuration
 echo "Testing OpenResty configuration..."
-sudo "$OPENRESTY" -t
+sudo "$OPENRESTY" -p "$REPO/" -c nginx.conf -t
 
 # Reload OpenResty
 echo "Reloading OpenResty..."
-sudo "$OPENRESTY" -s reload
+sudo "$OPENRESTY" -p "$REPO/" -c nginx.conf -s reload
 
 echo "Deployment successful!"

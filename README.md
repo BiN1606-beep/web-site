@@ -1,17 +1,18 @@
 # web-site
 
-A minimal OpenResty site with a static homepage and a Lua health endpoint.
+A minimal OpenResty site serving a static homepage.
 
 ## Run
 
 Install OpenResty, then start the site from the project directory:
 
 ```sh
-openresty -p "$PWD/" -c nginx.conf
+sudo openresty -p "$PWD/" -c nginx.conf
 ```
 
-Then open http://localhost:8080.
-Stop OpenResty with `openresty -p "$PWD/" -c nginx.conf -s stop`.
+If the default welcome site is already running on port 80, stop that OpenResty instance before starting this configuration.
+
+Then open http://localhost. Stop OpenResty with `sudo openresty -p "$PWD/" -c nginx.conf -s stop`.
 
 ## Test
 
