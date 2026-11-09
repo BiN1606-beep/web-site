@@ -6,8 +6,6 @@
     <title>OpenResty Starter</title>
     <style>
       :root {
-        --bg-start: #eef4ff;
-        --bg-end: #dfeafe;
         --panel: rgba(255, 255, 255, 0.8);
         --panel-border: rgba(148, 163, 184, 0.2);
         --text: #0f172a;
@@ -26,18 +24,37 @@
         display: grid;
         place-items: center;
         font-family: Arial, Helvetica, sans-serif;
-        background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+        background: #fff;
         color: var(--text);
+        transition: background-color 200ms ease;
+      }
+
+      body.is-dark {
+        background: #000;
       }
 
       main {
         width: min(90vw, 700px);
+      }
+
+      .panel-toggle {
+        display: block;
+        width: 100%;
         padding: 3rem 2.5rem;
         border: 1px solid var(--panel-border);
         border-radius: 24px;
         background: var(--panel);
         backdrop-filter: blur(10px);
         box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .panel-toggle:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 4px;
       }
 
       h1 {
@@ -59,11 +76,28 @@
   </head>
   <body>
     <main>
-      <h1>Arvid</h1>
-      <p>
-        This is THE website.
-        hejhej jag heter barvi......
-      </p>
+      <div class="panel-toggle" role="button" tabindex="0" aria-pressed="false">
+        <h1>Arvid</h1>
+        <p>
+          This is THE website.
+          hejhej jag heter barvi......
+        </p>
+      </div>
     </main>
+    <script>
+      const panel = document.querySelector(".panel-toggle");
+
+      panel.addEventListener("click", () => {
+        const isDark = document.body.classList.toggle("is-dark");
+        panel.setAttribute("aria-pressed", String(isDark));
+      });
+
+      panel.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          panel.click();
+        }
+      });
+    </script>
   </body>
 </html>
