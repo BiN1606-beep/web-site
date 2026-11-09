@@ -185,12 +185,29 @@
 
       .launcher-actions {
         position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .launcher-actions .launcher {
+        position: absolute;
+        pointer-events: auto;
+      }
+
+      #launcher {
         top: 50%;
         left: 50%;
-        z-index: 1;
-        display: flex;
-        gap: 1rem;
         transform: translate(-50%, -50%);
+      }
+
+      #launcher:hover {
+        transform: translate(-50%, -50%) scale(1.08);
+      }
+
+      #menu-launcher {
+        top: 1.5rem;
+        left: 1.5rem;
       }
 
       .launcher {
