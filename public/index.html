@@ -61,14 +61,13 @@
 
       .startup-logo-motion {
         width: min(72vw, 360px);
-        animation: logo-float 2.6s 900ms ease-in-out infinite alternate;
+        animation: logo-float 2.6s 1750ms ease-in-out infinite alternate;
       }
 
       .startup-logo-art {
         position: relative;
         width: 100%;
         aspect-ratio: 1;
-        animation: logo-arrive 900ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
       }
 
       .startup-logo {
@@ -79,49 +78,60 @@
         height: 100%;
       }
 
-      .startup-logo-upper {
-        clip-path: polygon(0 0, 100% 0, 100% 69.4%, 17% 40%);
-      }
-
       .startup-logo-stripe {
         opacity: 0;
-        animation: logo-stripe-appear 180ms ease-out both;
-        animation-delay: calc(900ms + var(--stripe-delay));
+        animation: logo-stripe-appear 220ms ease-out both;
+        animation-delay: calc(250ms + var(--stripe-delay));
       }
 
       .startup-logo-stripe-1 {
-        clip-path: polygon(17% 40%, 81% 69.4%, 81% 72.6%, 17% 43.2%);
+        clip-path: polygon(66.74% 0, 100% 0, 100% 14.3%);
         --stripe-delay: 0ms;
       }
 
       .startup-logo-stripe-2 {
-        clip-path: polygon(17% 45.5%, 81% 74.9%, 81% 78.1%, 17% 48.7%);
-        --stripe-delay: 170ms;
+        clip-path: polygon(33.49% 0, 66.74% 0, 100% 14.3%, 100% 28.6%);
+        --stripe-delay: 125ms;
       }
 
       .startup-logo-stripe-3 {
-        clip-path: polygon(17% 51%, 81% 80.4%, 81% 83.6%, 17% 54.2%);
-        --stripe-delay: 340ms;
+        clip-path: polygon(0.23% 0, 33.49% 0, 100% 28.6%, 100% 42.9%);
+        --stripe-delay: 250ms;
       }
 
       .startup-logo-stripe-4 {
-        clip-path: polygon(17% 56.5%, 81% 85.9%, 81% 89.1%, 17% 59.7%);
-        --stripe-delay: 510ms;
+        clip-path: polygon(0 0, 0.23% 0, 100% 42.9%, 100% 57.2%, 0 14.2%);
+        --stripe-delay: 375ms;
       }
 
       .startup-logo-stripe-5 {
-        clip-path: polygon(17% 62%, 81% 91.4%, 81% 94.6%, 17% 65.2%);
-        --stripe-delay: 680ms;
+        clip-path: polygon(100% 57.2%, 100% 71.5%, 0 28.5%, 0 14.2%);
+        --stripe-delay: 500ms;
       }
 
       .startup-logo-stripe-6 {
-        clip-path: polygon(17% 67.5%, 81% 96.9%, 81% 100.1%, 17% 70.7%);
-        --stripe-delay: 850ms;
+        clip-path: polygon(100% 71.5%, 100% 85.8%, 0 42.8%, 0 28.5%);
+        --stripe-delay: 625ms;
       }
 
-      .startup-logo-complete {
-        opacity: 0;
-        animation: logo-complete 250ms 1980ms ease-out both;
+      .startup-logo-stripe-7 {
+        clip-path: polygon(100% 85.8%, 100% 100%, 99.77% 100%, 0 57.1%, 0 42.8%);
+        --stripe-delay: 750ms;
+      }
+
+      .startup-logo-stripe-8 {
+        clip-path: polygon(99.77% 100%, 66.51% 100%, 0 71.4%, 0 57.1%);
+        --stripe-delay: 875ms;
+      }
+
+      .startup-logo-stripe-9 {
+        clip-path: polygon(66.51% 100%, 33.26% 100%, 0 85.7%, 0 71.4%);
+        --stripe-delay: 1000ms;
+      }
+
+      .startup-logo-stripe-10 {
+        clip-path: polygon(33.26% 100%, 0 100%, 0 85.7%);
+        --stripe-delay: 1125ms;
       }
 
       .startup-skip {
@@ -327,18 +337,6 @@
         }
       }
 
-      @keyframes logo-arrive {
-        from {
-          opacity: 0;
-          transform: translateY(18px) scale(0.88);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-
       @keyframes logo-float {
         from {
           transform: translateY(0) scale(1);
@@ -354,12 +352,6 @@
           opacity: 0;
         }
 
-        to {
-          opacity: 1;
-        }
-      }
-
-      @keyframes logo-complete {
         to {
           opacity: 1;
         }
@@ -407,14 +399,16 @@
     <div class="startup-screen" id="startup-screen">
       <div class="startup-logo-motion">
         <div class="startup-logo-art">
-          <img class="startup-logo startup-logo-upper" src="/arvid-logo.png" alt="Arvid logo" width="500" height="500">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-1" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-1" src="/arvid-logo.png" alt="Arvid logo" width="500" height="500">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-2" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-3" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-4" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-5" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-6" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-complete" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-7" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-8" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-9" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-10" src="/arvid-logo.png" alt="" aria-hidden="true">
         </div>
       </div>
       <button class="startup-skip" id="startup-skip" type="button">Skip intro</button>
