@@ -183,6 +183,21 @@
         width: min(90vw, 700px);
       }
 
+      .main-logo-watermark {
+        position: fixed;
+        z-index: 0;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: url("/arvid-logo.png") center / min(68vmin, 500px) no-repeat;
+        opacity: 0.13;
+        pointer-events: none;
+      }
+
+      body.is-dark .main-logo-watermark {
+        opacity: 0.22;
+      }
+
       .launcher-actions {
         position: fixed;
         inset: 0;
@@ -558,6 +573,7 @@
       <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
     <main>
+      <div class="main-logo-watermark" aria-hidden="true"></div>
       <div class="launcher-actions" id="launcher-actions">
         <button class="launcher" id="launcher" type="button" aria-label="Open shared text panel" aria-controls="content-panel" aria-expanded="false">
           +
