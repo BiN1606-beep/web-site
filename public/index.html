@@ -59,6 +59,14 @@
         pointer-events: none;
       }
 
+      .show-startup .launcher-actions {
+        opacity: 0;
+      }
+
+      .show-startup .launcher-actions.is-appearing {
+        animation: launcher-fade-in 2s ease-out both;
+      }
+
       .startup-logo-motion {
         display: flex;
         align-items: center;
@@ -175,15 +183,21 @@
         width: min(90vw, 700px);
       }
 
-      .launcher {
+      .launcher-actions {
         position: fixed;
         top: 50%;
         left: 50%;
+        z-index: 1;
+        display: flex;
+        gap: 1rem;
+        transform: translate(-50%, -50%);
+      }
+
+      .launcher {
         display: grid;
         width: 3.5rem;
         aspect-ratio: 1;
         place-items: center;
-        transform: translate(-50%, -50%);
         border: 0;
         border-radius: 50%;
         background: #000;
@@ -201,12 +215,13 @@
       }
 
       .launcher:hover {
-        transform: translate(-50%, -50%) scale(1.08);
+        transform: scale(1.08);
       }
 
       .launcher:focus-visible,
       .close-button:focus-visible,
-      .background-toggle:focus-visible {
+      .background-toggle:focus-visible,
+      .menu-action:focus-visible {
         outline: 3px solid var(--accent);
         outline-offset: 4px;
       }
@@ -242,6 +257,10 @@
 
       .content-panel::backdrop {
         background: rgba(15, 23, 42, 0.12);
+      }
+
+      .menu-panel {
+        width: min(90vw, 420px);
       }
 
       .close-button {
@@ -326,7 +345,8 @@
         resize: vertical;
       }
 
-      .save-button {
+      .save-button,
+      .menu-action {
         justify-self: start;
         padding: 0.65rem 0.9rem;
         border: 0;
@@ -385,6 +405,16 @@
 
         to {
           transform: translateY(-9px) scale(1.015);
+        }
+      }
+
+      @keyframes launcher-fade-in {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
         }
       }
 
@@ -470,9 +500,16 @@
       <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
     <main>
-      <button class="launcher" id="launcher" type="button" aria-label="Open shared text panel" aria-controls="content-panel" aria-expanded="false">
-        +
-      </button>
+      <div class="launcher-actions" id="launcher-actions">
+        <button class="launcher" id="launcher" type="button" aria-label="Open shared text panel" aria-controls="content-panel" aria-expanded="false">
+          +
+        </button>
+        <button class="launcher" id="menu-launcher" type="button" aria-label="Open menu" aria-controls="menu-panel" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
       <dialog class="content-panel" id="content-panel" aria-labelledby="panel-title">
         <button class="close-button" type="button" aria-label="Close panel">&times;</button>
         <h1 id="panel-title">Shared text</h1>
@@ -493,14 +530,25 @@
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
         </button>
+        <button class="menu-action" id="open-menu" type="button">Menu</button>
+      </dialog>
+      <dialog class="content-panel menu-panel" id="menu-panel" aria-labelledby="menu-title">
+        <button class="close-button" type="button" aria-label="Close menu">&times;</button>
+        <h1 id="menu-title">Menu</h1>
+        <p>Choose a place to go.</p>
+        <button class="menu-action" id="open-shared-text" type="button">Shared text</button>
       </dialog>
     </main>
     <script>
       const startupScreen = document.querySelector("#startup-screen");
       const startupSkip = document.querySelector("#startup-skip");
       const launcher = document.querySelector("#launcher");
+      const menuLauncher = document.querySelector("#menu-launcher");
+      const launcherActions = document.querySelector("#launcher-actions");
       const panel = document.querySelector("#content-panel");
-      const closeButton = document.querySelector(".close-button");
+      const menuPanel = document.querySelector("#menu-panel");
+      const openMenuButton = document.querySelector("#open-menu");
+      const openSharedTextButton = document.querySelector("#open-shared-text");
       const backgroundToggle = document.querySelector(".background-toggle");
       const sharedTextForm = document.querySelector("#shared-text-form");
       const sharedTextInput = document.querySelector("#shared-text");
@@ -556,6 +604,7 @@
           window.setTimeout(() => {
             startupScreen.remove();
             page.inert = false;
+            launcherActions.classList.add("is-appearing");
             if (restoreFocus) launcher.focus();
           }, 600);
         };
@@ -564,30 +613,61 @@
         window.setTimeout(finishStartup, 2500);
       }
 
-      launcher.addEventListener("click", () => {
-        panel.showModal();
-        launcher.setAttribute("aria-expanded", "true");
-      });
-      const closePanel = () => {
-        if (panel.classList.contains("is-closing")) return;
-        panel.classList.add("is-closing");
-        closeButton.disabled = true;
+      let activePanel = null;
+      let queuedPanel = null;
+
+      const closePanel = (dialog) => {
+        if (dialog.classList.contains("is-closing")) return;
+        dialog.classList.add("is-closing");
+        dialog.querySelector(".close-button").disabled = true;
       };
 
-      closeButton.addEventListener("click", closePanel);
-      panel.addEventListener("cancel", (event) => {
-        event.preventDefault();
-        closePanel();
-      });
-      panel.addEventListener("animationend", (event) => {
-        if (event.animationName === "collapse-out") panel.close();
-      });
-      panel.addEventListener("close", () => {
-        panel.classList.remove("is-closing");
-        closeButton.disabled = false;
-        launcher.setAttribute("aria-expanded", "false");
-        launcher.focus();
-      });
+      const openPanel = (dialog, trigger) => {
+        if (activePanel === dialog && dialog.open) return;
+        if (activePanel?.open) {
+          queuedPanel = { dialog, trigger };
+          closePanel(activePanel);
+          return;
+        }
+
+        dialog.showModal();
+        activePanel = dialog;
+        trigger.setAttribute("aria-expanded", "true");
+      };
+
+      for (const dialog of [panel, menuPanel]) {
+        const dialogTrigger = dialog === panel ? launcher : menuLauncher;
+        const dialogCloseButton = dialog.querySelector(".close-button");
+
+        dialogCloseButton.addEventListener("click", () => closePanel(dialog));
+        dialog.addEventListener("cancel", (event) => {
+          event.preventDefault();
+          closePanel(dialog);
+        });
+        dialog.addEventListener("animationend", (event) => {
+          if (event.animationName === "collapse-out") dialog.close();
+        });
+        dialog.addEventListener("close", () => {
+          dialog.classList.remove("is-closing");
+          dialogCloseButton.disabled = false;
+          dialogTrigger.setAttribute("aria-expanded", "false");
+          if (activePanel === dialog) activePanel = null;
+
+          if (queuedPanel) {
+            const nextPanel = queuedPanel;
+            queuedPanel = null;
+            openPanel(nextPanel.dialog, nextPanel.trigger);
+            return;
+          }
+
+          dialogTrigger.focus();
+        });
+      }
+
+      launcher.addEventListener("click", () => openPanel(panel, launcher));
+      menuLauncher.addEventListener("click", () => openPanel(menuPanel, menuLauncher));
+      openMenuButton.addEventListener("click", () => openPanel(menuPanel, menuLauncher));
+      openSharedTextButton.addEventListener("click", () => openPanel(panel, launcher));
 
       backgroundToggle.addEventListener("click", () => {
         const isDark = document.body.classList.toggle("is-dark");
