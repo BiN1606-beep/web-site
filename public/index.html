@@ -60,14 +60,28 @@
       }
 
       .startup-logo-motion {
-        width: min(72vw, 360px);
+        display: flex;
+        align-items: center;
+        width: min(94vw, 780px);
         animation: logo-float 2.6s 1750ms ease-in-out infinite alternate;
       }
 
       .startup-logo-art {
         position: relative;
-        width: 100%;
+        flex: 0 0 min(44vw, 360px);
+        width: min(44vw, 360px);
         aspect-ratio: 1;
+      }
+
+      .startup-wordmark {
+        display: block;
+        flex: 0 0 min(52vw, 430px);
+        width: min(52vw, 430px);
+        height: auto;
+        margin-left: clamp(-28px, -3vw, -10px);
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        animation: wordmark-extend 700ms cubic-bezier(0.2, 0.75, 0.25, 1) 1600ms both;
       }
 
       .startup-logo {
@@ -384,6 +398,20 @@
         }
       }
 
+      @keyframes wordmark-extend {
+        from {
+          opacity: 0;
+          clip-path: inset(0 100% 0 0);
+          transform: translateX(-16px);
+        }
+
+        to {
+          opacity: 1;
+          clip-path: inset(0);
+          transform: translateX(0);
+        }
+      }
+
       @keyframes skip-arrive {
         from {
           opacity: 0;
@@ -437,8 +465,9 @@
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-9" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-10" src="/arvid-logo.png" alt="" aria-hidden="true">
         </div>
+        <img class="startup-wordmark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
       </div>
-      <button class="startup-skip" id="startup-skip" type="button">Skip intro</button>
+      <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
     <main>
       <button class="launcher" id="launcher" type="button" aria-label="Open shared text panel" aria-controls="content-panel" aria-expanded="false">
