@@ -80,7 +80,7 @@
       }
 
       .startup-logo-upper {
-        clip-path: polygon(0 0, 100% 0, 100% 67%, 17% 40%);
+        clip-path: polygon(0 0, 100% 0, 100% 69.4%, 17% 40%);
       }
 
       .startup-logo-stripe {
@@ -90,43 +90,38 @@
       }
 
       .startup-logo-stripe-1 {
-        clip-path: polygon(17% 40%, 81% 67%, 81% 69.5%, 17% 42.5%);
+        clip-path: polygon(17% 40%, 81% 69.4%, 81% 72.6%, 17% 43.2%);
         --stripe-delay: 0ms;
       }
 
       .startup-logo-stripe-2 {
-        clip-path: polygon(17% 45.2%, 81% 72.2%, 81% 74.7%, 17% 47.7%);
-        --stripe-delay: 150ms;
+        clip-path: polygon(17% 45.5%, 81% 74.9%, 81% 78.1%, 17% 48.7%);
+        --stripe-delay: 170ms;
       }
 
       .startup-logo-stripe-3 {
-        clip-path: polygon(17% 50.4%, 81% 77.4%, 81% 79.9%, 17% 52.9%);
-        --stripe-delay: 300ms;
+        clip-path: polygon(17% 51%, 81% 80.4%, 81% 83.6%, 17% 54.2%);
+        --stripe-delay: 340ms;
       }
 
       .startup-logo-stripe-4 {
-        clip-path: polygon(17% 55.6%, 81% 82.6%, 81% 85.1%, 17% 58.1%);
-        --stripe-delay: 450ms;
+        clip-path: polygon(17% 56.5%, 81% 85.9%, 81% 89.1%, 17% 59.7%);
+        --stripe-delay: 510ms;
       }
 
       .startup-logo-stripe-5 {
-        clip-path: polygon(17% 60.8%, 81% 87.8%, 81% 90.3%, 17% 63.3%);
-        --stripe-delay: 600ms;
+        clip-path: polygon(17% 62%, 81% 91.4%, 81% 94.6%, 17% 65.2%);
+        --stripe-delay: 680ms;
       }
 
       .startup-logo-stripe-6 {
-        clip-path: polygon(17% 66%, 81% 93%, 81% 95.5%, 17% 68.5%);
-        --stripe-delay: 750ms;
-      }
-
-      .startup-logo-stripe-7 {
-        clip-path: polygon(17% 71.2%, 81% 98.2%, 81% 100%, 17% 73.7%);
-        --stripe-delay: 900ms;
+        clip-path: polygon(17% 67.5%, 81% 96.9%, 81% 100.1%, 17% 70.7%);
+        --stripe-delay: 850ms;
       }
 
       .startup-logo-complete {
         opacity: 0;
-        animation: logo-complete 250ms 1950ms ease-out both;
+        animation: logo-complete 250ms 1980ms ease-out both;
       }
 
       .startup-skip {
@@ -419,7 +414,6 @@
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-4" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-5" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-stripe startup-logo-stripe-6" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-7" src="/arvid-logo.png" alt="" aria-hidden="true">
           <img class="startup-logo startup-logo-complete" src="/arvid-logo.png" alt="" aria-hidden="true">
         </div>
       </div>
@@ -509,7 +503,7 @@
         };
 
         startupSkip.addEventListener("click", finishStartup);
-        window.setTimeout(finishStartup, 2300);
+        window.setTimeout(finishStartup, 2500);
       }
 
       launcher.addEventListener("click", () => {
