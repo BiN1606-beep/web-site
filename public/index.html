@@ -37,24 +37,117 @@
         width: min(90vw, 700px);
       }
 
-      .panel-toggle {
-        display: block;
-        width: 100%;
+      .launcher {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        display: grid;
+        width: 3.5rem;
+        aspect-ratio: 1;
+        place-items: center;
+        transform: translate(-50%, -50%);
+        border: 0;
+        border-radius: 50%;
+        background: #000;
+        color: #fff;
+        font: inherit;
+        font-size: 1.75rem;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
+      }
+
+      body.is-dark .launcher {
+        background: #fff;
+        color: #000;
+      }
+
+      .launcher:hover {
+        transform: translate(-50%, -50%) scale(1.08);
+      }
+
+      .launcher:focus-visible,
+      .close-button:focus-visible,
+      .background-toggle:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 4px;
+      }
+
+      .content-panel {
+        position: fixed;
+        inset: 0;
+        width: min(90vw, 700px);
+        max-width: none;
+        max-height: min(85vh, 700px);
+        margin: auto;
         padding: 3rem 2.5rem;
         border: 1px solid var(--panel-border);
         border-radius: 24px;
-        background: var(--panel);
+        background: #fff;
         backdrop-filter: blur(10px);
         box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
-        color: inherit;
+      }
+
+      .content-panel[open] {
+        animation: expand-in 220ms ease-out both;
+      }
+
+      .content-panel::backdrop {
+        background: rgba(15, 23, 42, 0.12);
+      }
+
+      .close-button {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        display: grid;
+        width: 2.5rem;
+        aspect-ratio: 1;
+        place-items: center;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--muted);
         font: inherit;
-        text-align: left;
+        font-size: 1.5rem;
         cursor: pointer;
       }
 
-      .panel-toggle:focus-visible {
-        outline: 3px solid var(--accent);
-        outline-offset: 4px;
+      .close-button:hover {
+        background: var(--accent-soft);
+        color: var(--text);
+      }
+
+      .background-toggle {
+        margin-top: 1.5rem;
+        padding: 0.65rem 0.9rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      @keyframes expand-in {
+        from {
+          opacity: 0;
+          transform: scale(0.15);
+        }
+
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
       }
 
       h1 {
@@ -76,27 +169,39 @@
   </head>
   <body>
     <main>
-      <div class="panel-toggle" role="button" tabindex="0" aria-pressed="false">
-        <h1>Arvid</h1>
+      <button class="launcher" id="launcher" type="button" aria-label="Open Arvid panel" aria-controls="content-panel" aria-expanded="false">
+        +
+      </button>
+      <dialog class="content-panel" id="content-panel" aria-labelledby="panel-title">
+        <button class="close-button" type="button" aria-label="Close panel">&times;</button>
+        <h1 id="panel-title">Arvid</h1>
         <p>
           This is THE website.
           hejhej jag heter barvi......
         </p>
-      </div>
+        <button class="background-toggle" type="button" aria-pressed="false">Use dark background</button>
+      </dialog>
     </main>
     <script>
-      const panel = document.querySelector(".panel-toggle");
+      const launcher = document.querySelector("#launcher");
+      const panel = document.querySelector("#content-panel");
+      const closeButton = document.querySelector(".close-button");
+      const backgroundToggle = document.querySelector(".background-toggle");
 
-      panel.addEventListener("click", () => {
-        const isDark = document.body.classList.toggle("is-dark");
-        panel.setAttribute("aria-pressed", String(isDark));
+      launcher.addEventListener("click", () => {
+        panel.showModal();
+        launcher.setAttribute("aria-expanded", "true");
+      });
+      closeButton.addEventListener("click", () => panel.close());
+      panel.addEventListener("close", () => {
+        launcher.setAttribute("aria-expanded", "false");
+        launcher.focus();
       });
 
-      panel.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          panel.click();
-        }
+      backgroundToggle.addEventListener("click", () => {
+        const isDark = document.body.classList.toggle("is-dark");
+        backgroundToggle.setAttribute("aria-pressed", String(isDark));
+        backgroundToggle.textContent = isDark ? "Use light background" : "Use dark background";
       });
     </script>
   </body>
