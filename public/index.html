@@ -59,13 +59,74 @@
         pointer-events: none;
       }
 
-      .startup-logo {
-        display: block;
+      .startup-logo-motion {
         width: min(72vw, 360px);
-        height: auto;
-        animation:
-          logo-arrive 900ms cubic-bezier(0.2, 0.75, 0.25, 1) both,
-          logo-float 2.6s 900ms ease-in-out infinite alternate;
+        animation: logo-float 2.6s 900ms ease-in-out infinite alternate;
+      }
+
+      .startup-logo-art {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1;
+        animation: logo-arrive 900ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+      }
+
+      .startup-logo {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .startup-logo-upper {
+        clip-path: polygon(0 0, 100% 0, 100% 67%, 17% 40%);
+      }
+
+      .startup-logo-stripe {
+        opacity: 0;
+        animation: logo-stripe-appear 180ms ease-out both;
+        animation-delay: calc(900ms + var(--stripe-delay));
+      }
+
+      .startup-logo-stripe-1 {
+        clip-path: polygon(17% 40%, 81% 67%, 81% 69.5%, 17% 42.5%);
+        --stripe-delay: 0ms;
+      }
+
+      .startup-logo-stripe-2 {
+        clip-path: polygon(17% 45.2%, 81% 72.2%, 81% 74.7%, 17% 47.7%);
+        --stripe-delay: 150ms;
+      }
+
+      .startup-logo-stripe-3 {
+        clip-path: polygon(17% 50.4%, 81% 77.4%, 81% 79.9%, 17% 52.9%);
+        --stripe-delay: 300ms;
+      }
+
+      .startup-logo-stripe-4 {
+        clip-path: polygon(17% 55.6%, 81% 82.6%, 81% 85.1%, 17% 58.1%);
+        --stripe-delay: 450ms;
+      }
+
+      .startup-logo-stripe-5 {
+        clip-path: polygon(17% 60.8%, 81% 87.8%, 81% 90.3%, 17% 63.3%);
+        --stripe-delay: 600ms;
+      }
+
+      .startup-logo-stripe-6 {
+        clip-path: polygon(17% 66%, 81% 93%, 81% 95.5%, 17% 68.5%);
+        --stripe-delay: 750ms;
+      }
+
+      .startup-logo-stripe-7 {
+        clip-path: polygon(17% 71.2%, 81% 98.2%, 81% 100%, 17% 73.7%);
+        --stripe-delay: 900ms;
+      }
+
+      .startup-logo-complete {
+        opacity: 0;
+        animation: logo-complete 250ms 1950ms ease-out both;
       }
 
       .startup-skip {
@@ -293,6 +354,22 @@
         }
       }
 
+      @keyframes logo-stripe-appear {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes logo-complete {
+        to {
+          opacity: 1;
+        }
+      }
+
       @keyframes skip-arrive {
         from {
           opacity: 0;
@@ -333,7 +410,19 @@
   </head>
   <body>
     <div class="startup-screen" id="startup-screen">
-      <img class="startup-logo" src="/arvid-logo.png" alt="Arvid logo" width="500" height="500">
+      <div class="startup-logo-motion">
+        <div class="startup-logo-art">
+          <img class="startup-logo startup-logo-upper" src="/arvid-logo.png" alt="Arvid logo" width="500" height="500">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-1" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-2" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-3" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-4" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-5" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-6" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-stripe startup-logo-stripe-7" src="/arvid-logo.png" alt="" aria-hidden="true">
+          <img class="startup-logo startup-logo-complete" src="/arvid-logo.png" alt="" aria-hidden="true">
+        </div>
+      </div>
       <button class="startup-skip" id="startup-skip" type="button">Skip intro</button>
     </div>
     <main>
