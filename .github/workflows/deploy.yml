@@ -18,7 +18,11 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key > ~/.ssh/deploy_key.pub
+          echo "Deploy key fingerprint (compare with the server's authorized_keys):"
+          ssh-keygen -lf ~/.ssh/deploy_key.pub
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
             -i ~/.ssh/deploy_key "$USER@$HOST" \
             'bash /opt/mysite/deploy.sh'
