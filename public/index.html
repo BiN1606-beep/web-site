@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>OpenResty Starter</title>
+    <title>Shared text</title>
     <style>
       :root {
         --panel: rgba(255, 255, 255, 0.8);
@@ -73,6 +73,12 @@
         outline-offset: 4px;
       }
 
+      .save-button:focus-visible,
+      #shared-text:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
       .content-panel {
         position: fixed;
         inset: 0;
@@ -133,6 +139,56 @@
         cursor: pointer;
       }
 
+      .shared-text-form {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 1.5rem;
+      }
+
+      .shared-text-form label {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      #shared-text {
+        width: 100%;
+        min-height: 8rem;
+        padding: 0.75rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+
+      .save-button {
+        justify-self: start;
+        padding: 0.65rem 0.9rem;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .save-button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      #save-status {
+        min-height: 1.5em;
+        font-size: 0.95rem;
+      }
+
+      .saved-text {
+        min-height: 1.8em;
+        margin-top: 0.75rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
       @keyframes expand-in {
         from {
           opacity: 0;
@@ -185,16 +241,20 @@
   </head>
   <body>
     <main>
-      <button class="launcher" id="launcher" type="button" aria-label="Open Arvid panel" aria-controls="content-panel" aria-expanded="false">
+      <button class="launcher" id="launcher" type="button" aria-label="Open shared text panel" aria-controls="content-panel" aria-expanded="false">
         +
       </button>
       <dialog class="content-panel" id="content-panel" aria-labelledby="panel-title">
         <button class="close-button" type="button" aria-label="Close panel">&times;</button>
-        <h1 id="panel-title">Arvid</h1>
-        <p>
-          This is THE website.
-          hejhej jag heter barvi......
-        </p>
+        <h1 id="panel-title">Shared text</h1>
+        <p>Everyone can see and edit this text. Changes are shared with all visitors.</p>
+        <p class="saved-text" id="saved-text" aria-live="polite">Loading shared text...</p>
+        <form class="shared-text-form" id="shared-text-form">
+          <label for="shared-text">Edit the shared text</label>
+          <textarea id="shared-text" name="text" maxlength="1000" aria-describedby="save-status"></textarea>
+          <button class="save-button" id="save-button" type="submit">Save text</button>
+          <p id="save-status" role="status"></p>
+        </form>
         <button class="background-toggle" type="button" aria-pressed="false">Use dark background</button>
       </dialog>
     </main>
@@ -203,6 +263,48 @@
       const panel = document.querySelector("#content-panel");
       const closeButton = document.querySelector(".close-button");
       const backgroundToggle = document.querySelector(".background-toggle");
+      const sharedTextForm = document.querySelector("#shared-text-form");
+      const sharedTextInput = document.querySelector("#shared-text");
+      const savedText = document.querySelector("#saved-text");
+      const saveButton = document.querySelector("#save-button");
+      const saveStatus = document.querySelector("#save-status");
+
+      const loadSharedText = async () => {
+        try {
+          const response = await fetch("/api/shared-text", { cache: "no-store" });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not load shared text.");
+          sharedTextInput.value = result.text;
+          savedText.textContent = result.text || "(The shared text is empty.)";
+        } catch (error) {
+          savedText.textContent = "Shared text could not be loaded.";
+          saveStatus.textContent = error.message;
+        }
+      };
+
+      sharedTextForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        saveButton.disabled = true;
+        saveStatus.textContent = "Saving...";
+        try {
+          const response = await fetch("/api/shared-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: sharedTextInput.value }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not save shared text.");
+          sharedTextInput.value = result.text;
+          savedText.textContent = result.text || "(The shared text is empty.)";
+          saveStatus.textContent = "Saved for everyone.";
+        } catch (error) {
+          saveStatus.textContent = error.message;
+        } finally {
+          saveButton.disabled = false;
+        }
+      });
+
+      loadSharedText();
 
       launcher.addEventListener("click", () => {
         panel.showModal();
