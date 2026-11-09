@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>OpenResty Starter</title>
+    <script>
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        document.documentElement.classList.add("show-startup");
+      }
+    </script>
     <style>
       :root {
         --panel: rgba(255, 255, 255, 0.8);
@@ -31,6 +36,59 @@
 
       body.is-dark {
         background: #000;
+      }
+
+      .startup-screen {
+        position: fixed;
+        z-index: 10;
+        inset: 0;
+        display: none;
+        place-items: center;
+        overflow: hidden;
+        background: #000;
+        opacity: 1;
+        transition: opacity 550ms ease;
+      }
+
+      .show-startup .startup-screen {
+        display: grid;
+      }
+
+      .startup-screen.is-leaving {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .startup-logo {
+        display: block;
+        width: min(72vw, 360px);
+        height: auto;
+        animation:
+          logo-arrive 900ms cubic-bezier(0.2, 0.75, 0.25, 1) both,
+          logo-float 2.6s 900ms ease-in-out infinite alternate;
+      }
+
+      .startup-skip {
+        position: absolute;
+        right: 1.5rem;
+        bottom: 1.5rem;
+        padding: 0.65rem 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+        animation: skip-arrive 500ms 700ms both;
+      }
+
+      .startup-skip:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .startup-skip:focus-visible {
+        outline: 3px solid #fff;
+        outline-offset: 4px;
       }
 
       main {
@@ -157,6 +215,40 @@
         }
       }
 
+      @keyframes logo-arrive {
+        from {
+          opacity: 0;
+          transform: translateY(18px) scale(0.88);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes logo-float {
+        from {
+          transform: translateY(0) scale(1);
+        }
+
+        to {
+          transform: translateY(-9px) scale(1.015);
+        }
+      }
+
+      @keyframes skip-arrive {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -184,6 +276,10 @@
     </style>
   </head>
   <body>
+    <div class="startup-screen" id="startup-screen">
+      <img class="startup-logo" src="/arvid-logo.png" alt="Arvid logo" width="500" height="500">
+      <button class="startup-skip" id="startup-skip" type="button">Skip intro</button>
+    </div>
     <main>
       <button class="launcher" id="launcher" type="button" aria-label="Open Arvid panel" aria-controls="content-panel" aria-expanded="false">
         +
@@ -199,10 +295,31 @@
       </dialog>
     </main>
     <script>
+      const startupScreen = document.querySelector("#startup-screen");
+      const startupSkip = document.querySelector("#startup-skip");
       const launcher = document.querySelector("#launcher");
       const panel = document.querySelector("#content-panel");
       const closeButton = document.querySelector(".close-button");
       const backgroundToggle = document.querySelector(".background-toggle");
+
+      if (document.documentElement.classList.contains("show-startup")) {
+        const page = document.querySelector("main");
+        page.inert = true;
+
+        const finishStartup = () => {
+          if (startupScreen.classList.contains("is-leaving")) return;
+          const restoreFocus = startupSkip.matches(":focus");
+          startupScreen.classList.add("is-leaving");
+          window.setTimeout(() => {
+            startupScreen.remove();
+            page.inert = false;
+            if (restoreFocus) launcher.focus();
+          }, 600);
+        };
+
+        startupSkip.addEventListener("click", finishStartup);
+        window.setTimeout(finishStartup, 2300);
+      }
 
       launcher.addEventListener("click", () => {
         panel.showModal();
