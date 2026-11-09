@@ -85,52 +85,52 @@
       }
 
       .startup-logo-stripe-1 {
-        clip-path: polygon(66.74% 0, 100% 0, 100% 14.3%);
+        clip-path: polygon(65.12% 0, 100% 0, 100% 15%);
         --stripe-delay: 0ms;
       }
 
       .startup-logo-stripe-2 {
-        clip-path: polygon(33.49% 0, 66.74% 0, 100% 14.3%, 100% 28.6%);
+        clip-path: polygon(31.86% 0, 68.37% 0, 100% 13.6%, 100% 29.3%);
         --stripe-delay: 125ms;
       }
 
       .startup-logo-stripe-3 {
-        clip-path: polygon(0.23% 0, 33.49% 0, 100% 28.6%, 100% 42.9%);
+        clip-path: polygon(0 0, 35.12% 0, 100% 27.9%, 100% 43.6%, 0 0.6%);
         --stripe-delay: 250ms;
       }
 
       .startup-logo-stripe-4 {
-        clip-path: polygon(0 0, 0.23% 0, 100% 42.9%, 100% 57.2%, 0 14.2%);
+        clip-path: polygon(0 0, 1.86% 0, 100% 42.2%, 100% 57.9%, 0 14.9%);
         --stripe-delay: 375ms;
       }
 
       .startup-logo-stripe-5 {
-        clip-path: polygon(100% 57.2%, 100% 71.5%, 0 28.5%, 0 14.2%);
+        clip-path: polygon(100% 56.5%, 100% 72.2%, 0 29.2%, 0 13.5%);
         --stripe-delay: 500ms;
       }
 
       .startup-logo-stripe-6 {
-        clip-path: polygon(100% 71.5%, 100% 85.8%, 0 42.8%, 0 28.5%);
+        clip-path: polygon(100% 70.8%, 100% 86.5%, 0 43.5%, 0 27.8%);
         --stripe-delay: 625ms;
       }
 
       .startup-logo-stripe-7 {
-        clip-path: polygon(100% 85.8%, 100% 100%, 99.77% 100%, 0 57.1%, 0 42.8%);
+        clip-path: polygon(100% 85.1%, 100% 100%, 98.14% 100%, 0 57.8%, 0 42.1%);
         --stripe-delay: 750ms;
       }
 
       .startup-logo-stripe-8 {
-        clip-path: polygon(99.77% 100%, 66.51% 100%, 0 71.4%, 0 57.1%);
+        clip-path: polygon(100% 99.4%, 100% 100%, 64.88% 100%, 0 72.1%, 0 56.4%);
         --stripe-delay: 875ms;
       }
 
       .startup-logo-stripe-9 {
-        clip-path: polygon(66.51% 100%, 33.26% 100%, 0 85.7%, 0 71.4%);
+        clip-path: polygon(68.14% 100%, 31.63% 100%, 0 86.4%, 0 70.7%);
         --stripe-delay: 1000ms;
       }
 
       .startup-logo-stripe-10 {
-        clip-path: polygon(33.26% 100%, 0 100%, 0 85.7%);
+        clip-path: polygon(34.88% 100%, 0 100%, 0 85%);
         --stripe-delay: 1125ms;
       }
 
@@ -254,13 +254,40 @@
 
       .background-toggle {
         margin-top: 1.5rem;
-        padding: 0.65rem 0.9rem;
+        display: grid;
+        width: 2.75rem;
+        aspect-ratio: 1;
+        place-items: center;
+        padding: 0;
         border: 1px solid var(--panel-border);
-        border-radius: 8px;
+        border-radius: 50%;
         background: #fff;
-        color: var(--text);
+        color: #b45309;
         font: inherit;
         cursor: pointer;
+      }
+
+      .background-toggle svg {
+        width: 1.35rem;
+        height: 1.35rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .background-toggle .moon-icon {
+        display: none;
+        color: #1d4ed8;
+      }
+
+      body.is-dark .background-toggle .sun-icon {
+        display: none;
+      }
+
+      body.is-dark .background-toggle .moon-icon {
+        display: block;
       }
 
       .shared-text-form {
@@ -428,7 +455,15 @@
           <button class="save-button" id="save-button" type="submit">Save text</button>
           <p id="save-status" role="status"></p>
         </form>
-        <button class="background-toggle" type="button" aria-pressed="false">Use dark background</button>
+        <button class="background-toggle" type="button" aria-label="Switch to black background" aria-pressed="false" title="Switch background">
+          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
       </dialog>
     </main>
     <script>
@@ -528,7 +563,7 @@
       backgroundToggle.addEventListener("click", () => {
         const isDark = document.body.classList.toggle("is-dark");
         backgroundToggle.setAttribute("aria-pressed", String(isDark));
-        backgroundToggle.textContent = isDark ? "Use light background" : "Use dark background";
+        backgroundToggle.setAttribute("aria-label", isDark ? "Switch to white background" : "Switch to black background");
       });
     </script>
   </body>
