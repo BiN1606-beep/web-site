@@ -109,29 +109,16 @@
         background: url("/background-logo.png") center / contain no-repeat;
       }
 
-      .startup-logo-bright {
-        animation: logo-stripe-appear 650ms ease-out 250ms both;
-      }
-
-      html:not(.is-dark) .startup-logo-stripe {
-        display: none;
+      html:not(.is-dark) .startup-logo-art {
+        animation: logo-finish 500ms cubic-bezier(0.2, 0.75, 0.25, 1) 1600ms both;
       }
 
       html.is-dark .startup-logo {
         background-image: url("/arvid-logo.png");
       }
 
-      html.is-dark .startup-logo-bright {
-        display: none;
-      }
-
       .startup-wordmark-dark {
         display: none;
-      }
-
-      .startup-wordmark-bright {
-        clip-path: none;
-        animation: logo-stripe-appear 650ms ease-out 250ms both;
       }
 
       html.is-dark .startup-wordmark-bright {
@@ -567,6 +554,19 @@
         }
       }
 
+      @keyframes logo-finish {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 0 rgba(255, 184, 80, 0));
+        }
+
+        45% {
+          transform: scale(1.025);
+          filter: drop-shadow(0 0 12px rgba(255, 184, 80, 0.42));
+        }
+      }
+
       @keyframes launcher-fade-in {
         from {
           opacity: 0;
@@ -643,7 +643,6 @@
     <div class="startup-screen" id="startup-screen">
       <div class="startup-logo-motion">
         <div class="startup-logo-art" role="img" aria-label="Arvid logo">
-          <div class="startup-logo startup-logo-bright"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-1"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-2"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-3"></div>
