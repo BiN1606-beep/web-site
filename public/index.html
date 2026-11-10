@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shared text</title>
     <script>
+      if (document.cookie.split(";").some((cookie) => cookie.trim() === "background-theme=dark")) {
+        document.documentElement.classList.add("is-dark");
+      }
+
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         document.documentElement.classList.add("show-startup");
       }
@@ -28,13 +32,13 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: "SF Pro Display", "SF Pro Text", "SF Pro", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         background: #fff;
         color: var(--text);
         transition: background-color 200ms ease;
       }
 
-      body.is-dark {
+      html.is-dark body {
         background: #000;
       }
 
@@ -193,7 +197,7 @@
         pointer-events: none;
       }
 
-      body.is-dark .main-logo-watermark {
+      html.is-dark body .main-logo-watermark {
         background-image: url("/arvid-logo.png");
         opacity: 0.22;
       }
@@ -241,7 +245,7 @@
         transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
       }
 
-      body.is-dark .launcher {
+      html.is-dark body .launcher {
         background: #fff;
         color: #000;
       }
@@ -364,11 +368,11 @@
         color: #1d4ed8;
       }
 
-      body.is-dark .background-toggle .sun-icon {
+      html.is-dark body .background-toggle .sun-icon {
         display: none;
       }
 
-      body.is-dark .background-toggle .moon-icon {
+      html.is-dark body .background-toggle .moon-icon {
         display: block;
       }
 
@@ -746,10 +750,16 @@
       openSharedTextButton.addEventListener("click", () => openPanel(panel, launcher));
 
       backgroundToggle.addEventListener("click", () => {
-        const isDark = document.body.classList.toggle("is-dark");
+        const isDark = document.documentElement.classList.toggle("is-dark");
+        const secureAttribute = location.protocol === "https:" ? "; Secure" : "";
+        document.cookie = `background-theme=${isDark ? "dark" : "light"}; Path=/; Max-Age=31536000; SameSite=Lax${secureAttribute}`;
         backgroundToggle.setAttribute("aria-pressed", String(isDark));
         backgroundToggle.setAttribute("aria-label", isDark ? "Switch to white background" : "Switch to black background");
       });
+
+      const isDark = document.documentElement.classList.contains("is-dark");
+      backgroundToggle.setAttribute("aria-pressed", String(isDark));
+      backgroundToggle.setAttribute("aria-label", isDark ? "Switch to white background" : "Switch to black background");
     </script>
   </body>
 </html>
