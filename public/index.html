@@ -100,6 +100,10 @@
         animation: wordmark-extend 700ms cubic-bezier(0.2, 0.75, 0.25, 1) 1600ms both;
       }
 
+      html:not(.is-dark) .startup-wordmark-bright {
+        animation-delay: 2200ms;
+      }
+
       .startup-logo {
         position: absolute;
         inset: 0;
@@ -791,7 +795,8 @@
         };
 
         startupSkip.addEventListener("click", finishStartup);
-        window.setTimeout(finishStartup, 2500);
+        const startupDuration = document.documentElement.classList.contains("is-dark") ? 2500 : 3000;
+        window.setTimeout(finishStartup, startupDuration);
       }
 
       let activePanel = null;
