@@ -49,9 +49,13 @@
         display: none;
         place-items: center;
         overflow: hidden;
-        background: #000;
+        background: #fff;
         opacity: 1;
         transition: opacity 550ms ease;
+      }
+
+      html.is-dark .startup-screen {
+        background: #000;
       }
 
       .show-startup .startup-screen {
@@ -102,6 +106,23 @@
         display: block;
         width: 100%;
         height: 100%;
+        background: url("/background-logo.png") center / contain no-repeat;
+      }
+
+      html.is-dark .startup-logo {
+        background-image: url("/arvid-logo.png");
+      }
+
+      .startup-wordmark-dark {
+        display: none;
+      }
+
+      html.is-dark .startup-wordmark-bright {
+        display: none;
+      }
+
+      html.is-dark .startup-wordmark-dark {
+        display: block;
       }
 
       .startup-logo-stripe {
@@ -165,22 +186,36 @@
         right: 1.5rem;
         bottom: 1.5rem;
         padding: 0.65rem 0.9rem;
-        border: 1px solid rgba(255, 255, 255, 0.28);
+        border: 1px solid rgba(15, 23, 42, 0.28);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
+        background: rgba(15, 23, 42, 0.06);
+        color: #0f172a;
         font: inherit;
         cursor: pointer;
         animation: skip-arrive 500ms 700ms both;
       }
 
       .startup-skip:hover {
-        background: rgba(255, 255, 255, 0.16);
+        background: rgba(15, 23, 42, 0.12);
       }
 
       .startup-skip:focus-visible {
-        outline: 3px solid #fff;
+        outline: 3px solid #0f172a;
         outline-offset: 4px;
+      }
+
+      html.is-dark .startup-skip {
+        border-color: rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+      html.is-dark .startup-skip:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      html.is-dark .startup-skip:focus-visible {
+        outline-color: #fff;
       }
 
       main {
@@ -215,13 +250,12 @@
       }
 
       #launcher {
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        top: 5.75rem;
+        left: 1.5rem;
       }
 
       #launcher:hover {
-        transform: translate(-50%, -50%) scale(1.08);
+        transform: scale(1.08);
       }
 
       #menu-launcher {
@@ -591,19 +625,20 @@
   <body>
     <div class="startup-screen" id="startup-screen">
       <div class="startup-logo-motion">
-        <div class="startup-logo-art">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-1" src="/arvid-logo.png" alt="Arvid logo" width="500" height="500">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-2" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-3" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-4" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-5" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-6" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-7" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-8" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-9" src="/arvid-logo.png" alt="" aria-hidden="true">
-          <img class="startup-logo startup-logo-stripe startup-logo-stripe-10" src="/arvid-logo.png" alt="" aria-hidden="true">
+        <div class="startup-logo-art" role="img" aria-label="Arvid logo">
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-1"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-2"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-3"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-4"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-5"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-6"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-7"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-8"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-9"></div>
+          <div class="startup-logo startup-logo-stripe startup-logo-stripe-10"></div>
         </div>
-        <img class="startup-wordmark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
+        <img class="startup-wordmark startup-wordmark-bright" src="/arvid-wordmark-bright.png" alt="" aria-hidden="true" width="549" height="181">
+        <img class="startup-wordmark startup-wordmark-dark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
       </div>
       <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
