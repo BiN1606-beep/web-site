@@ -100,10 +100,6 @@
         animation: wordmark-extend 700ms cubic-bezier(0.2, 0.75, 0.25, 1) 1600ms both;
       }
 
-      html:not(.is-dark) .startup-wordmark-bright {
-        animation-delay: 2200ms;
-      }
-
       .startup-logo {
         position: absolute;
         inset: 0;
@@ -111,10 +107,6 @@
         width: 100%;
         height: 100%;
         background: url("/background-logo.png") center / contain no-repeat;
-      }
-
-      html:not(.is-dark) .startup-logo-art {
-        animation: logo-finish 500ms cubic-bezier(0.2, 0.75, 0.25, 1) 1600ms both;
       }
 
       html.is-dark .startup-logo {
@@ -558,19 +550,6 @@
         }
       }
 
-      @keyframes logo-finish {
-        0%,
-        100% {
-          transform: scale(1);
-          filter: drop-shadow(0 0 0 rgba(255, 184, 80, 0));
-        }
-
-        45% {
-          transform: scale(1.025);
-          filter: drop-shadow(0 0 12px rgba(255, 184, 80, 0.42));
-        }
-      }
-
       @keyframes launcher-fade-in {
         from {
           opacity: 0;
@@ -795,8 +774,7 @@
         };
 
         startupSkip.addEventListener("click", finishStartup);
-        const startupDuration = document.documentElement.classList.contains("is-dark") ? 2500 : 3000;
-        window.setTimeout(finishStartup, startupDuration);
+        window.setTimeout(finishStartup, 2500);
       }
 
       let activePanel = null;
