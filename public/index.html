@@ -263,7 +263,8 @@
       }
 
       .save-button:focus-visible,
-      #shared-text:focus-visible {
+      #shared-text:focus-visible,
+      #groq-prompt:focus-visible {
         outline: 3px solid var(--accent);
         outline-offset: 3px;
       }
@@ -382,6 +383,35 @@
         margin-top: 1.5rem;
       }
 
+      .groq-form {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+
+      .groq-form label {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      #groq-prompt {
+        width: 100%;
+        min-height: 7rem;
+        padding: 0.75rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+
+      #groq-answer {
+        min-height: 1.8em;
+        margin-top: 1.25rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
       .shared-text-form label {
         color: var(--text);
         font-weight: 700;
@@ -415,7 +445,8 @@
         opacity: 0.65;
       }
 
-      #save-status {
+      #save-status,
+      #groq-status {
         min-height: 1.5em;
         font-size: 0.95rem;
       }
@@ -615,6 +646,19 @@
         <h1 id="menu-title">Menu</h1>
         <p>Choose a place to go.</p>
         <button class="menu-action" id="open-shared-text" type="button">Shared text</button>
+        <button class="menu-action" id="open-groq-chat" type="button">Groq AI demo</button>
+      </dialog>
+      <dialog class="content-panel" id="groq-panel" aria-labelledby="groq-title">
+        <button class="close-button" type="button" aria-label="Close Groq AI demo">&times;</button>
+        <h1 id="groq-title">Groq AI demo</h1>
+        <p>Send a prompt to Llama 3.3 70B through the Groq API.</p>
+        <form class="groq-form" id="groq-form">
+          <label for="groq-prompt">Your prompt</label>
+          <textarea id="groq-prompt" name="message" maxlength="2000" required aria-describedby="groq-status"></textarea>
+          <button class="save-button" id="groq-submit" type="submit">Ask Groq</button>
+          <p id="groq-status" role="status" aria-live="polite"></p>
+        </form>
+        <p id="groq-answer" aria-live="polite"></p>
       </dialog>
     </main>
     <script>
@@ -625,14 +669,21 @@
       const launcherActions = document.querySelector("#launcher-actions");
       const panel = document.querySelector("#content-panel");
       const menuPanel = document.querySelector("#menu-panel");
+      const groqPanel = document.querySelector("#groq-panel");
       const openMenuButton = document.querySelector("#open-menu");
       const openSharedTextButton = document.querySelector("#open-shared-text");
+      const openGroqChatButton = document.querySelector("#open-groq-chat");
       const backgroundToggle = document.querySelector(".background-toggle");
       const sharedTextForm = document.querySelector("#shared-text-form");
       const sharedTextInput = document.querySelector("#shared-text");
       const savedText = document.querySelector("#saved-text");
       const saveButton = document.querySelector("#save-button");
       const saveStatus = document.querySelector("#save-status");
+      const groqForm = document.querySelector("#groq-form");
+      const groqPrompt = document.querySelector("#groq-prompt");
+      const groqSubmit = document.querySelector("#groq-submit");
+      const groqStatus = document.querySelector("#groq-status");
+      const groqAnswer = document.querySelector("#groq-answer");
 
       const loadSharedText = async () => {
         try {
@@ -710,11 +761,18 @@
 
         dialog.showModal();
         activePanel = dialog;
-        trigger.setAttribute("aria-expanded", "true");
+        if (trigger.getAttribute("aria-controls") === dialog.id) {
+          trigger.setAttribute("aria-expanded", "true");
+        }
       };
 
-      for (const dialog of [panel, menuPanel]) {
-        const dialogTrigger = dialog === panel ? launcher : menuLauncher;
+      const dialogs = [
+        [panel, launcher],
+        [menuPanel, menuLauncher],
+        [groqPanel, menuLauncher],
+      ];
+
+      for (const [dialog, dialogTrigger] of dialogs) {
         const dialogCloseButton = dialog.querySelector(".close-button");
 
         dialogCloseButton.addEventListener("click", () => closePanel(dialog));
@@ -730,7 +788,9 @@
         dialog.addEventListener("close", () => {
           dialog.classList.remove("is-closing");
           dialogCloseButton.disabled = false;
-          dialogTrigger.setAttribute("aria-expanded", "false");
+          if (dialogTrigger.getAttribute("aria-controls") === dialog.id) {
+            dialogTrigger.setAttribute("aria-expanded", "false");
+          }
           if (activePanel === dialog) activePanel = null;
 
           if (queuedPanel) {
@@ -748,6 +808,47 @@
       menuLauncher.addEventListener("click", () => openPanel(menuPanel, menuLauncher));
       openMenuButton.addEventListener("click", () => openPanel(menuPanel, menuLauncher));
       openSharedTextButton.addEventListener("click", () => openPanel(panel, launcher));
+      openGroqChatButton.addEventListener("click", () => openPanel(groqPanel, menuLauncher));
+
+      groqForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (new TextEncoder().encode(groqPrompt.value).length > 2000) {
+          groqStatus.textContent = "Prompt must be 2000 bytes or fewer.";
+          return;
+        }
+        groqSubmit.disabled = true;
+        groqStatus.textContent = "Thinking...";
+        groqAnswer.textContent = "";
+        try {
+          const response = await fetch("/api/groq-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: groqPrompt.value }),
+          });
+          let result;
+          if (response.headers.get("Content-Type")?.includes("application/json")) {
+            result = await response.json();
+          } else if (!response.ok) {
+            throw new Error(response.status === 429
+              ? "Too many requests. Try again shortly."
+              : "Groq request failed.");
+          } else {
+            throw new Error("Groq returned an unexpected response.");
+          }
+          if (!response.ok) {
+            const message = typeof result.error === "string" ? result.error : result.error?.message;
+            throw new Error(message || "Groq request failed.");
+          }
+          const answer = result.choices?.[0]?.message?.content;
+          if (typeof answer !== "string") throw new Error("Groq returned an unexpected response.");
+          groqAnswer.textContent = answer;
+          groqStatus.textContent = "Response received.";
+        } catch (error) {
+          groqStatus.textContent = error.message;
+        } finally {
+          groqSubmit.disabled = false;
+        }
+      });
 
       backgroundToggle.addEventListener("click", () => {
         const isDark = document.documentElement.classList.toggle("is-dark");
