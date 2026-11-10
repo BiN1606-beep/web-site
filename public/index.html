@@ -109,12 +109,29 @@
         background: url("/background-logo.png") center / contain no-repeat;
       }
 
+      .startup-logo-bright {
+        animation: logo-stripe-appear 650ms ease-out 250ms both;
+      }
+
+      html:not(.is-dark) .startup-logo-stripe {
+        display: none;
+      }
+
       html.is-dark .startup-logo {
         background-image: url("/arvid-logo.png");
       }
 
+      html.is-dark .startup-logo-bright {
+        display: none;
+      }
+
       .startup-wordmark-dark {
         display: none;
+      }
+
+      .startup-wordmark-bright {
+        clip-path: none;
+        animation: logo-stripe-appear 650ms ease-out 250ms both;
       }
 
       html.is-dark .startup-wordmark-bright {
@@ -626,6 +643,7 @@
     <div class="startup-screen" id="startup-screen">
       <div class="startup-logo-motion">
         <div class="startup-logo-art" role="img" aria-label="Arvid logo">
+          <div class="startup-logo startup-logo-bright"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-1"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-2"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-3"></div>
