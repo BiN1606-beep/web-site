@@ -243,12 +243,15 @@
         display: grid;
         place-items: center;
         background: url("/background-logo.png") center / min(68vmin, 500px) no-repeat;
+        filter: drop-shadow(0 0 8px rgba(255, 190, 65, 0.18)) drop-shadow(0 0 22px rgba(255, 120, 45, 0.1));
+        animation: bright-logo-glow 5s ease-in-out infinite alternate;
         pointer-events: none;
       }
 
       html.is-dark body .main-logo-watermark {
         background-image: url("/arvid-logo.png");
         opacity: 1;
+        animation-name: dark-logo-glow;
       }
 
       .launcher-actions {
@@ -591,6 +594,26 @@
 
         to {
           transform: translateY(-9px) scale(1.015);
+        }
+      }
+
+      @keyframes bright-logo-glow {
+        from {
+          filter: drop-shadow(0 0 8px rgba(255, 190, 65, 0.18)) drop-shadow(0 0 22px rgba(255, 120, 45, 0.1));
+        }
+
+        to {
+          filter: drop-shadow(0 0 15px rgba(255, 190, 65, 0.34)) drop-shadow(0 0 34px rgba(255, 120, 45, 0.2));
+        }
+      }
+
+      @keyframes dark-logo-glow {
+        from {
+          filter: drop-shadow(0 0 8px rgba(100, 180, 255, 0.22)) drop-shadow(0 0 22px rgba(160, 100, 255, 0.12));
+        }
+
+        to {
+          filter: drop-shadow(0 0 15px rgba(100, 180, 255, 0.4)) drop-shadow(0 0 34px rgba(160, 100, 255, 0.24));
         }
       }
 
