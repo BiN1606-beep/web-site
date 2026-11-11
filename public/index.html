@@ -116,6 +116,18 @@
         aspect-ratio: 1;
       }
 
+      html:not(.is-dark) .startup-logo-art::before {
+        position: absolute;
+        z-index: 0;
+        top: 22.4%;
+        left: 19.3%;
+        width: 57.3%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: linear-gradient(110deg, #ffdc59, #ffb752 52%, #ff8c43);
+        content: "";
+      }
+
       .startup-wordmark {
         display: block;
         flex: 0 0 min(52vw, 430px);
