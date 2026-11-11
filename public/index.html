@@ -384,23 +384,25 @@
       }
 
       .background-toggle {
-        margin-top: 1.5rem;
-        display: grid;
-        width: 2.75rem;
-        aspect-ratio: 1;
-        place-items: center;
-        padding: 0;
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        padding: 0 0.9rem;
         border: 1px solid var(--panel-border);
-        border-radius: 50%;
+        border-radius: 999px;
         background: var(--surface);
         color: var(--sun);
         font: inherit;
+        font-size: 0.9rem;
         cursor: pointer;
       }
 
       .background-toggle svg {
-        width: 1.35rem;
-        height: 1.35rem;
+        flex: 0 0 1.2rem;
+        width: 1.2rem;
+        height: 1.2rem;
         fill: none;
         stroke: currentColor;
         stroke-linecap: round;
@@ -419,6 +421,31 @@
 
       html.is-dark body .background-toggle .moon-icon {
         display: block;
+      }
+
+      .settings-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--panel-border);
+      }
+
+      .settings-section h2 {
+        margin: 0 0 1rem;
+        color: var(--accent);
+        font-size: 1.25rem;
+      }
+
+      .theme-setting {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .theme-setting-label {
+        color: var(--text);
+        font-size: 0.95rem;
+        font-weight: 700;
       }
 
       .shared-text-form {
@@ -682,15 +709,6 @@
           <button class="save-button" id="save-button" type="submit">Save text</button>
           <p id="save-status" role="status"></p>
         </form>
-        <button class="background-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch theme">
-          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
-          </svg>
-          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
         <button class="menu-action" id="open-menu" type="button">Menu</button>
       </dialog>
       <dialog class="content-panel menu-panel" id="menu-panel" aria-labelledby="menu-title">
@@ -699,6 +717,22 @@
         <p>Choose a place to go.</p>
         <button class="menu-action" id="open-shared-text" type="button">Shared text</button>
         <button class="menu-action" id="open-groq-chat" type="button">Groq AI demo</button>
+        <section class="settings-section" aria-labelledby="settings-title">
+          <h2 id="settings-title">Settings</h2>
+          <div class="theme-setting">
+            <span class="theme-setting-label">Appearance</span>
+            <button class="background-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch theme">
+              <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+              </svg>
+              <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              <span id="background-toggle-label">Switch to dark theme</span>
+            </button>
+          </div>
+        </section>
       </dialog>
       <dialog class="content-panel" id="groq-panel" aria-labelledby="groq-title">
         <button class="close-button" type="button" aria-label="Close Groq AI demo">&times;</button>
@@ -726,6 +760,7 @@
       const openSharedTextButton = document.querySelector("#open-shared-text");
       const openGroqChatButton = document.querySelector("#open-groq-chat");
       const backgroundToggle = document.querySelector(".background-toggle");
+      const backgroundToggleLabel = document.querySelector("#background-toggle-label");
       const sharedTextForm = document.querySelector("#shared-text-form");
       const sharedTextInput = document.querySelector("#shared-text");
       const savedText = document.querySelector("#saved-text");
@@ -907,12 +942,14 @@
         const secureAttribute = location.protocol === "https:" ? "; Secure" : "";
         document.cookie = `background-theme=${isDark ? "dark" : "light"}; Path=/; Max-Age=31536000; SameSite=Lax${secureAttribute}`;
         backgroundToggle.setAttribute("aria-pressed", String(isDark));
-        backgroundToggle.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
+        backgroundToggleLabel.textContent = isDark ? "Switch to light theme" : "Switch to dark theme";
+        backgroundToggle.setAttribute("aria-label", backgroundToggleLabel.textContent);
       });
 
       const isDark = document.documentElement.classList.contains("is-dark");
       backgroundToggle.setAttribute("aria-pressed", String(isDark));
-      backgroundToggle.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
+      backgroundToggleLabel.textContent = isDark ? "Switch to light theme" : "Switch to dark theme";
+      backgroundToggle.setAttribute("aria-label", backgroundToggleLabel.textContent);
     </script>
   </body>
 </html>
