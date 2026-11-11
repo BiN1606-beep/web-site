@@ -17,17 +17,28 @@ OpenResty:
 psql -v ON_ERROR_STOP=1 -f db/migrations/002_auth.sql
 ```
 
-Set these server-side OpenResty environment variables for Google OAuth:
+Google OAuth requires the site to be served over HTTPS. The current HTTP IP
+address (`http://34.71.166.63`) cannot be used as a Google OAuth redirect URI.
+Set up a domain and TLS first, then create a **Web application** OAuth client
+in Google Cloud Console and add this exact authorized redirect URI:
+
+```text
+https://your-domain/api/auth/google/callback
+```
+
+Set these server-side OpenResty environment variables to match that client:
 
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI`, set to `https://your-domain/api/auth/google/callback`
 
-Register that exact redirect URI in the Google OAuth client. The `pgmoon` Lua
-module must be available to OpenResty as it is for the existing PostgreSQL
-endpoints. Email/password signup does not verify ownership of the email
-address. The authentication routes also use OpenResty's built-in Lua
-subrequests to exchange and verify Google user information over TLS.
+Keep the client secret on the server; do not put it in the page or commit it.
+Register the exact redirect URI in the Google OAuth client and browse the site
+using its HTTPS domain when signing in. The `pgmoon` Lua module must be
+available to OpenResty as it is for the existing PostgreSQL endpoints.
+Email/password signup does not verify ownership of the email address. The
+authentication routes use OpenResty's built-in Lua subrequests to exchange and
+verify Google user information over TLS.
 
 ## Groq AI demo
 

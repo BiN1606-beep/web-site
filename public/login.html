@@ -211,7 +211,9 @@
       });
 
       const params = new URLSearchParams(window.location.search);
-      if (params.get("error") === "google") {
+      if (params.get("error") === "google-config") {
+        status.textContent = "Google sign-in is not configured yet. Set up HTTPS for this site and configure its Google OAuth credentials.";
+      } else if (params.get("error") === "google") {
         status.textContent = "Google sign-in failed. Try again or use your email.";
       }
 

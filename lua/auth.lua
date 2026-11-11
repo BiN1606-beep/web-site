@@ -344,7 +344,7 @@ local function handle_google_start()
     end
     local client_id = google_configuration()
     if not client_id then
-        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Google sign-in is not configured." })
+        return ngx.redirect("/login?error=google-config", ngx.HTTP_MOVED_TEMPORARILY)
     end
 
     local rows = database_query("SELECT encode(gen_random_bytes(32), 'hex') AS token")
