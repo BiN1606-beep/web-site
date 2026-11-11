@@ -280,28 +280,17 @@
 
       .launcher-actions {
         position: fixed;
-        inset: 0;
+        top: 1.5rem;
+        right: 1.5rem;
         z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
         pointer-events: none;
       }
 
       .launcher-actions .launcher {
-        position: absolute;
         pointer-events: auto;
-      }
-
-      #launcher {
-        top: 5.75rem;
-        left: 1.5rem;
-      }
-
-      #launcher:hover {
-        transform: scale(1.08);
-      }
-
-      #menu-launcher {
-        top: 1.5rem;
-        left: 1.5rem;
       }
 
       .launcher {
@@ -320,14 +309,23 @@
         transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
       }
 
+      .launcher svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
       .launcher:hover {
         transform: scale(1.08);
       }
 
       .launcher:focus-visible,
       .close-button:focus-visible,
-      .background-toggle:focus-visible,
-      .menu-action:focus-visible {
+      .background-toggle:focus-visible {
         outline: 3px solid var(--accent);
         outline-offset: 4px;
       }
@@ -365,27 +363,6 @@
 
       .content-panel::backdrop {
         background: var(--backdrop);
-      }
-
-      .menu-panel {
-        position: fixed;
-        inset: 0 auto 0 0;
-        width: min(90vw, 420px);
-        height: 100vh;
-        height: 100dvh;
-        max-height: 100vh;
-        max-height: 100dvh;
-        margin: 0;
-        overflow-y: auto;
-        border-radius: 0 24px 24px 0;
-      }
-
-      .menu-panel[open] {
-        animation: menu-slide-in 280ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
-      }
-
-      .menu-panel[open].is-closing {
-        animation: menu-slide-out 180ms ease-in both;
       }
 
       .close-button {
@@ -469,12 +446,6 @@
         gap: 1rem;
       }
 
-      .theme-setting-label {
-        color: var(--text);
-        font-size: 0.95rem;
-        font-weight: 700;
-      }
-
       .shared-text-form {
         display: grid;
         gap: 0.65rem;
@@ -528,8 +499,7 @@
         resize: vertical;
       }
 
-      .save-button,
-      .menu-action {
+      .save-button {
         justify-self: start;
         padding: 0.65rem 0.9rem;
         border: 0;
@@ -540,8 +510,7 @@
         cursor: pointer;
       }
 
-      .save-button:hover,
-      .menu-action:hover {
+      .save-button:hover {
         background: var(--accent-hover);
       }
 
@@ -584,30 +553,6 @@
         to {
           opacity: 0;
           transform: scale(0.15);
-        }
-      }
-
-      @keyframes menu-slide-in {
-        from {
-          opacity: 0;
-          transform: translateX(-24px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-
-      @keyframes menu-slide-out {
-        from {
-          opacity: 1;
-          transform: translateX(0);
-        }
-
-        to {
-          opacity: 0;
-          transform: translateX(-24px);
         }
       }
 
@@ -733,16 +678,7 @@
     </div>
     <main>
       <div class="main-logo-watermark" aria-hidden="true"></div>
-      <div class="launcher-actions" id="launcher-actions">
-        <button class="launcher" id="launcher" type="button" aria-label="Open shared text panel" aria-controls="content-panel" aria-expanded="false">
-          +
-        </button>
-        <button class="launcher" id="menu-launcher" type="button" aria-label="Open menu" aria-controls="menu-panel" aria-expanded="false">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
-      </div>
+      <nav class="launcher-actions" id="launcher-actions" aria-label="Quick access"></nav>
       <dialog class="content-panel" id="content-panel" aria-labelledby="panel-title">
         <button class="close-button" type="button" aria-label="Close panel">&times;</button>
         <h1 id="panel-title">Shared text</h1>
@@ -754,18 +690,14 @@
           <button class="save-button" id="save-button" type="submit">Save text</button>
           <p id="save-status" role="status"></p>
         </form>
-        <button class="menu-action" id="open-menu" type="button">Menu</button>
       </dialog>
-      <dialog class="content-panel menu-panel" id="menu-panel" aria-labelledby="menu-title">
-        <button class="close-button" type="button" aria-label="Close menu">&times;</button>
-        <h1 id="menu-title">Menu</h1>
-        <p>Choose a place to go.</p>
-        <button class="menu-action" id="open-shared-text" type="button">Shared text</button>
-        <button class="menu-action" id="open-groq-chat" type="button">Groq AI demo</button>
-        <section class="settings-section" aria-labelledby="settings-title">
-          <h2 id="settings-title">Settings</h2>
+      <dialog class="content-panel" id="settings-panel" aria-labelledby="settings-title">
+        <button class="close-button" type="button" aria-label="Close settings">&times;</button>
+        <h1 id="settings-title">Settings</h1>
+        <p>Adjust site preferences.</p>
+        <section class="settings-section" aria-labelledby="appearance-title">
+          <h2 id="appearance-title">Appearance</h2>
           <div class="theme-setting">
-            <span class="theme-setting-label">Appearance</span>
             <button class="background-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch theme">
               <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="4"></circle>
@@ -795,15 +727,62 @@
     <script>
       const startupScreen = document.querySelector("#startup-screen");
       const startupSkip = document.querySelector("#startup-skip");
-      const launcher = document.querySelector("#launcher");
-      const menuLauncher = document.querySelector("#menu-launcher");
       const launcherActions = document.querySelector("#launcher-actions");
+      const launcherItems = [
+        {
+          dialogId: "content-panel",
+          label: "Open shared text",
+          icon: [
+            { tag: "path", attributes: { d: "M12 5v14M5 12h14" } },
+          ],
+        },
+        {
+          dialogId: "settings-panel",
+          label: "Open settings",
+          icon: [
+            { tag: "path", attributes: { d: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" } },
+            { tag: "path", attributes: { d: "m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V4a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2.9Z" } },
+          ],
+        },
+        {
+          dialogId: "groq-panel",
+          label: "Open Groq AI test",
+          icon: [
+            { tag: "path", attributes: { d: "m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" } },
+            { tag: "path", attributes: { d: "m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z" } },
+          ],
+        },
+      ];
+      const launcherByDialog = new Map();
+      const svgNamespace = "http://www.w3.org/2000/svg";
+
+      for (const item of launcherItems) {
+        const button = document.createElement("button");
+        button.className = "launcher";
+        button.type = "button";
+        button.setAttribute("aria-label", item.label);
+        button.setAttribute("aria-controls", item.dialogId);
+        button.setAttribute("aria-expanded", "false");
+        button.title = item.label.replace(/^Open /, "");
+
+        const icon = document.createElementNS(svgNamespace, "svg");
+        icon.setAttribute("viewBox", "0 0 24 24");
+        icon.setAttribute("aria-hidden", "true");
+        for (const shape of item.icon) {
+          const element = document.createElementNS(svgNamespace, shape.tag);
+          for (const [name, value] of Object.entries(shape.attributes)) {
+            element.setAttribute(name, value);
+          }
+          icon.append(element);
+        }
+
+        button.append(icon);
+        launcherActions.append(button);
+        launcherByDialog.set(item.dialogId, button);
+      }
+
+      const launcher = launcherByDialog.get("content-panel");
       const panel = document.querySelector("#content-panel");
-      const menuPanel = document.querySelector("#menu-panel");
-      const groqPanel = document.querySelector("#groq-panel");
-      const openMenuButton = document.querySelector("#open-menu");
-      const openSharedTextButton = document.querySelector("#open-shared-text");
-      const openGroqChatButton = document.querySelector("#open-groq-chat");
       const backgroundToggle = document.querySelector(".background-toggle");
       const backgroundToggleLabel = document.querySelector("#background-toggle-label");
       const sharedTextForm = document.querySelector("#shared-text-form");
@@ -898,11 +877,10 @@
         }
       };
 
-      const dialogs = [
-        [panel, launcher],
-        [menuPanel, menuLauncher],
-        [groqPanel, menuLauncher],
-      ];
+      const dialogs = launcherItems.map(({ dialogId }) => [
+        document.getElementById(dialogId),
+        launcherByDialog.get(dialogId),
+      ]);
 
       for (const [dialog, dialogTrigger] of dialogs) {
         const dialogCloseButton = dialog.querySelector(".close-button");
@@ -936,11 +914,9 @@
         });
       }
 
-      launcher.addEventListener("click", () => openPanel(panel, launcher));
-      menuLauncher.addEventListener("click", () => openPanel(menuPanel, menuLauncher));
-      openMenuButton.addEventListener("click", () => openPanel(menuPanel, menuLauncher));
-      openSharedTextButton.addEventListener("click", () => openPanel(panel, launcher));
-      openGroqChatButton.addEventListener("click", () => openPanel(groqPanel, menuLauncher));
+      for (const [dialog, trigger] of dialogs) {
+        trigger.addEventListener("click", () => openPanel(dialog, trigger));
+      }
 
       groqForm.addEventListener("submit", async (event) => {
         event.preventDefault();
