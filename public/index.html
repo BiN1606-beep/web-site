@@ -133,7 +133,23 @@
         display: block;
         width: 100%;
         height: 100%;
-        background: url("/arvid-logo.png") center / contain no-repeat;
+        background: url("/background-logo.png") center / contain no-repeat;
+      }
+
+      html.is-dark .startup-logo {
+        background-image: url("/arvid-logo.png");
+      }
+
+      .startup-wordmark-dark {
+        display: none;
+      }
+
+      html.is-dark .startup-wordmark-bright {
+        display: none;
+      }
+
+      html.is-dark .startup-wordmark-dark {
+        display: block;
       }
 
       .startup-logo-stripe {
@@ -638,7 +654,8 @@
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-9"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-10"></div>
         </div>
-        <img class="startup-wordmark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
+        <img class="startup-wordmark startup-wordmark-bright" src="/arvid-wordmark-bright.png" alt="" aria-hidden="true" width="550" height="182">
+        <img class="startup-wordmark startup-wordmark-dark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
       </div>
       <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
