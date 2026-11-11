@@ -240,17 +240,33 @@
         position: fixed;
         z-index: 0;
         inset: 0;
-        display: grid;
-        place-items: center;
-        background: url("/background-logo.png") center / min(68vmin, 500px) no-repeat;
-        filter: drop-shadow(0 0 14px rgba(255, 190, 65, 0.38)) drop-shadow(0 0 32px rgba(255, 120, 45, 0.24));
-        animation: bright-logo-glow 4s ease-in-out infinite;
         pointer-events: none;
       }
 
+      .main-logo-watermark::before,
+      .main-logo-watermark::after {
+        position: absolute;
+        inset: 0;
+        background: url("/background-logo.png") center / min(68vmin, 500px) no-repeat;
+        content: "";
+      }
+
+      .main-logo-watermark::before {
+        filter: blur(12px) saturate(1.4);
+        opacity: 0.24;
+        animation: bright-logo-glow 4s ease-in-out infinite;
+      }
+
       html.is-dark body .main-logo-watermark {
-        background-image: url("/arvid-logo.png");
         opacity: 1;
+      }
+
+      html.is-dark body .main-logo-watermark::before,
+      html.is-dark body .main-logo-watermark::after {
+        background-image: url("/arvid-logo.png");
+      }
+
+      html.is-dark body .main-logo-watermark::before {
         animation-name: dark-logo-glow;
       }
 
@@ -598,24 +614,28 @@
       }
 
       @keyframes bright-logo-glow {
-        0%,
-        100% {
-          filter: drop-shadow(0 0 10px rgba(255, 190, 65, 0.28)) drop-shadow(0 0 26px rgba(255, 120, 45, 0.18));
+        from,
+        to {
+          filter: blur(12px) saturate(1.4);
+          opacity: 0.24;
         }
 
         50% {
-          filter: drop-shadow(0 0 26px rgba(255, 190, 65, 0.72)) drop-shadow(0 0 58px rgba(255, 120, 45, 0.48));
+          filter: blur(26px) saturate(1.7);
+          opacity: 0.58;
         }
       }
 
       @keyframes dark-logo-glow {
-        0%,
-        100% {
-          filter: drop-shadow(0 0 10px rgba(100, 180, 255, 0.34)) drop-shadow(0 0 26px rgba(160, 100, 255, 0.2));
+        from,
+        to {
+          filter: blur(12px) saturate(1.5);
+          opacity: 0.28;
         }
 
         50% {
-          filter: drop-shadow(0 0 26px rgba(100, 180, 255, 0.7)) drop-shadow(0 0 58px rgba(160, 100, 255, 0.46));
+          filter: blur(26px) saturate(1.8);
+          opacity: 0.64;
         }
       }
 
