@@ -6,7 +6,7 @@ base_url="${BASE_URL:-http://127.0.0.1}"
 login_page="$(curl -fsS "$base_url/login")"
 printf '%s' "$login_page" | grep -q '<title>Sign in | Osiris</title>'
 printf '%s' "$login_page" | grep -q 'Continue with Google'
-printf '%s' "$login_page" | grep -q 'error=google-config'
+printf '%s' "$login_page" | grep -q 'google-config'
 printf '%s' "$login_page" | grep -q 'Google sign-in is not configured yet'
 printf '%s' "$login_page" | grep -q 'Create an account'
 

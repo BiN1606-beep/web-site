@@ -6,9 +6,10 @@ the only website you'll ever need.
 ## Accounts and sign-in
 
 The site requires an account. Visitors can sign up with an email and password
-or use Google sign-in. Email passwords are stored as PostgreSQL `pgcrypto`
-bcrypt hashes. Session tokens are random, stored hashed in PostgreSQL, and
-sent only in HttpOnly, SameSite cookies.
+or use Google sign-in once its OAuth credentials are configured. Email
+passwords are stored as PostgreSQL `pgcrypto` bcrypt hashes. Session tokens
+are random, stored hashed in PostgreSQL, and sent only in HttpOnly, SameSite
+cookies.
 
 Apply the authentication migration using the PostgreSQL role configured for
 OpenResty:
