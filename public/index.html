@@ -695,6 +695,12 @@
         <button class="close-button" type="button" aria-label="Close settings">&times;</button>
         <h1 id="settings-title">Settings</h1>
         <p>Adjust site preferences.</p>
+        <section class="settings-section" aria-labelledby="account-title">
+          <h2 id="account-title">Account</h2>
+          <p id="account-email" aria-live="polite">Loading account...</p>
+          <p id="account-status" role="status"></p>
+          <button class="save-button" id="sign-out" type="button">Sign out</button>
+        </section>
         <section class="settings-section" aria-labelledby="appearance-title">
           <h2 id="appearance-title">Appearance</h2>
           <div class="theme-setting">
@@ -783,6 +789,9 @@
 
       const launcher = launcherByDialog.get("content-panel");
       const panel = document.querySelector("#content-panel");
+      const accountEmail = document.querySelector("#account-email");
+      const accountStatus = document.querySelector("#account-status");
+      const signOutButton = document.querySelector("#sign-out");
       const backgroundToggle = document.querySelector(".background-toggle");
       const backgroundToggleLabel = document.querySelector("#background-toggle-label");
       const sharedTextForm = document.querySelector("#shared-text-form");
@@ -832,6 +841,34 @@
       });
 
       loadSharedText();
+
+      const loadAccount = async () => {
+        try {
+          const response = await fetch("/api/auth/me", { cache: "no-store" });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not load account.");
+          accountEmail.textContent = result.user.email;
+        } catch (error) {
+          accountEmail.textContent = "Account unavailable.";
+          accountStatus.textContent = error.message;
+        }
+      };
+
+      loadAccount();
+
+      signOutButton.addEventListener("click", async () => {
+        signOutButton.disabled = true;
+        accountStatus.textContent = "Signing out...";
+        try {
+          const response = await fetch("/api/auth/logout", { method: "POST" });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not sign out.");
+          window.location.replace("/login");
+        } catch (error) {
+          accountStatus.textContent = error.message;
+          signOutButton.disabled = false;
+        }
+      });
 
       if (document.documentElement.classList.contains("show-startup")) {
         const page = document.querySelector("main");

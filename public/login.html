@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Sign in | Osiris</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        color: #4c4f69;
+        background: #eff1f5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        padding: 1.25rem;
+        place-items: center;
+      }
+
+      main {
+        width: min(100%, 28rem);
+        padding: clamp(1.5rem, 6vw, 2.5rem);
+        border: 1px solid #ccd0da;
+        border-radius: 1.25rem;
+        background: #e6e9ef;
+        box-shadow: 0 1.25rem 3rem rgba(76, 79, 105, 0.16);
+      }
+
+      h1 {
+        margin: 0;
+        color: #8839ef;
+      }
+
+      p {
+        line-height: 1.6;
+      }
+
+      form {
+        display: grid;
+        gap: 0.8rem;
+        margin-top: 1.25rem;
+      }
+
+      label {
+        font-weight: 700;
+      }
+
+      input,
+      button {
+        min-height: 2.8rem;
+        border: 1px solid #ccd0da;
+        border-radius: 0.6rem;
+        padding: 0.65rem 0.8rem;
+        font: inherit;
+      }
+
+      input {
+        width: 100%;
+        color: inherit;
+        background: #eff1f5;
+      }
+
+      button,
+      .google-link {
+        color: #eff1f5;
+        background: #8839ef;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .google-link {
+        display: block;
+        margin-top: 1.25rem;
+        border-radius: 0.6rem;
+        padding: 0.8rem;
+      }
+
+      .separator {
+        margin: 1.2rem 0 0;
+        text-align: center;
+      }
+
+      #switch-mode {
+        display: block;
+        width: 100%;
+        margin-top: 1rem;
+        color: #8839ef;
+        background: transparent;
+      }
+
+      #status {
+        min-height: 1.5em;
+        color: #d20f39;
+        overflow-wrap: anywhere;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          color: #cdd6f4;
+          background: #1e1e2e;
+        }
+
+        main {
+          border-color: rgba(108, 112, 134, 0.55);
+          background: #313244;
+          box-shadow: 0 1.25rem 3rem rgba(17, 17, 27, 0.48);
+        }
+
+        h1 {
+          color: #cba6f7;
+        }
+
+        input {
+          border-color: rgba(108, 112, 134, 0.55);
+          color: #cdd6f4;
+          background: #1e1e2e;
+        }
+
+        button,
+        .google-link {
+          color: #1e1e2e;
+          background: #cba6f7;
+        }
+
+        #switch-mode {
+          border-color: rgba(108, 112, 134, 0.55);
+          color: #cba6f7;
+          background: transparent;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 id="heading">Sign in</h1>
+      <p>Sign in to continue to Osiris.</p>
+      <a class="google-link" href="/api/auth/google">Continue with Google</a>
+      <p class="separator">or use your email</p>
+      <form id="auth-form">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="72" required>
+        <p>Passwords must contain at least 12 characters and no more than 72 bytes.</p>
+        <button id="submit" type="submit">Sign in</button>
+      </form>
+      <button id="switch-mode" type="button">Create an account</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script>
+      const form = document.querySelector("#auth-form");
+      const email = document.querySelector("#email");
+      const password = document.querySelector("#password");
+      const heading = document.querySelector("#heading");
+      const submit = document.querySelector("#submit");
+      const switchMode = document.querySelector("#switch-mode");
+      const status = document.querySelector("#status");
+      let isSignup = false;
+
+      const updateMode = () => {
+        heading.textContent = isSignup ? "Create your account" : "Sign in";
+        submit.textContent = isSignup ? "Create account" : "Sign in";
+        switchMode.textContent = isSignup ? "Already have an account? Sign in" : "Create an account";
+        password.autocomplete = isSignup ? "new-password" : "current-password";
+        password.minLength = isSignup ? 12 : 1;
+        status.textContent = "";
+      };
+
+      switchMode.addEventListener("click", () => {
+        isSignup = !isSignup;
+        updateMode();
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        status.textContent = isSignup ? "Creating your account..." : "Signing in...";
+        try {
+          const response = await fetch(isSignup ? "/api/auth/signup" : "/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.value, password: password.value }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(result.error || (response.status === 429
+              ? "Too many attempts. Please wait a minute and try again."
+              : "Authentication failed."));
+          }
+          window.location.replace("/");
+        } catch (error) {
+          status.textContent = error.message || "Authentication failed.";
+        } finally {
+          submit.disabled = false;
+        }
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error") === "google") {
+        status.textContent = "Google sign-in failed. Try again or use your email.";
+      }
+
+      fetch("/api/auth/me", { cache: "no-store" })
+        .then(async (response) => {
+          if (response.ok) window.location.replace("/");
+          else if (response.status !== 401) throw new Error("Could not check your sign-in status.");
+        })
+        .catch((error) => {
+          status.textContent = error.message;
+        });
+    </script>
+  </body>
+</html>

@@ -3,15 +3,15 @@ set -eu
 
 base_url="${BASE_URL:-http://127.0.0.1}"
 
-homepage="$(curl -fsS "$base_url/")"
-printf '%s' "$homepage" | grep -q '<title>Osiris</title>'
-printf '%s' "$homepage" | grep -q '<h1 id="groq-title">Groq AI demo</h1>'
-printf '%s' "$homepage" | grep -q '<nav class="launcher-actions" id="launcher-actions" aria-label="Quick access"></nav>'
-printf '%s' "$homepage" | grep -q 'label: "Open settings"'
-printf '%s' "$homepage" | grep -q 'label: "Open Groq AI test"'
-if printf '%s' "$homepage" | grep -q 'menu-launcher'; then
-  printf 'The old menu launcher should not be present.\n' >&2
-  exit 1
-fi
+login_page="$(curl -fsS "$base_url/login")"
+printf '%s' "$login_page" | grep -q '<title>Sign in | Osiris</title>'
+printf '%s' "$login_page" | grep -q 'Continue with Google'
+printf '%s' "$login_page" | grep -q 'Create an account'
 
-printf 'Smoke tests passed.\n'
+homepage_status="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/")"
+test "$homepage_status" = "302"
+
+auth_status="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/api/auth/me")"
+test "$auth_status" = "401"
+
+printf 'Authentication smoke tests passed.\n'
