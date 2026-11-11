@@ -256,8 +256,7 @@
           radial-gradient(ellipse 24vmin 9vmin at calc(50% + min(19vmin, 135px)) 50%, var(--logo-glow-secondary), transparent);
         filter: blur(5px) saturate(1.8);
         opacity: 0.85;
-        transform-origin: center;
-        animation: logo-side-glow 3.2s ease-in-out infinite;
+        animation: logo-side-glow 4s linear infinite alternate;
         content: "";
       }
 
@@ -623,15 +622,20 @@
       }
 
       @keyframes logo-side-glow {
-        0%,
-        100% {
-          opacity: 0.62;
-          transform: scaleX(0.82);
+        from {
+          background-position:
+            calc(50% - min(28vmin, 200px)) 50%,
+            calc(50% + min(28vmin, 200px)) 50%,
+            calc(50% - min(19vmin, 135px)) 50%,
+            calc(50% + min(19vmin, 135px)) 50%;
         }
 
-        50% {
-          opacity: 1;
-          transform: scaleX(1.18);
+        to {
+          background-position:
+            calc(50% - min(34vmin, 240px)) 50%,
+            calc(50% + min(34vmin, 240px)) 50%,
+            calc(50% - min(23vmin, 165px)) 50%,
+            calc(50% + min(23vmin, 165px)) 50%;
         }
       }
 
