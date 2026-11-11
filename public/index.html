@@ -240,34 +240,43 @@
         position: fixed;
         z-index: 0;
         inset: 0;
+        --logo-glow-primary: rgba(255, 190, 65, 0.9);
+        --logo-glow-secondary: rgba(255, 120, 45, 0.72);
         pointer-events: none;
       }
 
-      .main-logo-watermark::before,
+      .main-logo-watermark::before {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background:
+          linear-gradient(90deg, transparent, var(--logo-glow-secondary), transparent) calc(50% - min(28vmin, 200px)) 50% / min(24vmin, 170px) 3px no-repeat,
+          linear-gradient(90deg, transparent, var(--logo-glow-primary), transparent) calc(50% + min(28vmin, 200px)) 50% / min(24vmin, 170px) 3px no-repeat,
+          radial-gradient(ellipse 24vmin 9vmin at calc(50% - min(19vmin, 135px)) 50%, var(--logo-glow-primary), transparent),
+          radial-gradient(ellipse 24vmin 9vmin at calc(50% + min(19vmin, 135px)) 50%, var(--logo-glow-secondary), transparent);
+        filter: blur(5px) saturate(1.8);
+        opacity: 0.85;
+        transform-origin: center;
+        animation: logo-side-glow 3.2s ease-in-out infinite;
+        content: "";
+      }
+
       .main-logo-watermark::after {
         position: absolute;
+        z-index: 1;
         inset: 0;
         background: url("/background-logo.png") center / min(68vmin, 500px) no-repeat;
         content: "";
       }
 
-      .main-logo-watermark::before {
-        filter: blur(12px) saturate(1.4);
-        opacity: 0.24;
-        animation: bright-logo-glow 4s ease-in-out infinite;
-      }
-
       html.is-dark body .main-logo-watermark {
         opacity: 1;
+        --logo-glow-primary: rgba(100, 180, 255, 0.95);
+        --logo-glow-secondary: rgba(160, 100, 255, 0.84);
       }
 
-      html.is-dark body .main-logo-watermark::before,
       html.is-dark body .main-logo-watermark::after {
         background-image: url("/arvid-logo.png");
-      }
-
-      html.is-dark body .main-logo-watermark::before {
-        animation-name: dark-logo-glow;
       }
 
       .launcher-actions {
@@ -613,29 +622,16 @@
         }
       }
 
-      @keyframes bright-logo-glow {
-        from,
-        to {
-          filter: blur(12px) saturate(1.4);
-          opacity: 0.24;
+      @keyframes logo-side-glow {
+        0%,
+        100% {
+          opacity: 0.62;
+          transform: scaleX(0.82);
         }
 
         50% {
-          filter: blur(26px) saturate(1.7);
-          opacity: 0.58;
-        }
-      }
-
-      @keyframes dark-logo-glow {
-        from,
-        to {
-          filter: blur(12px) saturate(1.5);
-          opacity: 0.28;
-        }
-
-        50% {
-          filter: blur(26px) saturate(1.8);
-          opacity: 0.64;
+          opacity: 1;
+          transform: scaleX(1.18);
         }
       }
 
