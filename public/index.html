@@ -15,12 +15,47 @@
     </script>
     <style>
       :root {
-        --panel: rgba(255, 255, 255, 0.8);
-        --panel-border: rgba(148, 163, 184, 0.2);
-        --text: #0f172a;
-        --muted: #475569;
-        --accent: #2563eb;
-        --accent-soft: rgba(37, 99, 235, 0.12);
+        color-scheme: light;
+        --base: #eff1f5;
+        --surface: #e6e9ef;
+        --panel: rgba(230, 233, 239, 0.94);
+        --panel-border: #ccd0da;
+        --text: #4c4f69;
+        --muted: #6c6f85;
+        --accent: #8839ef;
+        --accent-hover: #7287fd;
+        --accent-soft: rgba(136, 57, 239, 0.12);
+        --button-text: #eff1f5;
+        --shadow: rgba(76, 79, 105, 0.16);
+        --backdrop: rgba(76, 79, 105, 0.35);
+        --sun: #df8e1d;
+        --moon: #1e66f5;
+      }
+
+      html.is-dark {
+        color-scheme: dark;
+        --base: #1e1e2e;
+        --surface: #313244;
+        --panel: rgba(49, 50, 68, 0.96);
+        --panel-border: rgba(108, 112, 134, 0.55);
+        --text: #cdd6f4;
+        --muted: #a6adc8;
+        --accent: #cba6f7;
+        --accent-hover: #b4befe;
+        --accent-soft: rgba(203, 166, 247, 0.16);
+        --button-text: #1e1e2e;
+        --shadow: rgba(17, 17, 27, 0.48);
+        --backdrop: rgba(17, 17, 27, 0.72);
+        --sun: #f9e2af;
+        --moon: #89b4fa;
+      }
+
+      @font-face {
+        font-family: "JetBrainsMono Nerd Font";
+        src: url("/fonts/JetBrainsMonoNerdFont-Regular.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
       }
 
       * {
@@ -32,14 +67,10 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
-        font-family: "SF Pro Display", "SF Pro Text", "SF Pro", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-        background: #fff;
+        font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+        background: var(--base);
         color: var(--text);
-        transition: background-color 200ms ease;
-      }
-
-      html.is-dark body {
-        background: #000;
+        transition: background-color 200ms ease, color 200ms ease;
       }
 
       .startup-screen {
@@ -49,7 +80,7 @@
         display: none;
         place-items: center;
         overflow: hidden;
-        background: #000;
+        background: var(--base);
         opacity: 1;
         transition: opacity 550ms ease;
       }
@@ -167,21 +198,21 @@
         right: 1.5rem;
         bottom: 1.5rem;
         padding: 0.65rem 0.9rem;
-        border: 1px solid rgba(255, 255, 255, 0.28);
+        border: 1px solid var(--panel-border);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
+        background: var(--surface);
+        color: var(--text);
         font: inherit;
         cursor: pointer;
         animation: skip-arrive 500ms 700ms both;
       }
 
       .startup-skip:hover {
-        background: rgba(255, 255, 255, 0.16);
+        background: var(--accent-soft);
       }
 
       .startup-skip:focus-visible {
-        outline: 3px solid #fff;
+        outline: 3px solid var(--accent);
         outline-offset: 4px;
       }
 
@@ -237,18 +268,13 @@
         place-items: center;
         border: 0;
         border-radius: 50%;
-        background: #000;
-        color: #fff;
+        background: var(--accent);
+        color: var(--button-text);
         font: inherit;
         font-size: 1.75rem;
         line-height: 1;
         cursor: pointer;
         transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
-      }
-
-      html.is-dark body .launcher {
-        background: #fff;
-        color: #000;
       }
 
       .launcher:hover {
@@ -280,9 +306,10 @@
         padding: 3rem 2.5rem;
         border: 1px solid var(--panel-border);
         border-radius: 24px;
-        background: #fff;
+        background: var(--panel);
+        color: var(--text);
         backdrop-filter: blur(10px);
-        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 20px 45px var(--shadow);
       }
 
       .content-panel[open] {
@@ -294,7 +321,7 @@
       }
 
       .content-panel::backdrop {
-        background: rgba(15, 23, 42, 0.12);
+        background: var(--backdrop);
       }
 
       .menu-panel {
@@ -349,8 +376,8 @@
         padding: 0;
         border: 1px solid var(--panel-border);
         border-radius: 50%;
-        background: #fff;
-        color: #b45309;
+        background: var(--surface);
+        color: var(--sun);
         font: inherit;
         cursor: pointer;
       }
@@ -367,7 +394,7 @@
 
       .background-toggle .moon-icon {
         display: none;
-        color: #1d4ed8;
+        color: var(--moon);
       }
 
       html.is-dark body .background-toggle .sun-icon {
@@ -401,6 +428,7 @@
         padding: 0.75rem;
         border: 1px solid var(--panel-border);
         border-radius: 8px;
+        background: var(--surface);
         color: var(--text);
         font: inherit;
         resize: vertical;
@@ -424,6 +452,7 @@
         padding: 0.75rem;
         border: 1px solid var(--panel-border);
         border-radius: 8px;
+        background: var(--surface);
         color: var(--text);
         font: inherit;
         resize: vertical;
@@ -436,9 +465,14 @@
         border: 0;
         border-radius: 8px;
         background: var(--accent);
-        color: #fff;
+        color: var(--button-text);
         font: inherit;
         cursor: pointer;
+      }
+
+      .save-button:hover,
+      .menu-action:hover {
+        background: var(--accent-hover);
       }
 
       .save-button:disabled {
@@ -631,7 +665,7 @@
           <button class="save-button" id="save-button" type="submit">Save text</button>
           <p id="save-status" role="status"></p>
         </form>
-        <button class="background-toggle" type="button" aria-label="Switch to black background" aria-pressed="false" title="Switch background">
+        <button class="background-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch theme">
           <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
@@ -856,12 +890,12 @@
         const secureAttribute = location.protocol === "https:" ? "; Secure" : "";
         document.cookie = `background-theme=${isDark ? "dark" : "light"}; Path=/; Max-Age=31536000; SameSite=Lax${secureAttribute}`;
         backgroundToggle.setAttribute("aria-pressed", String(isDark));
-        backgroundToggle.setAttribute("aria-label", isDark ? "Switch to white background" : "Switch to black background");
+        backgroundToggle.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
       });
 
       const isDark = document.documentElement.classList.contains("is-dark");
       backgroundToggle.setAttribute("aria-pressed", String(isDark));
-      backgroundToggle.setAttribute("aria-label", isDark ? "Switch to white background" : "Switch to black background");
+      backgroundToggle.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
     </script>
   </body>
 </html>
