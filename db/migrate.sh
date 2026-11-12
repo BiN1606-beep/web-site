@@ -44,6 +44,7 @@ for migration in "${migrations[@]}"; do
     name="${migration##*/}"
     checksum="$(sha256sum "$migration" | cut -d ' ' -f 1)"
 
+    echo "Checking migration: $name"
     (
         cd "$MIGRATIONS_DIR"
         {
@@ -57,7 +58,6 @@ for migration in "${migrations[@]}"; do
             printf "    \\echo Migration already applied: %s\n" "$name"
             printf "  \\else\n"
             printf "    \\echo ERROR: checksum changed for applied migration %s\n" "$name"
-            printf "    \\quit 3\n"
             printf "  \\endif\n"
             printf "\\else\n"
             printf "  \\echo Applying migration: %s\n" "$name"
@@ -65,6 +65,8 @@ for migration in "${migrations[@]}"; do
             printf "  INSERT INTO public.schema_migrations (migration_name, checksum) VALUES ('%s', '%s');\n" "$name" "$checksum"
             printf "  \\echo Applied migration: %s\n" "$name"
             printf "\\endif\n"
+            printf "SELECT CASE WHEN :'already_applied'::boolean AND NOT :'checksum_matches'::boolean THEN 'SELECT 1 / 0' ELSE 'SELECT 1' END\n"
+            printf "\\gexec\n"
             printf "COMMIT;\n"
         } | psql --no-psqlrc --no-password --set=ON_ERROR_STOP=1 --dbname="$PGDATABASE"
     )
