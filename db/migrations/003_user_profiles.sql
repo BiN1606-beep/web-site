@@ -1,8 +1,6 @@
-BEGIN;
-
 ALTER TABLE public.auth_users
-    ADD COLUMN profile_picture text,
-    ADD COLUMN profile_gender text CHECK (
+    ADD COLUMN IF NOT EXISTS profile_picture text,
+    ADD COLUMN IF NOT EXISTS profile_gender text CHECK (
         profile_gender IS NULL OR profile_gender IN (
             'Male',
             'Female',
@@ -11,8 +9,6 @@ ALTER TABLE public.auth_users
             'Other'
         )
     ),
-    ADD COLUMN profile_bio text NOT NULL DEFAULT '',
-    ADD COLUMN profile_goals text NOT NULL DEFAULT '',
-    ADD COLUMN profile_onboarding_seen boolean NOT NULL DEFAULT false;
-
-COMMIT;
+    ADD COLUMN IF NOT EXISTS profile_bio text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS profile_goals text NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS profile_onboarding_seen boolean NOT NULL DEFAULT false;

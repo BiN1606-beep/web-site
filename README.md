@@ -23,17 +23,8 @@ Add migrations as `NNN_description.sql` files in `db/migrations/`, ordered by
 their three-digit prefix. Do not put `BEGIN` or `COMMIT` in migration files;
 the runner applies each file and its history record atomically.
 
-Apply the profile migration to add profile details and first-login onboarding:
-
-```sh
-psql -v ON_ERROR_STOP=1 -f db/migrations/003_user_profiles.sql
-```
-
-Add display names to saved profiles:
-
-```sh
-psql -v ON_ERROR_STOP=1 -f db/migrations/004_profile_display_name.sql
-```
+Profile details, first-login onboarding, and display-name schema migrations
+are applied automatically during deployment.
 
 New profiles can be edited from the Profile panel or Settings. The onboarding
 choice is saved to the user's account, and skipped profiles can be completed
