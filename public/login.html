@@ -68,6 +68,24 @@
         background: #eff1f5;
       }
 
+      .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-weight: 400;
+      }
+
+      .remember-me[hidden] {
+        display: none;
+      }
+
+      .remember-me input {
+        width: 1rem;
+        min-height: 1rem;
+        margin: 0;
+        accent-color: #8839ef;
+      }
+
       button,
       .google-link {
         color: #eff1f5;
@@ -157,6 +175,10 @@
         <label for="password">Password</label>
         <input id="password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="72" required>
         <p>Passwords must contain at least 12 characters and no more than 72 bytes.</p>
+        <label class="remember-me" id="remember-me-label" for="remember-me">
+          <input id="remember-me" name="rememberMe" type="checkbox">
+          Remember me for 6 months
+        </label>
         <button id="submit" type="submit">Sign in</button>
       </form>
       <button id="switch-mode" type="button">Create an account</button>
@@ -168,6 +190,8 @@
       const password = document.querySelector("#password");
       const heading = document.querySelector("#heading");
       const submit = document.querySelector("#submit");
+      const rememberMeLabel = document.querySelector("#remember-me-label");
+      const rememberMe = document.querySelector("#remember-me");
       const switchMode = document.querySelector("#switch-mode");
       const status = document.querySelector("#status");
       let isSignup = false;
@@ -178,6 +202,7 @@
         switchMode.textContent = isSignup ? "Already have an account? Sign in" : "Create an account";
         password.autocomplete = isSignup ? "new-password" : "current-password";
         password.minLength = isSignup ? 12 : 1;
+        rememberMeLabel.hidden = isSignup;
         status.textContent = "";
       };
 
@@ -194,7 +219,11 @@
           const response = await fetch(isSignup ? "/api/auth/signup" : "/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email.value, password: password.value }),
+            body: JSON.stringify({
+              email: email.value,
+              password: password.value,
+              ...(isSignup ? {} : { rememberMe: rememberMe.checked }),
+            }),
           });
           const result = await response.json().catch(() => ({}));
           if (!response.ok) {

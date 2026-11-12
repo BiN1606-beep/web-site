@@ -62,6 +62,10 @@
         box-sizing: border-box;
       }
 
+      [hidden] {
+        display: none !important;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
@@ -240,38 +244,16 @@
         position: fixed;
         z-index: 0;
         inset: 0;
-        --logo-glow-primary: rgba(255, 190, 65, 0.9);
-        --logo-glow-secondary: rgba(255, 120, 45, 0.72);
         pointer-events: none;
-      }
-
-      .main-logo-watermark::before {
-        position: absolute;
-        inset: 0;
-        z-index: 0;
-        background:
-          linear-gradient(90deg, transparent, var(--logo-glow-secondary), transparent) calc(50% - min(28vmin, 200px)) 50% / min(24vmin, 170px) 3px no-repeat,
-          linear-gradient(90deg, transparent, var(--logo-glow-primary), transparent) calc(50% + min(28vmin, 200px)) 50% / min(24vmin, 170px) 3px no-repeat,
-          radial-gradient(ellipse 24vmin 9vmin at calc(50% - min(19vmin, 135px)) 50%, var(--logo-glow-primary), transparent),
-          radial-gradient(ellipse 24vmin 9vmin at calc(50% + min(19vmin, 135px)) 50%, var(--logo-glow-secondary), transparent);
-        filter: blur(5px) saturate(1.8);
-        opacity: 0.85;
-        animation: logo-side-glow 4s linear infinite alternate;
-        content: "";
       }
 
       .main-logo-watermark::after {
         position: absolute;
         z-index: 1;
         inset: 0;
-        background: url("/background-logo.png") center / min(68vmin, 500px) no-repeat;
+        background: url("/background-logo.png") center / min(136vmin, 1000px) no-repeat;
+        opacity: 0.4;
         content: "";
-      }
-
-      html.is-dark body .main-logo-watermark {
-        opacity: 1;
-        --logo-glow-primary: rgba(100, 180, 255, 0.95);
-        --logo-glow-secondary: rgba(160, 100, 255, 0.84);
       }
 
       html.is-dark body .main-logo-watermark::after {
@@ -351,6 +333,19 @@
         color: var(--text);
         backdrop-filter: blur(10px);
         box-shadow: 0 20px 45px var(--shadow);
+      }
+
+      .profile-editor {
+        width: min(94vw, 760px);
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: clamp(1.25rem, 5vw, 2.75rem);
+      }
+
+      .profile-editor h1 {
+        padding-right: 1.5rem;
+        font-size: clamp(1.65rem, 5vw, 2.5rem);
+        overflow-wrap: anywhere;
       }
 
       .content-panel[open] {
@@ -437,6 +432,173 @@
         margin: 0 0 1rem;
         color: var(--accent);
         font-size: 1.25rem;
+      }
+
+      .profile-form {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+
+      .profile-form > label,
+      .profile-image-field > label:first-child {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .profile-form textarea,
+      .profile-form select {
+        width: 100%;
+        min-height: 3rem;
+        padding: 0.75rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.6rem;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .profile-form textarea {
+        min-height: 6rem;
+        resize: vertical;
+      }
+
+      .profile-form textarea:focus-visible,
+      .profile-form select:focus-visible,
+      .profile-form input:focus-visible,
+      .profile-form button:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .profile-image-field {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .profile-image-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .profile-avatar {
+        width: 5.5rem;
+        height: 5.5rem;
+        flex: 0 0 5.5rem;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 50%;
+        background: var(--accent-soft);
+      }
+
+      .profile-avatar img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .profile-avatar-placeholder {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+        color: var(--accent);
+        font-size: 2rem;
+      }
+
+      .profile-image-actions,
+      .profile-form-actions,
+      .goal-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.65rem;
+      }
+
+      .profile-file-button,
+      .profile-secondary-button,
+      .goal-suggestion {
+        display: inline-flex;
+        min-height: 2.6rem;
+        align-items: center;
+        justify-content: center;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.6rem;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .profile-file-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        clip-path: inset(50%);
+      }
+
+      .profile-file-input:focus-visible + .profile-file-button {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .profile-hint,
+      .profile-counter,
+      .profile-form #profile-status {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .profile-form-actions {
+        margin-top: 0.25rem;
+      }
+
+      #profile-skip {
+        margin-left: auto;
+      }
+
+      .profile-summary {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+
+      .profile-summary-heading {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        overflow-wrap: anywhere;
+      }
+
+      .profile-summary-heading h2 {
+        margin: 0 0 0.35rem;
+        color: var(--text);
+        font-size: 1.2rem;
+      }
+
+      .profile-summary-heading p,
+      .profile-summary-section p {
+        font-size: 1rem;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .profile-summary-section {
+        padding-top: 0.9rem;
+        border-top: 1px solid var(--panel-border);
+      }
+
+      .profile-summary-section h3 {
+        margin: 0 0 0.4rem;
+        color: var(--accent);
+        font-size: 1rem;
       }
 
       .theme-setting {
@@ -566,24 +728,6 @@
         }
       }
 
-      @keyframes logo-side-glow {
-        from {
-          background-position:
-            calc(50% - min(28vmin, 200px)) 50%,
-            calc(50% + min(28vmin, 200px)) 50%,
-            calc(50% - min(19vmin, 135px)) 50%,
-            calc(50% + min(19vmin, 135px)) 50%;
-        }
-
-        to {
-          background-position:
-            calc(50% - min(34vmin, 240px)) 50%,
-            calc(50% + min(34vmin, 240px)) 50%,
-            calc(50% - min(23vmin, 165px)) 50%,
-            calc(50% + min(23vmin, 165px)) 50%;
-        }
-      }
-
       @keyframes launcher-fade-in {
         from {
           opacity: 0;
@@ -699,6 +843,7 @@
           <h2 id="account-title">Account</h2>
           <p id="account-email" aria-live="polite">Loading account...</p>
           <p id="account-status" role="status"></p>
+          <button class="save-button" id="settings-edit-profile" type="button" disabled>Edit Profile</button>
           <button class="save-button" id="sign-out" type="button">Sign out</button>
         </section>
         <section class="settings-section" aria-labelledby="appearance-title">
@@ -717,6 +862,77 @@
           </div>
         </section>
       </dialog>
+      <dialog class="content-panel" id="profile-view-panel" aria-labelledby="profile-view-title">
+        <button class="close-button" type="button" aria-label="Close profile">&times;</button>
+        <h1 id="profile-view-title">Profile</h1>
+        <section class="profile-summary" aria-label="Your profile">
+          <div class="profile-summary-heading">
+            <div class="profile-avatar">
+              <img id="profile-view-picture" alt="Profile picture" hidden>
+              <div class="profile-avatar-placeholder" id="profile-view-placeholder" aria-hidden="true">P</div>
+            </div>
+            <div>
+              <h2 id="profile-view-email">Loading profile...</h2>
+              <p id="profile-view-gender">Gender not set</p>
+            </div>
+          </div>
+          <section class="profile-summary-section">
+            <h3>Bio</h3>
+            <p id="profile-view-bio">No bio yet.</p>
+          </section>
+          <section class="profile-summary-section">
+            <h3>Your goals</h3>
+            <p id="profile-view-goals">No goals set yet.</p>
+          </section>
+          <button class="save-button" id="profile-view-edit" type="button" disabled>Edit Profile</button>
+        </section>
+      </dialog>
+      <dialog class="content-panel profile-editor" id="profile-editor" aria-labelledby="profile-editor-title">
+        <button class="close-button" id="profile-editor-close" type="button" aria-label="Close profile editor">&times;</button>
+        <h1 id="profile-editor-title">Customize Your Profile</h1>
+        <p id="profile-editor-subtitle">Let's get to know you! Set up your profile so we can personalize your experience.</p>
+        <form class="profile-form" id="profile-form">
+          <div class="profile-image-field">
+            <label for="profile-picture">Profile Picture</label>
+            <div class="profile-image-controls">
+              <div class="profile-avatar">
+                <img id="profile-picture-preview" alt="Profile picture preview" hidden>
+                <div class="profile-avatar-placeholder" id="profile-picture-placeholder" aria-hidden="true">P</div>
+              </div>
+              <div class="profile-image-actions">
+                <input class="profile-file-input" id="profile-picture" type="file" accept="image/*">
+                <label class="profile-file-button" for="profile-picture">Upload picture</label>
+                <button class="profile-secondary-button" id="remove-profile-picture" type="button">Remove</button>
+              </div>
+            </div>
+            <span class="profile-hint">Images are resized before saving.</span>
+          </div>
+          <label for="profile-gender">Gender</label>
+          <select id="profile-gender" name="gender">
+            <option value="">Choose an option</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-binary">Non-binary</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+            <option value="Other">Other</option>
+          </select>
+          <label for="profile-bio">Bio</label>
+          <textarea id="profile-bio" name="bio" maxlength="250" placeholder="A little about you..." aria-describedby="profile-bio-count"></textarea>
+          <span class="profile-counter" id="profile-bio-count">0 / 250</span>
+          <label for="profile-goals">What are your goals?</label>
+          <textarea id="profile-goals" name="goals" maxlength="1000" placeholder="What would you like to achieve?"></textarea>
+          <div class="goal-suggestions" aria-label="Suggested goals">
+            <button class="goal-suggestion" type="button" data-goal="Build a consistent daily routine">Daily routine</button>
+            <button class="goal-suggestion" type="button" data-goal="Learn something new">Learn something new</button>
+            <button class="goal-suggestion" type="button" data-goal="Improve my fitness">Improve my fitness</button>
+          </div>
+          <p id="profile-status" role="status" aria-live="polite"></p>
+          <div class="profile-form-actions">
+            <button class="save-button" id="profile-save" type="submit">Save Profile</button>
+            <button class="profile-secondary-button" id="profile-skip" type="button">Skip for Now</button>
+          </div>
+        </form>
+      </dialog>
       <dialog class="content-panel" id="groq-panel" aria-labelledby="groq-title">
         <button class="close-button" type="button" aria-label="Close Groq AI demo">&times;</button>
         <h1 id="groq-title">Groq AI demo</h1>
@@ -734,6 +950,7 @@
       const startupScreen = document.querySelector("#startup-screen");
       const startupSkip = document.querySelector("#startup-skip");
       const launcherActions = document.querySelector("#launcher-actions");
+      const mainPage = document.querySelector("main");
       const launcherItems = [
         {
           dialogId: "content-panel",
@@ -748,6 +965,14 @@
           icon: [
             { tag: "path", attributes: { d: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" } },
             { tag: "path", attributes: { d: "m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V4a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2.9Z" } },
+          ],
+        },
+        {
+          dialogId: "profile-view-panel",
+          label: "Open profile",
+          icon: [
+            { tag: "circle", attributes: { cx: "12", cy: "8", r: "4" } },
+            { tag: "path", attributes: { d: "M5 21a7 7 0 0 1 14 0" } },
           ],
         },
         {
@@ -792,6 +1017,35 @@
       const accountEmail = document.querySelector("#account-email");
       const accountStatus = document.querySelector("#account-status");
       const signOutButton = document.querySelector("#sign-out");
+      const settingsEditProfileButton = document.querySelector("#settings-edit-profile");
+      const profileEditorDialog = document.querySelector("#profile-editor");
+      const profileEditorForm = document.querySelector("#profile-form");
+      const profileEditorTitle = document.querySelector("#profile-editor-title");
+      const profileEditorSubtitle = document.querySelector("#profile-editor-subtitle");
+      const profileEditorClose = document.querySelector("#profile-editor-close");
+      const profilePictureInput = document.querySelector("#profile-picture");
+      const profilePicturePreview = document.querySelector("#profile-picture-preview");
+      const profilePicturePlaceholder = document.querySelector("#profile-picture-placeholder");
+      const removeProfilePictureButton = document.querySelector("#remove-profile-picture");
+      const profileGenderInput = document.querySelector("#profile-gender");
+      const profileBioInput = document.querySelector("#profile-bio");
+      const profileBioCount = document.querySelector("#profile-bio-count");
+      const profileGoalsInput = document.querySelector("#profile-goals");
+      const profileSaveButton = document.querySelector("#profile-save");
+      const profileSkipButton = document.querySelector("#profile-skip");
+      const profileStatus = document.querySelector("#profile-status");
+      const profileViewPicture = document.querySelector("#profile-view-picture");
+      const profileViewPlaceholder = document.querySelector("#profile-view-placeholder");
+      const profileViewEmail = document.querySelector("#profile-view-email");
+      const profileViewGender = document.querySelector("#profile-view-gender");
+      const profileViewBio = document.querySelector("#profile-view-bio");
+      const profileViewGoals = document.querySelector("#profile-view-goals");
+      const profileViewEditButton = document.querySelector("#profile-view-edit");
+      let accountProfile = null;
+      let profilePictureValue = "";
+      let isOnboarding = false;
+      let activePanel = null;
+      let queuedPanel = null;
       const backgroundToggle = document.querySelector(".background-toggle");
       const backgroundToggleLabel = document.querySelector("#background-toggle-label");
       const sharedTextForm = document.querySelector("#shared-text-form");
@@ -842,19 +1096,67 @@
 
       loadSharedText();
 
+      const showPicture = (image, placeholder, picture) => {
+        image.hidden = !picture;
+        placeholder.hidden = Boolean(picture);
+        if (picture) image.src = picture;
+        else image.removeAttribute("src");
+      };
+
+      const updateProfileDisplay = (profile) => {
+        accountEmail.textContent = profile.email;
+        settingsEditProfileButton.disabled = false;
+        profileViewEditButton.disabled = false;
+        profileViewEmail.textContent = profile.email;
+        profileViewGender.textContent = profile.gender || "Gender not set";
+        profileViewBio.textContent = profile.bio || "No bio yet.";
+        profileViewGoals.textContent = profile.goals || "No goals set yet.";
+        showPicture(profileViewPicture, profileViewPlaceholder, profile.profile_picture);
+      };
+
+      const updateBioCount = () => {
+        profileBioCount.textContent = `${Array.from(profileBioInput.value).length} / 250`;
+      };
+
+      const prepareProfileEditor = (onboarding) => {
+        isOnboarding = onboarding;
+        profileEditorTitle.textContent = onboarding ? "Customize Your Profile" : "Edit Your Profile";
+        profileEditorSubtitle.textContent = onboarding
+          ? "Let's get to know you! Set up your profile so we can personalize your experience."
+          : "Update your profile details whenever you like.";
+        profileEditorClose.hidden = onboarding;
+        profileSkipButton.hidden = !onboarding;
+        profileGenderInput.value = accountProfile.gender || "";
+        profileBioInput.value = accountProfile.bio || "";
+        profileGoalsInput.value = accountProfile.goals || "";
+        profilePictureValue = accountProfile.profile_picture || "";
+        showPicture(profilePicturePreview, profilePicturePlaceholder, profilePictureValue);
+        profilePictureInput.value = "";
+        profileStatus.textContent = "";
+        updateBioCount();
+      };
+
       const loadAccount = async () => {
+        mainPage.inert = true;
         try {
-          const response = await fetch("/api/auth/me", { cache: "no-store" });
+          const response = await fetch("/api/auth/profile", { cache: "no-store" });
           const result = await response.json();
-          if (!response.ok) throw new Error(result.error || "Could not load account.");
-          accountEmail.textContent = result.user.email;
+          if (!response.ok) throw new Error(result.error || "Could not load your profile.");
+          accountProfile = result.profile;
+          updateProfileDisplay(accountProfile);
+          mainPage.inert = false;
+          if (!accountProfile.onboarding_seen) {
+            document.documentElement.classList.remove("show-startup");
+            startupScreen.remove();
+            prepareProfileEditor(true);
+            openPanel(profileEditorDialog, null);
+          }
         } catch (error) {
+          mainPage.inert = false;
           accountEmail.textContent = "Account unavailable.";
           accountStatus.textContent = error.message;
         }
       };
-
-      loadAccount();
 
       signOutButton.addEventListener("click", async () => {
         signOutButton.disabled = true;
@@ -890,9 +1192,6 @@
         window.setTimeout(finishStartup, 2500);
       }
 
-      let activePanel = null;
-      let queuedPanel = null;
-
       const closePanel = (dialog) => {
         if (dialog.classList.contains("is-closing")) return;
         dialog.classList.add("is-closing");
@@ -909,15 +1208,18 @@
 
         dialog.showModal();
         activePanel = dialog;
-        if (trigger.getAttribute("aria-controls") === dialog.id) {
+        if (trigger?.getAttribute("aria-controls") === dialog.id) {
           trigger.setAttribute("aria-expanded", "true");
         }
       };
 
-      const dialogs = launcherItems.map(({ dialogId }) => [
-        document.getElementById(dialogId),
-        launcherByDialog.get(dialogId),
-      ]);
+      const dialogs = [
+        ...launcherItems.map(({ dialogId }) => [
+          document.getElementById(dialogId),
+          launcherByDialog.get(dialogId),
+        ]),
+        [profileEditorDialog, null],
+      ];
 
       for (const [dialog, dialogTrigger] of dialogs) {
         const dialogCloseButton = dialog.querySelector(".close-button");
@@ -925,6 +1227,7 @@
         dialogCloseButton.addEventListener("click", () => closePanel(dialog));
         dialog.addEventListener("cancel", (event) => {
           event.preventDefault();
+          if (dialog === profileEditorDialog && isOnboarding) return;
           closePanel(dialog);
         });
         dialog.addEventListener("animationend", (event) => {
@@ -935,7 +1238,7 @@
         dialog.addEventListener("close", () => {
           dialog.classList.remove("is-closing");
           dialogCloseButton.disabled = false;
-          if (dialogTrigger.getAttribute("aria-controls") === dialog.id) {
+          if (dialogTrigger?.getAttribute("aria-controls") === dialog.id) {
             dialogTrigger.setAttribute("aria-expanded", "false");
           }
           if (activePanel === dialog) activePanel = null;
@@ -947,13 +1250,135 @@
             return;
           }
 
-          dialogTrigger.focus();
+          dialogTrigger?.focus();
         });
       }
 
       for (const [dialog, trigger] of dialogs) {
-        trigger.addEventListener("click", () => openPanel(dialog, trigger));
+        trigger?.addEventListener("click", () => openPanel(dialog, trigger));
       }
+
+      const loadImage = (file) => new Promise((resolve, reject) => {
+        const image = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        image.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(image);
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error("That image could not be opened."));
+        };
+        image.src = objectUrl;
+      });
+
+      profilePictureInput.addEventListener("change", async () => {
+        const [file] = profilePictureInput.files;
+        if (!file) return;
+        if (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) {
+          profileStatus.textContent = "Choose an image smaller than 10 MB.";
+          profilePictureInput.value = "";
+          return;
+        }
+        profileSaveButton.disabled = true;
+        profileStatus.textContent = "Preparing your picture...";
+        try {
+          const image = await loadImage(file);
+          const scale = Math.min(1, 320 / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Your browser could not prepare that image.");
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          const picture = canvas.toDataURL("image/jpeg", 0.78);
+          if (picture.length > 160000) throw new Error("Choose a simpler or smaller image.");
+          profilePictureValue = picture;
+          showPicture(profilePicturePreview, profilePicturePlaceholder, picture);
+          profileStatus.textContent = "Picture ready to save.";
+        } catch (error) {
+          profileStatus.textContent = error.message;
+        } finally {
+          profileSaveButton.disabled = false;
+        }
+      });
+
+      removeProfilePictureButton.addEventListener("click", () => {
+        profilePictureValue = "";
+        profilePictureInput.value = "";
+        showPicture(profilePicturePreview, profilePicturePlaceholder, "");
+        profileStatus.textContent = "Picture removed. Save your profile to apply the change.";
+      });
+
+      profileBioInput.addEventListener("input", updateBioCount);
+
+      document.querySelectorAll(".goal-suggestion").forEach((button) => {
+        button.addEventListener("click", () => {
+          const goal = button.dataset.goal;
+          const nextValue = profileGoalsInput.value
+            ? `${profileGoalsInput.value.trimEnd()}\n${goal}`
+            : goal;
+          if (Array.from(nextValue).length > profileGoalsInput.maxLength) {
+            profileStatus.textContent = "There is not enough room for that suggested goal.";
+            return;
+          }
+          profileGoalsInput.value = nextValue;
+          profileStatus.textContent = "";
+        });
+      });
+
+      profileEditorForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        profileSaveButton.disabled = true;
+        profileStatus.textContent = "Saving your profile...";
+        try {
+          const response = await fetch("/api/auth/profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              profilePicture: profilePictureValue,
+              gender: profileGenderInput.value,
+              bio: profileBioInput.value,
+              goals: profileGoalsInput.value,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not save your profile.");
+          accountProfile = result.profile;
+          updateProfileDisplay(accountProfile);
+          closePanel(profileEditorDialog);
+        } catch (error) {
+          profileStatus.textContent = error.message;
+        } finally {
+          profileSaveButton.disabled = false;
+        }
+      });
+
+      profileSkipButton.addEventListener("click", async () => {
+        profileSkipButton.disabled = true;
+        profileStatus.textContent = "Saving your choice...";
+        try {
+          const response = await fetch("/api/auth/profile/skip", { method: "POST" });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not skip profile setup.");
+          accountProfile.onboarding_seen = true;
+          closePanel(profileEditorDialog);
+        } catch (error) {
+          profileStatus.textContent = error.message;
+        } finally {
+          profileSkipButton.disabled = false;
+        }
+      });
+
+      const openProfileEditor = (trigger) => {
+        prepareProfileEditor(false);
+        openPanel(profileEditorDialog, trigger);
+      };
+
+      settingsEditProfileButton.addEventListener("click", () => openProfileEditor(settingsEditProfileButton));
+      profileViewEditButton.addEventListener("click", () => openProfileEditor(profileViewEditButton));
+
+      loadAccount();
 
       groqForm.addEventListener("submit", async (event) => {
         event.preventDefault();

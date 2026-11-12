@@ -18,6 +18,17 @@ OpenResty:
 psql -v ON_ERROR_STOP=1 -f db/migrations/002_auth.sql
 ```
 
+Apply the profile migration to add profile details and first-login onboarding:
+
+```sh
+psql -v ON_ERROR_STOP=1 -f db/migrations/003_user_profiles.sql
+```
+
+New profiles can be edited from the Profile panel or Settings. The onboarding
+choice is saved to the user's account, and skipped profiles can be completed
+later. Profile pictures are resized to a small JPEG in the browser and stored
+with the profile in PostgreSQL.
+
 Google OAuth requires the site to be served over HTTPS. The current HTTP IP
 address (`http://34.71.166.63`) cannot be used as a Google OAuth redirect URI.
 Set up a domain and TLS first, then create a **Web application** OAuth client
