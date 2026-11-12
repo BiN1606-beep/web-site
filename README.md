@@ -11,12 +11,17 @@ passwords are stored as PostgreSQL `pgcrypto` bcrypt hashes. Session tokens
 are random, stored hashed in PostgreSQL, and sent only in HttpOnly, SameSite
 cookies.
 
-Apply the authentication migration using the PostgreSQL role configured for
-OpenResty:
+Database migrations run automatically during deployment. The deploy process
+uses the PostgreSQL settings available in its environment (`PGHOST`,
+`PGDATABASE`, `PGUSER`, and `PGPASSWORD`) and requires `psql` on the server.
+Each migration is applied in a transaction and recorded in
+`public.schema_migrations`; a changed migration that was already applied stops
+the deployment. Give the deploy role the PostgreSQL permissions needed to
+create the migration-history table and apply schema changes.
 
-```sh
-psql -v ON_ERROR_STOP=1 -f db/migrations/002_auth.sql
-```
+Add migrations as `NNN_description.sql` files in `db/migrations/`, ordered by
+their three-digit prefix. Do not put `BEGIN` or `COMMIT` in migration files;
+the runner applies each file and its history record atomically.
 
 Google OAuth requires the site to be served over HTTPS. The current HTTP IP
 address (`http://34.71.166.63`) cannot be used as a Google OAuth redirect URI.
@@ -52,13 +57,8 @@ does not establish that an account's usage is free.
 The API key stays server-side in `GROQ_API_KEY`. The endpoint accepts prompts
 up to 2000 bytes and is rate-limited per client IP. Its daily request cap is
 shared across visitors and OpenResty instances using the same PostgreSQL
-database, and resets at UTC midnight. Apply
-[`db/migrations/001_groq_daily_usage.sql`](db/migrations/001_groq_daily_usage.sql)
-once using the PostgreSQL role configured for OpenResty:
-
-```sh
-psql -v ON_ERROR_STOP=1 -f db/migrations/001_groq_daily_usage.sql
-```
+database, and resets at UTC midnight. Its database table is created
+automatically by the migration runner during deployment.
 
 Set the limit no higher than the account's verified free quota. If the quota
 cannot be confirmed, leave `GROQ_FREE_QUOTA_CONFIRMED` unset; the endpoint

@@ -19,6 +19,10 @@ git fetch origin "$BRANCH"
 echo "Updating repository..."
 git merge --ff-only "origin/$BRANCH"
 
+# Apply pending database migrations before switching the running configuration.
+echo "Running database migrations..."
+"$REPO/db/migrate.sh"
+
 # Test OpenResty configuration
 echo "Testing OpenResty configuration..."
 sudo "$OPENRESTY" -p "$REPO/" -c nginx.conf -t
