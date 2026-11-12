@@ -1114,6 +1114,24 @@
 
       loadSharedText();
 
+      const readApiResponse = async (response, endpoint) => {
+        const contentType = response.headers.get("Content-Type") || "";
+        if (!contentType.toLowerCase().includes("application/json")) {
+          if (response.status === 404) {
+            throw new Error(`${endpoint} API was not found. The server may need the latest deployment.`);
+          }
+          if (response.status >= 500) {
+            throw new Error(`${endpoint} returned a server error (HTTP ${response.status}) instead of JSON.`);
+          }
+          throw new Error(`${endpoint} returned a web page instead of JSON (HTTP ${response.status}).`);
+        }
+        try {
+          return await response.json();
+        } catch {
+          throw new Error(`${endpoint} returned invalid JSON.`);
+        }
+      };
+
       const showPicture = (image, placeholder, picture) => {
         image.hidden = !picture;
         placeholder.hidden = Boolean(picture);
@@ -1163,7 +1181,7 @@
         profileLoadRequest = (async () => {
           try {
             const response = await fetch("/api/auth/profile", { cache: "no-store" });
-            const result = await response.json();
+            const result = await readApiResponse(response, "Profile");
             if (!response.ok) throw new Error(result.error || "Could not load your profile.");
             accountProfile = result.profile;
             profileLoaded = true;
@@ -1179,7 +1197,7 @@
             profileLoaded = false;
             try {
               const response = await fetch("/api/auth/me", { cache: "no-store" });
-              const result = await response.json();
+              const result = await readApiResponse(response, "Account");
               if (!response.ok) throw new Error(result.error || "Could not load your account.");
               accountProfile = {
                 email: result.user.email,
@@ -1398,7 +1416,7 @@
               goals: profileGoalsInput.value,
             }),
           });
-          const result = await response.json();
+          const result = await readApiResponse(response, "Profile");
           if (!response.ok) throw new Error(result.error || "Could not save your profile.");
           accountProfile = result.profile;
           updateProfileDisplay(accountProfile);
@@ -1415,7 +1433,7 @@
         profileStatus.textContent = "Saving your choice...";
         try {
           const response = await fetch("/api/auth/profile/skip", { method: "POST" });
-          const result = await response.json();
+          const result = await readApiResponse(response, "Profile");
           if (!response.ok) throw new Error(result.error || "Could not skip profile setup.");
           accountProfile.onboarding_seen = true;
           closePanel(profileEditorDialog);
