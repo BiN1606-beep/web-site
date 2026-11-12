@@ -596,6 +596,12 @@
         border-top: 1px solid var(--panel-border);
       }
 
+      #profile-view-status {
+        color: var(--muted);
+        font-size: 0.95rem;
+        overflow-wrap: anywhere;
+      }
+
       .profile-summary-section h3 {
         margin: 0 0 0.4rem;
         color: var(--accent);
@@ -866,6 +872,7 @@
       <dialog class="content-panel" id="profile-view-panel" aria-labelledby="profile-view-title">
         <button class="close-button" type="button" aria-label="Close profile">&times;</button>
         <h1 id="profile-view-title">Profile</h1>
+        <p id="profile-view-status" role="status" aria-live="polite">Loading your profile...</p>
         <section class="profile-summary" aria-label="Your profile">
           <div class="profile-summary-heading">
             <div class="profile-avatar">
@@ -887,6 +894,7 @@
             <p id="profile-view-goals">No goals set yet.</p>
           </section>
           <button class="save-button" id="profile-view-edit" type="button" disabled>Edit Profile</button>
+          <button class="profile-secondary-button" id="profile-view-retry" type="button" hidden>Retry loading profile</button>
         </section>
       </dialog>
       <dialog class="content-panel profile-editor" id="profile-editor" aria-labelledby="profile-editor-title">
@@ -1043,11 +1051,15 @@
       const profileViewPlaceholder = document.querySelector("#profile-view-placeholder");
       const profileViewDisplayName = document.querySelector("#profile-view-display-name");
       const profileViewEmail = document.querySelector("#profile-view-email");
+      const profileViewStatus = document.querySelector("#profile-view-status");
+      const profileViewRetryButton = document.querySelector("#profile-view-retry");
       const profileViewGender = document.querySelector("#profile-view-gender");
       const profileViewBio = document.querySelector("#profile-view-bio");
       const profileViewGoals = document.querySelector("#profile-view-goals");
       const profileViewEditButton = document.querySelector("#profile-view-edit");
       let accountProfile = null;
+      let profileLoaded = false;
+      let profileLoadRequest = null;
       let profilePictureValue = "";
       let isOnboarding = false;
       let activePanel = null;
@@ -1111,8 +1123,8 @@
 
       const updateProfileDisplay = (profile) => {
         accountEmail.textContent = profile.email;
-        settingsEditProfileButton.disabled = false;
-        profileViewEditButton.disabled = false;
+        settingsEditProfileButton.disabled = !profileLoaded;
+        profileViewEditButton.disabled = !profileLoaded;
         profileViewDisplayName.textContent = profile.display_name || profile.email;
         profileViewEmail.textContent = profile.email;
         profileViewGender.textContent = profile.gender || "Gender not set";
@@ -1144,26 +1156,58 @@
         updateBioCount();
       };
 
-      const loadAccount = async () => {
-        mainPage.inert = true;
-        try {
-          const response = await fetch("/api/auth/profile", { cache: "no-store" });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || "Could not load your profile.");
-          accountProfile = result.profile;
-          updateProfileDisplay(accountProfile);
-          mainPage.inert = false;
-          if (!accountProfile.onboarding_seen) {
-            document.documentElement.classList.remove("show-startup");
-            startupScreen.remove();
-            prepareProfileEditor(true);
-            openPanel(profileEditorDialog, null);
+      const loadAccount = () => {
+        if (profileLoadRequest) return profileLoadRequest;
+        profileViewStatus.textContent = "Loading your profile...";
+        profileViewRetryButton.hidden = true;
+        profileLoadRequest = (async () => {
+          try {
+            const response = await fetch("/api/auth/profile", { cache: "no-store" });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "Could not load your profile.");
+            accountProfile = result.profile;
+            profileLoaded = true;
+            updateProfileDisplay(accountProfile);
+            profileViewStatus.textContent = "";
+            if (!accountProfile.onboarding_seen) {
+              document.documentElement.classList.remove("show-startup");
+              startupScreen.remove();
+              prepareProfileEditor(true);
+              openPanel(profileEditorDialog, null);
+            }
+          } catch (error) {
+            profileLoaded = false;
+            try {
+              const response = await fetch("/api/auth/me", { cache: "no-store" });
+              const result = await response.json();
+              if (!response.ok) throw new Error(result.error || "Could not load your account.");
+              accountProfile = {
+                email: result.user.email,
+                display_name: result.user.email,
+                gender: "",
+                bio: "",
+                goals: "",
+                profile_picture: null,
+                onboarding_seen: true,
+              };
+              updateProfileDisplay(accountProfile);
+              profileViewStatus.textContent = `Profile details couldn't be loaded: ${error.message}`;
+              profileViewRetryButton.hidden = false;
+              accountStatus.textContent = error.message;
+            } catch (accountError) {
+              profileViewDisplayName.textContent = "Profile unavailable";
+              profileViewEmail.textContent = "";
+              profileViewStatus.textContent = `${error.message} ${accountError.message}`;
+              profileViewRetryButton.hidden = false;
+              accountEmail.textContent = "Account unavailable.";
+              accountStatus.textContent = accountError.message;
+            }
+          } finally {
+            mainPage.inert = false;
+            profileLoadRequest = null;
           }
-        } catch (error) {
-          mainPage.inert = false;
-          accountEmail.textContent = "Account unavailable.";
-          accountStatus.textContent = error.message;
-        }
+        })();
+        return profileLoadRequest;
       };
 
       signOutButton.addEventListener("click", async () => {
@@ -1263,7 +1307,10 @@
       }
 
       for (const [dialog, trigger] of dialogs) {
-        trigger?.addEventListener("click", () => openPanel(dialog, trigger));
+        trigger?.addEventListener("click", () => {
+          openPanel(dialog, trigger);
+          if (dialog.id === "profile-view-panel" && !profileLoaded) loadAccount();
+        });
       }
 
       const loadImage = (file) => new Promise((resolve, reject) => {
@@ -1386,7 +1433,9 @@
 
       settingsEditProfileButton.addEventListener("click", () => openProfileEditor(settingsEditProfileButton));
       profileViewEditButton.addEventListener("click", () => openProfileEditor(profileViewEditButton));
+      profileViewRetryButton.addEventListener("click", loadAccount);
 
+      mainPage.inert = true;
       loadAccount();
 
       groqForm.addEventListener("submit", async (event) => {
