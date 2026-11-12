@@ -43,8 +43,8 @@ Add migrations as `NNN_description.sql` files in `db/migrations/`, ordered by
 their three-digit prefix. Do not put `BEGIN` or `COMMIT` in migration files;
 the runner applies each file and its history record atomically.
 
-Profile details, first-login onboarding, display names, and progress-tree
-schema migrations are applied automatically during deployment.
+Profile details, first-login onboarding, display names, progress trees, and
+Community schema migrations are applied automatically during deployment.
 
 New profiles can be edited from the Profile panel or Settings. The onboarding
 choice is saved to the user's account, and skipped profiles can be completed
@@ -57,6 +57,12 @@ conversation history, and AI coaching memory in PostgreSQL. Creating or
 adjusting a path uses the existing Groq integration and its shared daily usage
 limit; it remains unavailable unless the configured quota is confirmed to be
 free.
+
+Community supports discovery, friend requests, following, activity reactions,
+notifications, blocks, and reports. Profiles and progress trees are private by
+default; users can opt in to sharing them from Community > Privacy. The server
+filters profile and journey data according to those settings. Accounts receive
+a searchable username in the form `user<ID>`.
 
 Google OAuth requires the site to be served over HTTPS. The current HTTP IP
 address (`http://34.71.166.63`) cannot be used as a Google OAuth redirect URI.
