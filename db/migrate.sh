@@ -52,21 +52,21 @@ for migration in "${migrations[@]}"; do
             printf "SELECT pg_advisory_xact_lock(hashtext('web-site'), hashtext('schema_migrations'));\n"
             printf "SELECT EXISTS (SELECT 1 FROM public.schema_migrations WHERE migration_name = '%s') AS already_applied,\n" "$name"
             printf "       COALESCE((SELECT checksum = '%s' FROM public.schema_migrations WHERE migration_name = '%s'), false) AS checksum_matches\n" "$checksum" "$name"
-            printf "\\gset\n"
-            printf "\\if :already_applied\n"
-            printf "  \\if :checksum_matches\n"
-            printf "    \\echo Migration already applied: %s\n" "$name"
-            printf "  \\else\n"
-            printf "    \\echo ERROR: checksum changed for applied migration %s\n" "$name"
-            printf "  \\endif\n"
-            printf "\\else\n"
-            printf "  \\echo Applying migration: %s\n" "$name"
-            printf "  \\i '%s'\n" "$name"
+            printf '%s\n' '\gset'
+            printf '%s\n' '\if :already_applied'
+            printf '%s\n' '  \if :checksum_matches'
+            printf '%s\n' "    \echo Migration already applied: $name"
+            printf '%s\n' '  \else'
+            printf '%s\n' "    \echo ERROR: checksum changed for applied migration $name"
+            printf '%s\n' '  \endif'
+            printf '%s\n' '\else'
+            printf '%s\n' "  \echo Applying migration: $name"
+            printf '%s\n' "  \i '$name'"
             printf "  INSERT INTO public.schema_migrations (migration_name, checksum) VALUES ('%s', '%s');\n" "$name" "$checksum"
-            printf "  \\echo Applied migration: %s\n" "$name"
-            printf "\\endif\n"
+            printf '%s\n' "  \echo Applied migration: $name"
+            printf '%s\n' '\endif'
             printf "SELECT CASE WHEN :'already_applied'::boolean AND NOT :'checksum_matches'::boolean THEN 'SELECT 1 / 0' ELSE 'SELECT 1' END\n"
-            printf "\\gexec\n"
+            printf '%s\n' '\gexec'
             printf "COMMIT;\n"
         } | psql --no-psqlrc --no-password --set=ON_ERROR_STOP=1 --dbname="$PGDATABASE"
     )
