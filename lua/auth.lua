@@ -769,6 +769,9 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
     if ai_response.status ~= ngx.HTTP_OK then
         local upstream_error = cjson.decode(ai_response.body or "")
         local message = type(upstream_error) == "table" and upstream_error.error
+        if type(message) == "table" then
+            message = message.message
+        end
         return respond(ai_response.status, {
             error = type(message) == "string" and message or "The AI coach could not respond right now.",
         })
