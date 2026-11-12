@@ -8,6 +8,13 @@ OPENRESTY="/usr/local/openresty/bin/openresty"
 
 echo "Starting deployment..."
 
+# Load database credentials for migrations when they are stored server-side.
+if [[ -f /etc/mysite/deploy.env ]]; then
+    set -a
+    . /etc/mysite/deploy.env
+    set +a
+fi
+
 # Enter repository
 cd "$REPO"
 

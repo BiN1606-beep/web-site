@@ -19,6 +19,26 @@ Each migration is applied in a transaction and recorded in
 the deployment. Give the deploy role the PostgreSQL permissions needed to
 create the migration-history table and apply schema changes.
 
+If the SSH deployment does not inherit the database settings, `deploy.sh` loads
+them from `/etc/mysite/deploy.env` on the server. Create this file as the root
+user, make it readable only by the deployment user (for example, mode `640`
+with that user's primary group), and add shell assignments for `PGHOST`,
+`PGDATABASE`, `PGUSER`, and `PGPASSWORD`. Do not commit this file or share its
+contents. When connected as the same account used by `DEPLOY_USER`, create and
+secure the file with:
+
+```sh
+sudo install -d -o root -g "$(id -gn)" -m 750 /etc/mysite
+sudoedit /etc/mysite/deploy.env
+sudo chown root:"$(id -gn)" /etc/mysite/deploy.env
+sudo chmod 640 /etc/mysite/deploy.env
+```
+
+In the editor, add shell assignments for the four variables, using the
+database connection values already used by the site. The deployment workflow
+loads this file before starting `deploy.sh`. After creating the file, rerun
+the failed Deploy workflow.
+
 Add migrations as `NNN_description.sql` files in `db/migrations/`, ordered by
 their three-digit prefix. Do not put `BEGIN` or `COMMIT` in migration files;
 the runner applies each file and its history record atomically.

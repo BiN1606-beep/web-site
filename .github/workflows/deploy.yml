@@ -25,4 +25,4 @@ jobs:
           ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
             -o IdentitiesOnly=yes \
             -i ~/.ssh/deploy_key "$USER@$HOST" \
-            'bash /opt/mysite/deploy.sh'
+            'set -a; if [ -f /etc/mysite/deploy.env ]; then . /etc/mysite/deploy.env; fi; set +a; bash /opt/mysite/deploy.sh'
