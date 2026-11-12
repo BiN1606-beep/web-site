@@ -342,6 +342,7 @@ local function profile_response(user)
     return {
         email = user.email,
         profile_picture = user.profile_picture or cjson.null,
+        display_name = user.profile_display_name or "",
         gender = user.profile_gender or cjson.null,
         bio = user.profile_bio or "",
         goals = user.profile_goals or "",
@@ -361,7 +362,7 @@ local function handle_profile()
     local method = ngx.req.get_method()
     if method == "GET" then
         local rows = database_query([[
-            SELECT email, profile_picture, profile_gender, profile_bio, profile_goals, profile_onboarding_seen
+            SELECT email, profile_picture, profile_display_name, profile_gender, profile_bio, profile_goals, profile_onboarding_seen
             FROM public.auth_users
             WHERE id = $1
         ]], user.id)
@@ -376,6 +377,7 @@ local function handle_profile()
     end
 
     local body = read_json_body(200000)
+    local display_name_count = body and type(body.displayName) == "string" and utf8_character_count(body.displayName)
     local bio_count = body and type(body.bio) == "string" and utf8_character_count(body.bio)
     local goals_count = body and type(body.goals) == "string" and utf8_character_count(body.goals)
     local valid_gender = body and type(body.gender) == "string"
@@ -385,7 +387,8 @@ local function handle_profile()
         or (type(picture) == "string"
             and #picture <= 160000
             and picture:match("^data:image/jpeg;base64,[A-Za-z0-9+/]+=*$") ~= nil)
-    if not body or not valid_gender
+    if not body or not display_name_count or display_name_count > 50
+        or not valid_gender
         or not bio_count or bio_count > 250
         or not goals_count or goals_count > 1000
         or not valid_picture then
@@ -397,13 +400,14 @@ local function handle_profile()
     local rows = database_query([[
         UPDATE public.auth_users
         SET profile_picture = NULLIF($2, ''),
-            profile_gender = NULLIF($3, ''),
-            profile_bio = $4,
-            profile_goals = $5,
+            profile_display_name = $3,
+            profile_gender = NULLIF($4, ''),
+            profile_bio = $5,
+            profile_goals = $6,
             profile_onboarding_seen = true
         WHERE id = $1
-        RETURNING email, profile_picture, profile_gender, profile_bio, profile_goals, profile_onboarding_seen
-    ]], user.id, picture, body.gender, body.bio, body.goals)
+        RETURNING email, profile_picture, profile_display_name, profile_gender, profile_bio, profile_goals, profile_onboarding_seen
+    ]], user.id, picture, body.displayName, body.gender, body.bio, body.goals)
     if not rows or not rows[1] then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save your profile." })
     end

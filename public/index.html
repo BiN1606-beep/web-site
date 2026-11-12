@@ -446,6 +446,7 @@
         font-weight: 700;
       }
 
+      .profile-form input[type="text"],
       .profile-form textarea,
       .profile-form select {
         width: 100%;
@@ -872,7 +873,8 @@
               <div class="profile-avatar-placeholder" id="profile-view-placeholder" aria-hidden="true">P</div>
             </div>
             <div>
-              <h2 id="profile-view-email">Loading profile...</h2>
+              <h2 id="profile-view-display-name">Loading profile...</h2>
+              <p id="profile-view-email"></p>
               <p id="profile-view-gender">Gender not set</p>
             </div>
           </div>
@@ -907,6 +909,8 @@
             </div>
             <span class="profile-hint">Images are resized before saving.</span>
           </div>
+          <label for="profile-display-name">Display name</label>
+          <input id="profile-display-name" name="displayName" type="text" maxlength="50" autocomplete="nickname" placeholder="How should we call you?">
           <label for="profile-gender">Gender</label>
           <select id="profile-gender" name="gender">
             <option value="">Choose an option</option>
@@ -1027,6 +1031,7 @@
       const profilePicturePreview = document.querySelector("#profile-picture-preview");
       const profilePicturePlaceholder = document.querySelector("#profile-picture-placeholder");
       const removeProfilePictureButton = document.querySelector("#remove-profile-picture");
+      const profileDisplayNameInput = document.querySelector("#profile-display-name");
       const profileGenderInput = document.querySelector("#profile-gender");
       const profileBioInput = document.querySelector("#profile-bio");
       const profileBioCount = document.querySelector("#profile-bio-count");
@@ -1036,6 +1041,7 @@
       const profileStatus = document.querySelector("#profile-status");
       const profileViewPicture = document.querySelector("#profile-view-picture");
       const profileViewPlaceholder = document.querySelector("#profile-view-placeholder");
+      const profileViewDisplayName = document.querySelector("#profile-view-display-name");
       const profileViewEmail = document.querySelector("#profile-view-email");
       const profileViewGender = document.querySelector("#profile-view-gender");
       const profileViewBio = document.querySelector("#profile-view-bio");
@@ -1107,6 +1113,7 @@
         accountEmail.textContent = profile.email;
         settingsEditProfileButton.disabled = false;
         profileViewEditButton.disabled = false;
+        profileViewDisplayName.textContent = profile.display_name || profile.email;
         profileViewEmail.textContent = profile.email;
         profileViewGender.textContent = profile.gender || "Gender not set";
         profileViewBio.textContent = profile.bio || "No bio yet.";
@@ -1126,6 +1133,7 @@
           : "Update your profile details whenever you like.";
         profileEditorClose.hidden = onboarding;
         profileSkipButton.hidden = !onboarding;
+        profileDisplayNameInput.value = accountProfile.display_name || "";
         profileGenderInput.value = accountProfile.gender || "";
         profileBioInput.value = accountProfile.bio || "";
         profileGoalsInput.value = accountProfile.goals || "";
@@ -1337,6 +1345,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               profilePicture: profilePictureValue,
+              displayName: profileDisplayNameInput.value,
               gender: profileGenderInput.value,
               bio: profileBioInput.value,
               goals: profileGoalsInput.value,

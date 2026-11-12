@@ -24,10 +24,17 @@ Apply the profile migration to add profile details and first-login onboarding:
 psql -v ON_ERROR_STOP=1 -f db/migrations/003_user_profiles.sql
 ```
 
+Add display names to saved profiles:
+
+```sh
+psql -v ON_ERROR_STOP=1 -f db/migrations/004_profile_display_name.sql
+```
+
 New profiles can be edited from the Profile panel or Settings. The onboarding
 choice is saved to the user's account, and skipped profiles can be completed
-later. Profile pictures are resized to a small JPEG in the browser and stored
-with the profile in PostgreSQL.
+later. Display names, profile pictures, gender, bio, and goals are stored with
+the profile in PostgreSQL. Profile pictures are resized to a small JPEG in the
+browser before saving.
 
 Google OAuth requires the site to be served over HTTPS. The current HTTP IP
 address (`http://34.71.166.63`) cannot be used as a Google OAuth redirect URI.
