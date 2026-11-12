@@ -15,6 +15,11 @@ if [[ -f /etc/mysite/deploy.env ]]; then
     set +a
 fi
 
+: "${PGHOST:?PGHOST must be set for deployment}"
+: "${PGDATABASE:?PGDATABASE must be set for deployment}"
+: "${PGUSER:?PGUSER must be set for deployment}"
+: "${PGPASSWORD:?PGPASSWORD must be set for deployment}"
+
 # Enter repository
 cd "$REPO"
 
