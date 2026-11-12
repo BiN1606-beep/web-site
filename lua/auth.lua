@@ -4,6 +4,7 @@ local M = {}
 local SESSION_COOKIE = "osiris_session"
 local STATE_COOKIE = "osiris_google_state"
 local SESSION_MAX_AGE = 2592000
+local REMEMBERED_SESSION_MAX_AGE = 15552000
 
 local function respond(status, body)
     ngx.status = status
@@ -141,7 +142,7 @@ function M.require_api_session()
     return true
 end
 
-local function read_json_body()
+local function read_json_body(max_bytes)
     local content_type = ngx.var.http_content_type
     local media_type = content_type and content_type:match("^%s*([^;]+)")
     media_type = media_type and media_type:match("^%s*(.-)%s*$")
@@ -151,7 +152,7 @@ local function read_json_body()
 
     ngx.req.read_body()
     local raw_body = ngx.req.get_body_data()
-    if not raw_body or #raw_body > 8192 then
+    if not raw_body or #raw_body > (max_bytes or 8192) then
         return nil
     end
     local body = cjson.decode(raw_body)
@@ -215,28 +216,32 @@ local function valid_password(password)
         and (utf8_character_count(password) or 0) >= 12
 end
 
-local function create_session(user_id)
+local function create_session(user_id, remember_me)
+    local session_duration = remember_me == true and "180 days" or "30 days"
     local rows = database_query([[
         WITH generated AS (
             SELECT encode(gen_random_bytes(32), 'hex') AS token
         ),
         stored AS (
             INSERT INTO public.auth_sessions (token_hash, user_id, expires_at)
-            SELECT encode(digest(generated.token, 'sha256'), 'hex'), $1, now() + interval '30 days'
+            SELECT encode(digest(generated.token, 'sha256'), 'hex'), $1, now() + $2::interval
             FROM generated
             RETURNING token_hash
         )
         SELECT generated.token
         FROM generated
         JOIN stored ON stored.token_hash = encode(digest(generated.token, 'sha256'), 'hex')
-    ]], user_id)
+    ]], user_id, session_duration)
     if not rows or not rows[1] or type(rows[1].token) ~= "string" then
         return false
     end
-    set_cookie(SESSION_COOKIE, rows[1].token, {
-        http_only = true,
-        max_age = SESSION_MAX_AGE,
-    })
+    local cookie_options = { http_only = true }
+    if remember_me == true then
+        cookie_options.max_age = REMEMBERED_SESSION_MAX_AGE
+    elseif remember_me == nil then
+        cookie_options.max_age = SESSION_MAX_AGE
+    end
+    set_cookie(SESSION_COOKIE, rows[1].token, cookie_options)
     return true
 end
 
@@ -283,6 +288,9 @@ local function handle_login()
         or #body.password == 0 or #body.password > 72 or body.password:find("%z") then
         return respond(ngx.HTTP_BAD_REQUEST, { error = "Enter a valid email and password." })
     end
+    if body.rememberMe ~= nil and type(body.rememberMe) ~= "boolean" then
+        return respond(ngx.HTTP_BAD_REQUEST, { error = "Remember me must be enabled or disabled." })
+    end
 
     local rows = database_query([[
         SELECT id, email
@@ -295,7 +303,7 @@ local function handle_login()
     if not rows[1] then
         return respond(ngx.HTTP_UNAUTHORIZED, { error = "Email or password is incorrect." })
     end
-    if not create_session(rows[1].id) then
+    if not create_session(rows[1].id, body.rememberMe == true) then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start your session." })
     end
     return respond(ngx.HTTP_OK, {
@@ -319,6 +327,114 @@ local function handle_logout()
         end
     end
     clear_cookie(SESSION_COOKIE, "/")
+    return respond(ngx.HTTP_OK, { ok = true })
+end
+
+local PROFILE_GENDERS = {
+    ["Male"] = true,
+    ["Female"] = true,
+    ["Non-binary"] = true,
+    ["Prefer not to say"] = true,
+    ["Other"] = true,
+}
+
+local function profile_response(user)
+    return {
+        email = user.email,
+        profile_picture = user.profile_picture or cjson.null,
+        display_name = user.profile_display_name or "",
+        gender = user.profile_gender or cjson.null,
+        bio = user.profile_bio or "",
+        goals = user.profile_goals or "",
+        onboarding_seen = user.profile_onboarding_seen,
+    }
+end
+
+local function handle_profile()
+    local user, database_error = current_user()
+    if database_error then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Authentication is temporarily unavailable." })
+    end
+    if not user then
+        return respond(ngx.HTTP_UNAUTHORIZED, { error = "Please sign in to continue." })
+    end
+
+    local method = ngx.req.get_method()
+    if method == "GET" then
+        local rows = database_query([[
+            SELECT email, profile_picture, profile_display_name, profile_gender, profile_bio, profile_goals, profile_onboarding_seen
+            FROM public.auth_users
+            WHERE id = $1
+        ]], user.id)
+        if not rows or not rows[1] then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your profile." })
+        end
+        return respond(ngx.HTTP_OK, { profile = profile_response(rows[1]) })
+    end
+
+    if method ~= "POST" then
+        return respond(ngx.HTTP_NOT_ALLOWED, { error = "Only GET and POST are supported." })
+    end
+
+    local body = read_json_body(200000)
+    local display_name_count = body and type(body.displayName) == "string" and utf8_character_count(body.displayName)
+    local bio_count = body and type(body.bio) == "string" and utf8_character_count(body.bio)
+    local goals_count = body and type(body.goals) == "string" and utf8_character_count(body.goals)
+    local valid_gender = body and type(body.gender) == "string"
+        and (body.gender == "" or PROFILE_GENDERS[body.gender])
+    local picture = body and body.profilePicture
+    local valid_picture = picture == ""
+        or (type(picture) == "string"
+            and #picture <= 160000
+            and picture:match("^data:image/jpeg;base64,[A-Za-z0-9+/]+=*$") ~= nil)
+    if not body or not display_name_count or display_name_count > 50
+        or not valid_gender
+        or not bio_count or bio_count > 250
+        or not goals_count or goals_count > 1000
+        or not valid_picture then
+        return respond(ngx.HTTP_BAD_REQUEST, {
+            error = "Check your profile details. Bio must be 250 characters or fewer and goals must be 1000 characters or fewer.",
+        })
+    end
+
+    local rows = database_query([[
+        UPDATE public.auth_users
+        SET profile_picture = NULLIF($2, ''),
+            profile_display_name = $3,
+            profile_gender = NULLIF($4, ''),
+            profile_bio = $5,
+            profile_goals = $6,
+            profile_onboarding_seen = true
+        WHERE id = $1
+        RETURNING email, profile_picture, profile_display_name, profile_gender, profile_bio, profile_goals, profile_onboarding_seen
+    ]], user.id, picture, body.displayName, body.gender, body.bio, body.goals)
+    if not rows or not rows[1] then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save your profile." })
+    end
+    return respond(ngx.HTTP_OK, { profile = profile_response(rows[1]) })
+end
+
+local function handle_profile_skip()
+    if ngx.req.get_method() ~= "POST" then
+        return respond(ngx.HTTP_NOT_ALLOWED, { error = "Only POST is supported." })
+    end
+    local user, database_error = current_user()
+    if database_error then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Authentication is temporarily unavailable." })
+    end
+    if not user then
+        return respond(ngx.HTTP_UNAUTHORIZED, { error = "Please sign in to continue." })
+    end
+
+    local rows = database_query([[
+        UPDATE public.auth_users
+        SET profile_onboarding_seen = true
+        WHERE id = $1
+        RETURNING profile_onboarding_seen
+    ]], user.id)
+    if not rows or not rows[1] then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not skip profile setup." })
+    end
     return respond(ngx.HTTP_OK, { ok = true })
 end
 
@@ -470,6 +586,10 @@ function M.handle_request()
             authenticated = true,
             user = { email = user.email },
         })
+    elseif path == "/api/auth/profile" then
+        return handle_profile()
+    elseif path == "/api/auth/profile/skip" then
+        return handle_profile_skip()
     elseif path == "/api/auth/google" then
         return handle_google_start()
     elseif path == "/api/auth/google/callback" then
