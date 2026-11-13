@@ -1035,6 +1035,45 @@
         padding-left: 1.3rem;
       }
 
+      .tree-step-checklist {
+        margin: 0;
+        padding: 0.65rem 0.85rem 0;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.75rem;
+      }
+
+      .tree-step-checklist legend {
+        padding: 0 0.35rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .tree-step-checklist ul {
+        padding: 0;
+        list-style: none;
+      }
+
+      .tree-step-checklist label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        cursor: pointer;
+      }
+
+      .tree-step-checklist input {
+        width: 1.15rem;
+        height: 1.15rem;
+        flex: 0 0 auto;
+        margin-top: 0.2rem;
+        accent-color: var(--accent);
+      }
+
+      .tree-checklist-status {
+        margin: 0.4rem 0 0.75rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
       .tree-step-label {
         color: var(--muted);
         font-size: 0.85rem;
@@ -1602,7 +1641,11 @@
               <span class="tree-step-label">A helpful tip</span>
               <p id="tree-step-tip"></p>
             </div>
-            <ul id="tree-step-tasks" hidden></ul>
+            <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
+              <legend>Completion checklist</legend>
+              <ul id="tree-step-tasks"></ul>
+              <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
+            </fieldset>
             <button class="save-button" id="tree-complete" type="button">Complete This Step</button>
           </article>
           <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
@@ -1812,7 +1855,9 @@
       const treeStepWhy = document.querySelector("#tree-step-why");
       const treeStepTip = document.querySelector("#tree-step-tip");
       const treeStepTipContainer = document.querySelector("#tree-step-tip-container");
+      const treeStepChecklist = document.querySelector("#tree-step-checklist");
       const treeStepTasks = document.querySelector("#tree-step-tasks");
+      const treeChecklistStatus = document.querySelector("#tree-checklist-status");
       const treeCompleteButton = document.querySelector("#tree-complete");
       const treeFinished = document.querySelector("#tree-finished");
       const treeAskHelpButton = document.querySelector("#tree-ask-help");
@@ -1838,6 +1883,7 @@
       let accountProfile = null;
       let progressTreeState = null;
       let progressTreeRequest = null;
+      let completingTreeStep = false;
       let treeAssistantOpen = false;
       let treeChatAction = "chat";
       let profileLoaded = false;
@@ -2456,6 +2502,16 @@
         treeChat.scrollTop = treeChat.scrollHeight;
       };
 
+      const updateTreeChecklist = () => {
+        const checkboxes = [...treeStepTasks.querySelectorAll("input[type='checkbox']")];
+        const checkedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+        treeStepChecklist.hidden = checkboxes.length === 0;
+        treeChecklistStatus.textContent = checkboxes.length
+          ? `${checkedCount} of ${checkboxes.length} tasks checked. Check each task before completing this step.`
+          : "";
+        treeCompleteButton.disabled = completingTreeStep || checkedCount < checkboxes.length;
+      };
+
       const renderProgressTree = (tree) => {
         progressTreeState = tree;
         const conversation = Array.isArray(tree.conversation) ? tree.conversation : [];
@@ -2505,14 +2561,19 @@
           treeStepTipContainer.hidden = !tree.current_step.tip;
           treeStepTasks.replaceChildren();
           const tasks = Array.isArray(tree.current_step.tasks) ? tree.current_step.tasks : [];
-          for (const task of tasks) {
+          for (const [index, task] of tasks.entries()) {
             const taskItem = document.createElement("li");
-            taskItem.textContent = task;
+            const label = document.createElement("label");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.value = String(index + 1);
+            checkbox.addEventListener("change", updateTreeChecklist);
+            label.append(checkbox, document.createTextNode(task));
+            taskItem.append(label);
             treeStepTasks.append(taskItem);
           }
-          treeStepTasks.hidden = tasks.length === 0;
-          treeCompleteButton.disabled = false;
           treeCompleteButton.hidden = false;
+          updateTreeChecklist();
         } else {
           treeCurrentStep.hidden = true;
           treeFinished.hidden = false;
@@ -3023,12 +3084,15 @@
 
       treeCompleteButton.addEventListener("click", async () => {
         if (!progressTreeState?.current_step) return;
-        treeCompleteButton.disabled = true;
+        completingTreeStep = true;
+        updateTreeChecklist();
         treeStatus.textContent = "Growing your progress tree...";
         try {
           const result = await postProgressTree({
             action: "complete",
             expectedStep: progressTreeState.completed_count,
+            checkedTasks: [...treeStepTasks.querySelectorAll("input[type='checkbox']:checked")]
+              .map((checkbox) => Number(checkbox.value)),
           });
           treeStatus.textContent = result.completed
             ? "Step complete — a new branch has grown!"
@@ -3036,7 +3100,8 @@
         } catch (error) {
           treeStatus.textContent = error.message;
         } finally {
-          treeCompleteButton.disabled = false;
+          completingTreeStep = false;
+          updateTreeChecklist();
         }
       });
 

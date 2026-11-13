@@ -790,6 +790,19 @@ local function handle_progress_tree()
         if not expected_step or expected_step < 0 or expected_step % 1 ~= 0 then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "The current step is invalid." })
         end
+        local saved_tree = decode_json_value(row.tree_data, nil)
+        local current_step = saved_tree.steps and saved_tree.steps[(tonumber(row.completed_count) or 0) + 1]
+        local required_tasks = current_step and current_step.tasks
+        if type(required_tasks) == "table" and #required_tasks > 0 then
+            if type(body.checkedTasks) ~= "table" or #body.checkedTasks ~= #required_tasks then
+                return respond(ngx.HTTP_BAD_REQUEST, { error = "Check every listed task before completing this step." })
+            end
+            for index = 1, #required_tasks do
+                if body.checkedTasks[index] ~= index then
+                    return respond(ngx.HTTP_BAD_REQUEST, { error = "Check every listed task before completing this step." })
+                end
+            end
+        end
         local updated = database_query([[
             WITH changed AS (
                 UPDATE public.user_progress_trees
@@ -939,7 +952,7 @@ For action "interview_answer", run a guided interview with exactly 10 selected a
 For action "chat" when a tree already exists, discuss the user's goal and current step without changing the roadmap; set ready=false.
 For action "help", give focused, actionable support for the current step without changing the tree; set ready=false and tree=null.
 For action "adjust", discuss the requested change and return a replacement roadmap only when you and the user agree it is appropriate. The replacement tree.steps must contain only new, not-yet-completed steps; completed steps are preserved by the server. Set ready=true only when returning that revised path.
-Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
+Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. When a step has several concrete sub-actions, include 2-4 concise tasks in its tasks array; omit tasks when the step is already one clear action. These listed tasks become a checklist the user must complete before they can mark that step done. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
     local prompt = cjson.encode({
         instructions = instructions,
         action = action,

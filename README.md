@@ -58,9 +58,11 @@ adjusting a path uses the existing Groq integration and its shared daily usage
 limit; it remains unavailable unless the configured quota is confirmed to be
 free. New trees start with a 10-answer, multiple-choice AI interview; the full
 personalized roadmap is stored, while the interface reveals completed steps
-and only the current step. Existing trees can be replaced by starting a new
-tree; the interface asks for confirmation because this resets the current
-tree's progress.
+and only the current step. Steps with several subtasks include a checklist;
+all listed tasks must be checked before the step can be completed. Steps
+without subtasks keep the simple completion flow. Existing trees can be
+replaced by starting a new tree; the interface asks for confirmation because
+this resets the current tree's progress.
 
 The Progress Tree debug menu opens with the `ä` key only for the account
 matching an address in the server-side `DEBUG_MENU_EMAIL` setting. Add one or
