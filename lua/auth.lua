@@ -453,16 +453,16 @@ local function validate_tree(tree)
         or type(tree.goal) ~= "string" or #tree.goal == 0 or #tree.goal > 200
         or type(tree.summary) ~= "string" or #tree.summary > 500
         or type(tree.steps) ~= "table" or #tree.steps < 3 or #tree.steps > 30 then
-        return false
+        return false, "tree goal, summary, or step count is outside its limits"
     end
-    for _, step in ipairs(tree.steps) do
+    for index, step in ipairs(tree.steps) do
         if type(step) ~= "table"
             or type(step.title) ~= "string" or #step.title == 0 or #step.title > 100
             or type(step.description) ~= "string" or #step.description == 0 or #step.description > 500
             or type(step.why) ~= "string" or #step.why == 0 or #step.why > 400
             or (step.tip ~= nil and step.tip ~= cjson.null
                 and (type(step.tip) ~= "string" or #step.tip > 300)) then
-            return false
+            return false, "step " .. index .. " has a missing or overlong required field"
         end
         if step.tip == cjson.null then
             step.tip = nil
@@ -472,11 +472,11 @@ local function validate_tree(tree)
         end
         if step.tasks ~= nil then
             if type(step.tasks) ~= "table" or #step.tasks > 4 then
-                return false
+                return false, "step " .. index .. " has an invalid task list"
             end
             for _, task in ipairs(step.tasks) do
                 if type(task) ~= "string" or #task == 0 or #task > 160 then
-                    return false
+                    return false, "step " .. index .. " has an invalid task"
                 end
             end
         end
@@ -574,14 +574,19 @@ local function is_progress_debug_user(user)
     return false
 end
 
-local function validate_progress_ai_result(response)
+local function progress_ai_content(response)
     local result = cjson.decode(response.body or "")
     local content = result
         and result.choices
         and result.choices[1]
         and result.choices[1].message
         and result.choices[1].message.content
-    if type(content) ~= "string" then
+    return type(content) == "string" and content or nil
+end
+
+local function validate_progress_ai_result(response)
+    local content = progress_ai_content(response)
+    if not content then
         return nil
     end
     local parsed = cjson.decode(content)
@@ -607,6 +612,28 @@ local function validate_progress_ai_result(response)
         parsed.tree = nil
     end
     return parsed
+end
+
+local function request_progress_ai(prompt)
+    local request_body = cjson.encode({
+        message = prompt,
+        maxTokens = 1600,
+        jsonMode = true,
+    })
+    if not request_body or #request_body > 24000 then
+        return nil, "request_too_large"
+    end
+    local subrequest_ok, response = pcall(function()
+        return ngx.location.capture("/api/groq-chat", {
+            method = ngx.HTTP_POST,
+            body = request_body,
+        })
+    end)
+    if not subrequest_ok or not response then
+        ngx.log(ngx.ERR, "Progress-tree AI request failed: ", response or "no response")
+        return nil, "request_failed"
+    end
+    return response
 end
 
 local function handle_progress_tree()
@@ -912,7 +939,7 @@ For action "interview_answer", run a guided interview with exactly 10 selected a
 For action "chat" when a tree already exists, discuss the user's goal and current step without changing the roadmap; set ready=false.
 For action "help", give focused, actionable support for the current step without changing the tree; set ready=false and tree=null.
 For action "adjust", discuss the requested change and return a replacement roadmap only when you and the user agree it is appropriate. The replacement tree.steps must contain only new, not-yet-completed steps; completed steps are preserved by the server. Set ready=true only when returning that revised path.
-Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). A tree has goal (string), summary (string), and 3-30 complete, ordered steps. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
+Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
     local prompt = cjson.encode({
         instructions = instructions,
         action = action,
@@ -936,23 +963,11 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
         return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Start a fresh conversation or shorten your message." })
     end
 
-    local ai_request_body = cjson.encode({
-        message = prompt,
-        maxTokens = 1600,
-        jsonMode = true,
-    })
-    if not ai_request_body or #ai_request_body > 24000 then
-        return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Shorten your recent messages and try again." })
-    end
-
-    local subrequest_ok, ai_response = pcall(function()
-        return ngx.location.capture("/api/groq-chat", {
-            method = ngx.HTTP_POST,
-            body = ai_request_body,
-        })
-    end)
-    if not subrequest_ok or not ai_response then
-        ngx.log(ngx.ERR, "Progress-tree AI request failed: ", ai_response or "no response")
+    local ai_response, ai_request_error = request_progress_ai(prompt)
+    if not ai_response then
+        if ai_request_error == "request_too_large" then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Shorten your recent messages and try again." })
+        end
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "The AI coach is temporarily unavailable." })
     end
     if ai_response.status ~= ngx.HTTP_OK then
@@ -984,9 +999,42 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
     local updated_tree = nil
     local next_completed_count = nil
     if ai_result.ready and ai_result.tree then
-        if not validate_tree(ai_result.tree) then
-            ngx.log(ngx.ERR, "Progress-tree AI returned an invalid roadmap")
-            return respond(ngx.HTTP_BAD_GATEWAY, { error = "The AI coach returned an invalid roadmap. Please try again." })
+        local valid_tree, validation_error = validate_tree(ai_result.tree)
+        if not valid_tree then
+            ngx.log(ngx.WARN, "Progress-tree AI returned an invalid roadmap: ", validation_error)
+            local repair_prompt = cjson.encode({
+                instructions = [[Repair this personalized roadmap and return JSON only in the form {"tree":{"goal":"...","summary":"...","steps":[...]}}. Preserve the user's intended goal and the useful personalized milestones; change only what is needed to satisfy the schema. The tree needs a goal string of 1-200 characters, a summary string of at most 500 characters, and 3-30 ordered steps. Every step must have a title string (1-100 characters), description string (1-500 characters), and why string (1-400 characters). Optional tip must be a string of at most 300 characters. Optional tasks must be an array of at most 4 strings, each 1-160 characters. Do not include markdown or any other keys outside the tree object.]],
+                candidate_tree = ai_result.tree,
+            })
+            local repaired_response = repair_prompt and request_progress_ai(repair_prompt)
+            local repaired_tree = nil
+            if repaired_response and repaired_response.status == ngx.HTTP_OK then
+                local repair_content = progress_ai_content(repaired_response)
+                local repair_result = repair_content and cjson.decode(repair_content)
+                if type(repair_result) == "table" and type(repair_result.tree) == "table" then
+                    local repaired_valid, repair_error = validate_tree(repair_result.tree)
+                    if repaired_valid then
+                        repaired_tree = repair_result.tree
+                    else
+                        ngx.log(ngx.WARN, "Progress-tree AI roadmap repair was invalid: ", repair_error)
+                    end
+                else
+                    ngx.log(ngx.WARN, "Progress-tree AI roadmap repair returned invalid JSON")
+                end
+            elseif repaired_response then
+                ngx.log(ngx.WARN, "Progress-tree AI roadmap repair failed with HTTP ", repaired_response.status)
+            else
+                ngx.log(ngx.WARN, "Progress-tree AI roadmap repair request failed")
+            end
+            if not repaired_tree then
+                local retry_message = is_interview_answer
+                    and "The coach could not format a valid roadmap yet. Your earlier answers are saved; please submit your last answer again."
+                    or "The coach could not format the revised path yet. Your current progress is unchanged; please try adjusting your path again."
+                return respond(ngx.HTTP_BAD_GATEWAY, {
+                    error = retry_message,
+                })
+            end
+            ai_result.tree = repaired_tree
         end
         if action == "adjust" then
             updated_tree = {
