@@ -556,7 +556,12 @@ local function create_progress_tree_row(user_id)
 end
 
 local function is_progress_debug_user(user)
-    local debug_email = os.getenv("DEBUG_MENU_EMAIL")
+    local file = io.open("/opt/mysite/lua/debug_menu_email.txt", "r")
+    if not file then
+        return false
+    end
+    local debug_email = file:read("*l")
+    file:close()
     return type(debug_email) == "string"
         and debug_email ~= ""
         and type(user.email) == "string"

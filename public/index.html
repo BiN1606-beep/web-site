@@ -2601,7 +2601,11 @@
         debugAccessRequest = (async () => {
           const response = await fetch("/api/progress-tree?action=debug_status", { cache: "no-store" });
           const result = await readApiResponse(response, "Debug menu");
-          if (response.status === 401 || response.status === 403) return;
+          if (response.status === 401) return;
+          if (response.status === 403) {
+            window.alert(result.error || "Debug access is not enabled for this account.");
+            return;
+          }
           if (!response.ok) throw new Error(result.error || "Could not check debug access.");
           if (result.enabled !== true) return;
           debugStatus.textContent = "";

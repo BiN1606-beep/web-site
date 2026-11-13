@@ -20,6 +20,11 @@ fi
 : "${PGUSER:?PGUSER must be set for deployment}"
 : "${PGPASSWORD:?PGPASSWORD must be set for deployment}"
 
+if [[ -n "${DEBUG_MENU_EMAIL:-}" && ! "$DEBUG_MENU_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+    echo "DEBUG_MENU_EMAIL must be a valid email address." >&2
+    exit 1
+fi
+
 # Enter repository
 cd "$REPO"
 
@@ -30,6 +35,18 @@ git fetch origin "$BRANCH"
 # Update local repository (only fast-forward)
 echo "Updating repository..."
 git merge --ff-only "origin/$BRANCH"
+
+# Store the non-secret allowlist where OpenResty can read it without relying
+# on the environment of an already-running master process.
+debug_email_file="$REPO/lua/debug_menu_email.txt"
+if [[ -n "${DEBUG_MENU_EMAIL:-}" ]]; then
+    debug_email_tmp="$(mktemp "$REPO/lua/.debug_menu_email.XXXXXX")"
+    printf '%s\n' "$DEBUG_MENU_EMAIL" > "$debug_email_tmp"
+    chmod 644 "$debug_email_tmp"
+    mv -f "$debug_email_tmp" "$debug_email_file"
+else
+    rm -f "$debug_email_file"
+fi
 
 # Apply pending database migrations before switching the running configuration.
 echo "Running database migrations..."
