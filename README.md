@@ -62,6 +62,13 @@ and only the current step. Existing trees can be replaced by starting a new
 tree; the interface asks for confirmation because this resets the current
 tree's progress.
 
+The Progress Tree debug menu opens with the `ä` key only for the account
+matching the server-side `DEBUG_MENU_EMAIL` setting. Set this in the OpenResty
+master process environment to the developer account's email, then restart
+OpenResty so it inherits the setting. The menu can reset the complete tree
+interview and progress or skip steps to inspect later milestones; debug actions
+are checked by the server, not just hidden in the page.
+
 Community supports discovery, friend requests, following, activity reactions,
 notifications, blocks, and reports. Profiles and progress trees are private by
 default; users can opt in to sharing them from Community > Privacy. The server

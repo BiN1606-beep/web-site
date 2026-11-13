@@ -23,6 +23,9 @@ test "$profile_status" = "401"
 progress_tree_status="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/api/progress-tree")"
 test "$progress_tree_status" = "401"
 
+progress_tree_debug_status="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/api/progress-tree?action=debug_status")"
+test "$progress_tree_debug_status" = "401"
+
 community_status="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/api/community")"
 test "$community_status" = "401"
 

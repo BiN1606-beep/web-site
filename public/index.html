@@ -625,6 +625,38 @@
         font-size: clamp(1.7rem, 5vw, 2.6rem);
       }
 
+      .debug-panel {
+        width: min(94vw, 620px);
+      }
+
+      .debug-panel h1 {
+        padding-right: 1.5rem;
+        color: var(--accent);
+        font-size: clamp(1.6rem, 5vw, 2.2rem);
+      }
+
+      .debug-actions {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.25rem;
+      }
+
+      .debug-actions label {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .debug-actions input {
+        width: 100%;
+        min-height: 2.8rem;
+        padding: 0.7rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.6rem;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+      }
+
       .community-panel {
         width: min(94vw, 900px);
         max-height: 92vh;
@@ -1597,6 +1629,20 @@
           </section>
         </section>
       </dialog>
+      <dialog class="content-panel debug-panel" id="debug-panel" aria-labelledby="debug-title">
+        <button class="close-button" type="button" aria-label="Close debug menu">&times;</button>
+        <h1 id="debug-title">Progress Tree Debug</h1>
+        <p>These tools change your saved tree and are only available to your configured account.</p>
+        <div class="debug-actions">
+          <button class="profile-secondary-button" id="debug-reset-progress" type="button">Reset tree and interview</button>
+          <form id="debug-skip-form">
+            <label for="debug-skip-count">Skip this many steps to inspect later tasks</label>
+            <input id="debug-skip-count" type="number" min="1" max="20" step="1" value="1" required>
+            <button class="profile-secondary-button" id="debug-skip-steps" type="submit">Skip steps</button>
+          </form>
+        </div>
+        <p id="debug-status" role="status" aria-live="polite"></p>
+      </dialog>
       <dialog class="content-panel" id="groq-panel" aria-labelledby="groq-title">
         <button class="close-button" type="button" aria-label="Close Groq AI demo">&times;</button>
         <h1 id="groq-title">Groq AI demo</h1>
@@ -1782,6 +1828,13 @@
       const treeChatSendButton = document.querySelector("#tree-chat-send");
       const treeChatCloseButton = document.querySelector("#tree-chat-close");
       const treeChatStatus = document.querySelector("#tree-chat-status");
+      const debugMenuDialog = document.querySelector("#debug-panel");
+      const debugStatus = document.querySelector("#debug-status");
+      const debugResetButton = document.querySelector("#debug-reset-progress");
+      const debugSkipForm = document.querySelector("#debug-skip-form");
+      const debugSkipCount = document.querySelector("#debug-skip-count");
+      const debugSkipButton = document.querySelector("#debug-skip-steps");
+      let debugAccessRequest = null;
       let accountProfile = null;
       let progressTreeState = null;
       let progressTreeRequest = null;
@@ -2538,6 +2591,31 @@
         }
       };
 
+      const openProgressTreeAfterDebug = () => {
+        closePanel(debugMenuDialog);
+        openPanel(progressTreeDialog, launcherByDialog.get("progress-tree-panel"));
+      };
+
+      const openDebugMenu = async () => {
+        if (debugAccessRequest) return debugAccessRequest;
+        debugAccessRequest = (async () => {
+          const response = await fetch("/api/progress-tree?action=debug_status", { cache: "no-store" });
+          const result = await readApiResponse(response, "Debug menu");
+          if (response.status === 401 || response.status === 403) return;
+          if (!response.ok) throw new Error(result.error || "Could not check debug access.");
+          if (result.enabled !== true) return;
+          debugStatus.textContent = "";
+          openPanel(debugMenuDialog, null);
+        })();
+        try {
+          await debugAccessRequest;
+        } catch (error) {
+          console.error("Could not open the Progress Tree debug menu:", error);
+        } finally {
+          debugAccessRequest = null;
+        }
+      };
+
       const sendTreeAnswer = async (choice) => {
         const answerNumber = (progressTreeState?.conversation || [])
           .filter((message) => message.role === "user").length + 1;
@@ -2753,6 +2831,7 @@
           launcherByDialog.get(dialogId),
         ]),
         [profileEditorDialog, null],
+        [debugMenuDialog, null],
       ];
 
       for (const [dialog, dialogTrigger] of dialogs) {
@@ -2796,6 +2875,58 @@
           if (dialog === communityDialog) loadCommunity();
         });
       }
+
+      document.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (event.key.toLocaleLowerCase() !== "ä" || event.repeat
+          || event.ctrlKey || event.metaKey || event.altKey
+          || (target instanceof Element && target.closest("input, textarea, select, [contenteditable='true']"))) {
+          return;
+        }
+        event.preventDefault();
+        openDebugMenu();
+      });
+
+      debugResetButton.addEventListener("click", async () => {
+        if (!window.confirm("Reset your entire progress tree, including completed steps, interview answers, chat, and AI memory?")) {
+          return;
+        }
+        debugResetButton.disabled = true;
+        debugStatus.textContent = "Resetting your progress tree...";
+        treeAssistantOpen = true;
+        try {
+          await postProgressTree({ action: "debug_reset" });
+          treeStatus.textContent = "Progress reset. Start with the first interview question.";
+          openProgressTreeAfterDebug();
+        } catch (error) {
+          debugStatus.textContent = error.message;
+        } finally {
+          debugResetButton.disabled = false;
+        }
+      });
+
+      debugSkipForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!debugSkipForm.reportValidity()) return;
+        const count = Number(debugSkipCount.value);
+        if (!Number.isInteger(count) || count < 1 || count > 20) {
+          debugStatus.textContent = "Choose a whole number between 1 and 20.";
+          return;
+        }
+        debugSkipButton.disabled = true;
+        debugStatus.textContent = "Skipping skill-tree steps...";
+        try {
+          const result = await postProgressTree({ action: "debug_skip", count });
+          treeStatus.textContent = result.tree.finished
+            ? "Debug test: moved to the end of the skill tree."
+            : `Debug test: now showing step ${result.tree.completed_count + 1}.`;
+          openProgressTreeAfterDebug();
+        } catch (error) {
+          debugStatus.textContent = error.message;
+        } finally {
+          debugSkipButton.disabled = false;
+        }
+      });
 
       for (const tab of communityDialog.querySelectorAll("[data-community-view]")) {
         tab.addEventListener("click", () => {

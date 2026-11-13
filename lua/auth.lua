@@ -555,6 +555,14 @@ local function create_progress_tree_row(user_id)
     return rows ~= nil
 end
 
+local function is_progress_debug_user(user)
+    local debug_email = os.getenv("DEBUG_MENU_EMAIL")
+    return type(debug_email) == "string"
+        and debug_email ~= ""
+        and type(user.email) == "string"
+        and string.lower(user.email) == string.lower(debug_email)
+end
+
 local function validate_progress_ai_result(response)
     local result = cjson.decode(response.body or "")
     local content = result
@@ -601,6 +609,13 @@ local function handle_progress_tree()
 
     local method = ngx.req.get_method()
     if method == "GET" then
+        local args = ngx.req.get_uri_args()
+        if args.action == "debug_status" then
+            if not is_progress_debug_user(user) then
+                return respond(ngx.HTTP_FORBIDDEN, { error = "Debug menu is not enabled for this account." })
+            end
+            return respond(ngx.HTTP_OK, { enabled = true })
+        end
         local row, load_error = load_progress_tree(user.id)
         if load_error then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your progress tree." })
@@ -616,6 +631,10 @@ local function handle_progress_tree()
     local body = read_json_body(12000)
     if not body or type(body.action) ~= "string" then
         return respond(ngx.HTTP_BAD_REQUEST, { error = "A progress-tree action is required." })
+    end
+    if (body.action == "debug_reset" or body.action == "debug_skip")
+        and not is_progress_debug_user(user) then
+        return respond(ngx.HTTP_FORBIDDEN, { error = "Debug tools are not enabled for this account." })
     end
 
     local row, load_error = load_progress_tree(user.id)
@@ -669,7 +688,7 @@ local function handle_progress_tree()
         return respond(ngx.HTTP_OK, { tree = progress_tree_view(row) })
     end
 
-    if body.action == "start_new" then
+    if body.action == "start_new" or body.action == "debug_reset" then
         local initial_conversation = {{
             role = "assistant",
             content = "What would you most like to work toward? Choose the closest starting point.",
@@ -697,6 +716,32 @@ local function handle_progress_tree()
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start a new progress tree." })
         end
         return respond(ngx.HTTP_OK, { tree = progress_tree_view(reset[1]), restarted = true })
+    end
+
+    if body.action == "debug_skip" then
+        local count = tonumber(body.count)
+        if not count or count < 1 or count > 20 or count % 1 ~= 0 then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose a whole number of steps between 1 and 20." })
+        end
+        local skipped = database_query([[
+            UPDATE public.user_progress_trees
+            SET completed_count = LEAST(
+                    completed_count + $2::integer,
+                    jsonb_array_length(tree_data->'steps')
+                ),
+                updated_at = now()
+            WHERE user_id = $1
+              AND tree_data IS NOT NULL
+              AND jsonb_typeof(tree_data->'steps') = 'array'
+            RETURNING tree_data, completed_count, conversation, ai_memory
+        ]], user.id, count)
+        if not skipped then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not skip progress-tree steps." })
+        end
+        if not skipped[1] then
+            return respond(ngx.HTTP_CONFLICT, { error = "Create a progress tree before skipping steps." })
+        end
+        return respond(ngx.HTTP_OK, { tree = progress_tree_view(skipped[1]), skipped = true })
     end
 
     if body.action == "complete" then
