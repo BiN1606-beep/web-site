@@ -56,13 +56,17 @@ The personalized Progress Tree stores each user's roadmap, completed steps,
 conversation history, and AI coaching memory in PostgreSQL. Creating or
 adjusting a path uses the existing Groq integration and its shared daily usage
 limit; it remains unavailable unless the configured quota is confirmed to be
-free.
+free. New trees start with a 10-answer, multiple-choice AI interview; the full
+personalized roadmap is stored, while the interface reveals completed steps
+and only the current step.
 
 Community supports discovery, friend requests, following, activity reactions,
 notifications, blocks, and reports. Profiles and progress trees are private by
 default; users can opt in to sharing them from Community > Privacy. The server
 filters profile and journey data according to those settings. Accounts receive
-a searchable username in the form `user<ID>`.
+a searchable username in the form `user<ID>`. Community search also supports
+exact email matches for users who are discoverable; email addresses are never
+included in search results.
 
 Google OAuth requires the site to be served over HTTPS. The current HTTP IP
 address (`http://34.71.166.63`) cannot be used as a Google OAuth redirect URI.

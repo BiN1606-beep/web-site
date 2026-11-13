@@ -1010,15 +1010,43 @@
         letter-spacing: 0.08em;
       }
 
-      .tree-next-preview {
-        padding-left: 1rem;
-        border-left: 2px dashed var(--panel-border);
+      .tree-interview-progress {
+        margin: 0;
         color: var(--muted);
       }
 
-      .tree-next-preview p {
-        margin-top: 0.35rem;
-        font-size: 0.95rem;
+      .tree-interview-choices {
+        display: grid;
+        gap: 0.55rem;
+      }
+
+      .tree-interview-choice {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.75rem;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
+      }
+
+      .tree-interview-choice:hover:not(:disabled) {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .tree-interview-choice:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .tree-interview-choice:disabled {
+        cursor: wait;
+        opacity: 0.65;
       }
 
       .tree-actions,
@@ -1464,8 +1492,8 @@
         <h1 id="community-title">Community</h1>
         <p id="community-status" class="community-status" role="status" aria-live="polite"></p>
         <form class="community-search" id="community-search-form" role="search">
-          <label class="sr-only" for="community-search-input">Find people by name or username</label>
-          <input id="community-search-input" type="search" maxlength="80" placeholder="Search people by username, name, or user ID">
+          <label class="sr-only" for="community-search-input">Find people by email, name, username, or user ID</label>
+          <input id="community-search-input" type="search" maxlength="320" placeholder="Search people by email, username, name, or user ID" autocomplete="off">
           <button class="save-button" type="submit">Search</button>
         </form>
         <nav class="community-tabs" aria-label="Community sections">
@@ -1488,7 +1516,7 @@
             <option value="public">Public</option>
           </select>
           <label><input id="community-show-goals" type="checkbox"> Show my main goal</label>
-          <label><input id="community-show-progress" type="checkbox"> Share my progress tree (only completed steps, current step, and next preview)</label>
+          <label><input id="community-show-progress" type="checkbox"> Share my progress tree (only completed steps and the current step)</label>
           <label><input id="community-show-activity" type="checkbox"> Show my milestones in the activity feed</label>
           <label><input id="community-allow-requests" type="checkbox"> Allow friend requests</label>
           <label><input id="community-show-search" type="checkbox"> Show me in Discover search</label>
@@ -1511,7 +1539,7 @@
         <section class="tree-empty-state" id="tree-empty-state" hidden>
           <div class="tree-empty-icon" aria-hidden="true">✦</div>
           <h2>Your journey starts here.</h2>
-          <p>Everyone has a different goal. Let's build a path that's made just for you, one step at a time.</p>
+          <p>Answer 10 quick multiple-choice questions. Your AI coach will build a complete skill tree and reveal one step at a time.</p>
           <button class="save-button" id="tree-create" type="button">Create My Progress Tree</button>
         </section>
         <section class="tree-view" id="tree-view" hidden>
@@ -1531,7 +1559,7 @@
           </div>
           <ol class="tree-growth" id="tree-growth" aria-label="Completed and current progress"></ol>
           <article class="tree-step-card" id="tree-current-step" hidden>
-            <span class="tree-step-label">Your next step</span>
+            <span class="tree-step-label">Your step for today</span>
             <h3 id="tree-step-title"></h3>
             <p id="tree-step-description"></p>
             <div>
@@ -1545,10 +1573,6 @@
             <ul id="tree-step-tasks" hidden></ul>
             <button class="save-button" id="tree-complete" type="button">Complete This Step</button>
           </article>
-          <section class="tree-next-preview" id="tree-next-preview" hidden>
-            <span class="tree-step-label">A glimpse of what's next</span>
-            <p id="tree-next-title"></p>
-          </section>
           <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
           <div class="tree-actions">
             <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Ask AI for Help</button>
@@ -1556,8 +1580,10 @@
           </div>
           </div>
           <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
-            <h2 id="tree-assistant-title">Your AI coach</h2>
+            <h2 id="tree-assistant-title">Build your personalized skill tree</h2>
+            <p id="tree-interview-progress" class="tree-interview-progress" hidden></p>
             <div class="tree-chat" id="tree-chat" aria-live="polite"></div>
+            <div class="tree-interview-choices" id="tree-interview-choices" role="group" aria-label="Choose your answer" hidden></div>
             <form class="tree-chat-form" id="tree-chat-form">
               <label for="tree-chat-input">What's on your mind?</label>
               <textarea id="tree-chat-input" maxlength="1500" required></textarea>
@@ -1741,13 +1767,14 @@
       const treeStepTipContainer = document.querySelector("#tree-step-tip-container");
       const treeStepTasks = document.querySelector("#tree-step-tasks");
       const treeCompleteButton = document.querySelector("#tree-complete");
-      const treeNextPreview = document.querySelector("#tree-next-preview");
-      const treeNextTitle = document.querySelector("#tree-next-title");
       const treeFinished = document.querySelector("#tree-finished");
       const treeAskHelpButton = document.querySelector("#tree-ask-help");
       const treeAdjustButton = document.querySelector("#tree-adjust");
       const treeAssistant = document.querySelector("#tree-assistant");
+      const treeAssistantTitle = document.querySelector("#tree-assistant-title");
       const treeChat = document.querySelector("#tree-chat");
+      const treeInterviewProgress = document.querySelector("#tree-interview-progress");
+      const treeInterviewChoices = document.querySelector("#tree-interview-choices");
       const treeChatForm = document.querySelector("#tree-chat-form");
       const treeChatInput = document.querySelector("#tree-chat-input");
       const treeChatSendButton = document.querySelector("#tree-chat-send");
@@ -2276,11 +2303,6 @@
               currentSummary.textContent = profile.progress.current_step.description;
               progress.append(currentSummary);
             }
-            if (profile.progress.next_preview) {
-              const next = document.createElement("span");
-              next.textContent = `Coming next: ${profile.progress.next_preview.title}`;
-              progress.append(next);
-            }
             progress.append(progressTitle, progressDescription, steps);
             communityProfile.append(progress);
           }
@@ -2353,11 +2375,28 @@
 
       const renderTreeConversation = (conversation = []) => {
         treeChat.replaceChildren();
+        treeInterviewChoices.replaceChildren();
+        const answerCount = conversation.filter((message) => message.role === "user").length;
+        const currentQuestion = conversation.at(-1);
+        const choices = !progressTreeState?.exists && Array.isArray(currentQuestion?.choices)
+          ? currentQuestion.choices
+          : [];
+        treeInterviewProgress.hidden = progressTreeState?.exists || choices.length === 0;
+        treeInterviewProgress.textContent = `Question ${Math.min(answerCount + 1, 10)} of 10`;
+        treeInterviewChoices.hidden = choices.length === 0;
         for (const message of conversation) {
           const bubble = document.createElement("div");
           bubble.className = `tree-chat-message${message.role === "user" ? " is-user" : ""}`;
           bubble.textContent = message.content;
           treeChat.append(bubble);
+        }
+        for (const choice of choices) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "tree-interview-choice";
+          button.textContent = choice;
+          button.addEventListener("click", () => sendTreeAnswer(choice));
+          treeInterviewChoices.append(button);
         }
         treeChat.scrollTop = treeChat.scrollHeight;
       };
@@ -2370,11 +2409,16 @@
         treeView.hidden = !tree.exists && !hasConversation;
         treeDetails.hidden = !tree.exists;
         treeAssistant.hidden = !treeAssistantOpen;
+        treeChatForm.hidden = tree.exists === false;
+        treeAssistantTitle.textContent = tree.exists ? "Your AI coach" : "Build your personalized skill tree";
         renderTreeConversation(conversation);
         treeStatus.textContent = "";
         if (!tree.exists) {
           treeActions.hidden = true;
-          if (hasConversation) treeAssistant.hidden = false;
+          if (hasConversation) {
+            treeAssistantOpen = true;
+            treeAssistant.hidden = false;
+          }
           return;
         }
 
@@ -2420,8 +2464,6 @@
           treeCompleteButton.hidden = true;
         }
         treeFinished.hidden = !tree.finished;
-        treeNextPreview.hidden = !tree.next_preview;
-        treeNextTitle.textContent = tree.next_preview?.title || "";
         treeAskHelpButton.hidden = tree.finished;
         treeAdjustButton.hidden = false;
       };
@@ -2464,16 +2506,38 @@
 
       const startProgressTree = async () => {
         treeCreateButton.disabled = true;
-        treeStatus.textContent = "Starting your goal conversation...";
+        treeStatus.textContent = "Preparing your personalized skill-tree interview...";
         treeAssistantOpen = true;
         try {
           await postProgressTree({ action: "begin" });
-          treeChatAction = "chat";
-          treeChatInput.focus();
+          treeInterviewChoices.querySelector("button")?.focus();
         } catch (error) {
           treeStatus.textContent = error.message;
         } finally {
           treeCreateButton.disabled = false;
+        }
+      };
+
+      const sendTreeAnswer = async (choice) => {
+        const answerNumber = (progressTreeState?.conversation || [])
+          .filter((message) => message.role === "user").length + 1;
+        const choiceButtons = [...treeInterviewChoices.querySelectorAll("button")];
+        for (const button of choiceButtons) button.disabled = true;
+        treeChatStatus.textContent = `Saving answer ${Math.min(answerNumber, 10)} of 10...`;
+        try {
+          const result = await postProgressTree({ action: "interview_answer", choice });
+          if (result.created) {
+            treeAssistantOpen = false;
+            treeAssistant.hidden = true;
+            treeChatStatus.textContent = "";
+            treeStatus.textContent = "Your personalized skill tree is ready. Here is the step to focus on now.";
+          } else {
+            treeChatStatus.textContent = "";
+            treeInterviewChoices.querySelector("button")?.focus();
+          }
+        } catch (error) {
+          treeChatStatus.textContent = error.message;
+          for (const button of choiceButtons) button.disabled = false;
         }
       };
 
