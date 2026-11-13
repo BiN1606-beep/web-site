@@ -669,6 +669,36 @@ local function handle_progress_tree()
         return respond(ngx.HTTP_OK, { tree = progress_tree_view(row) })
     end
 
+    if body.action == "start_new" then
+        local initial_conversation = {{
+            role = "assistant",
+            content = "What would you most like to work toward? Choose the closest starting point.",
+            choices = {
+                "Improve my health, fitness, or energy",
+                "Learn a new skill or subject",
+                "Build confidence or improve my wellbeing",
+                "Grow in my career, studies, or business",
+                "Create better habits or a more balanced routine",
+                "Explore another personal goal",
+            },
+        }}
+        local reset = database_query([[
+            INSERT INTO public.user_progress_trees (user_id, tree_data, completed_count, conversation, ai_memory)
+            VALUES ($1, NULL, 0, $2::jsonb, '')
+            ON CONFLICT (user_id) DO UPDATE
+            SET tree_data = NULL,
+                completed_count = 0,
+                conversation = EXCLUDED.conversation,
+                ai_memory = '',
+                updated_at = now()
+            RETURNING tree_data, completed_count, conversation, ai_memory
+        ]], user.id, cjson.encode(initial_conversation))
+        if not reset or not reset[1] then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start a new progress tree." })
+        end
+        return respond(ngx.HTTP_OK, { tree = progress_tree_view(reset[1]), restarted = true })
+    end
+
     if body.action == "complete" then
         local expected_step = tonumber(body.expectedStep)
         if not row or not decode_json_value(row.tree_data, nil) then

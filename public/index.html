@@ -1577,6 +1577,7 @@
           <div class="tree-actions">
             <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Ask AI for Help</button>
             <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust My Path</button>
+            <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>Start a new progress tree</button>
           </div>
           </div>
           <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
@@ -1770,6 +1771,7 @@
       const treeFinished = document.querySelector("#tree-finished");
       const treeAskHelpButton = document.querySelector("#tree-ask-help");
       const treeAdjustButton = document.querySelector("#tree-adjust");
+      const treeStartNewButton = document.querySelector("#tree-start-new");
       const treeAssistant = document.querySelector("#tree-assistant");
       const treeAssistantTitle = document.querySelector("#tree-assistant-title");
       const treeChat = document.querySelector("#tree-chat");
@@ -2466,6 +2468,7 @@
         treeFinished.hidden = !tree.finished;
         treeAskHelpButton.hidden = tree.finished;
         treeAdjustButton.hidden = false;
+        treeStartNewButton.hidden = false;
       };
 
       const loadProgressTree = async () => {
@@ -2515,6 +2518,23 @@
           treeStatus.textContent = error.message;
         } finally {
           treeCreateButton.disabled = false;
+        }
+      };
+
+      const startNewProgressTree = async () => {
+        if (!window.confirm("Start a new progress tree? Your current tree and its progress will be replaced.")) {
+          return;
+        }
+        treeStartNewButton.disabled = true;
+        treeStatus.textContent = "Starting a new skill-tree interview...";
+        treeAssistantOpen = true;
+        try {
+          await postProgressTree({ action: "start_new" });
+          treeInterviewChoices.querySelector("button")?.focus();
+        } catch (error) {
+          treeStatus.textContent = error.message;
+        } finally {
+          treeStartNewButton.disabled = false;
         }
       };
 
@@ -2864,6 +2884,7 @@
       });
 
       treeCreateButton.addEventListener("click", startProgressTree);
+      treeStartNewButton.addEventListener("click", startNewProgressTree);
 
       treeCompleteButton.addEventListener("click", async () => {
         if (!progressTreeState?.current_step) return;
