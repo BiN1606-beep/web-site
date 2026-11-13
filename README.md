@@ -63,14 +63,15 @@ tree; the interface asks for confirmation because this resets the current
 tree's progress.
 
 The Progress Tree debug menu opens with the `ä` key only for the account
-matching the server-side `DEBUG_MENU_EMAIL` setting. Add a shell assignment
-for `DEBUG_MENU_EMAIL` to `/etc/mysite/deploy.env` using the developer account's
-sign-in email, then rerun the Deploy workflow. Deployment writes the allowlist
-to a server-side file read by OpenResty, so no OpenResty restart is needed just
-to apply the setting. If the account is not allowed, pressing `ä` reports that
-access is not enabled. The menu can reset the complete tree interview and
-progress or skip steps to inspect later milestones; debug actions are checked
-by the server, not just hidden in the page.
+matching an address in the server-side `DEBUG_MENU_EMAIL` setting. Add one or
+more comma-separated sign-in emails to `/etc/mysite/deploy.env`, for example
+`DEBUG_MENU_EMAIL="first@example.com,second@example.com"`, then rerun the Deploy
+workflow. Deployment writes the allowlist to a server-side file read by
+OpenResty, so no OpenResty restart is needed just to apply the setting. If an
+account is not allowed, pressing `ä` reports that access is not enabled. The
+menu can reset the complete tree interview and progress or skip steps to
+inspect later milestones; debug actions are checked by the server, not just
+hidden in the page.
 
 Community supports discovery, friend requests, following, activity reactions,
 notifications, blocks, and reports. Profiles and progress trees are private by

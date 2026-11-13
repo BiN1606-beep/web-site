@@ -20,9 +20,18 @@ fi
 : "${PGUSER:?PGUSER must be set for deployment}"
 : "${PGPASSWORD:?PGPASSWORD must be set for deployment}"
 
-if [[ -n "${DEBUG_MENU_EMAIL:-}" && ! "$DEBUG_MENU_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
-    echo "DEBUG_MENU_EMAIL must be a valid email address." >&2
-    exit 1
+if [[ -n "${DEBUG_MENU_EMAIL:-}" ]]; then
+    IFS=',' read -r -a debug_emails <<< "$DEBUG_MENU_EMAIL"
+    for debug_email in "${debug_emails[@]}"; do
+        if [[ ! "$debug_email" =~ ^[[:space:]]*[^[:space:]@,]+@[^[:space:]@,]+\.[^[:space:]@,]+[[:space:]]*$ ]]; then
+            echo "Every address in DEBUG_MENU_EMAIL must be a valid email address, separated by commas." >&2
+            exit 1
+        fi
+    done
+    if [[ "$DEBUG_MENU_EMAIL" == *, ]]; then
+        echo "DEBUG_MENU_EMAIL cannot end with a comma." >&2
+        exit 1
+    fi
 fi
 
 # Enter repository

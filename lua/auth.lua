@@ -560,12 +560,18 @@ local function is_progress_debug_user(user)
     if not file then
         return false
     end
-    local debug_email = file:read("*l")
+    local debug_emails = file:read("*a")
     file:close()
-    return type(debug_email) == "string"
-        and debug_email ~= ""
-        and type(user.email) == "string"
-        and string.lower(user.email) == string.lower(debug_email)
+    if type(debug_emails) ~= "string" or type(user.email) ~= "string" then
+        return false
+    end
+    for debug_email in string.gmatch(debug_emails, "[^,]+") do
+        debug_email = string.match(debug_email, "^%s*(.-)%s*$")
+        if debug_email ~= "" and string.lower(user.email) == string.lower(debug_email) then
+            return true
+        end
+    end
+    return false
 end
 
 local function validate_progress_ai_result(response)
