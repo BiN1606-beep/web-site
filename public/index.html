@@ -35,6 +35,15 @@
         --moon: #1e66f5;
         /* Green for finished steps and the leaves on the progress tree. */
         --leaf: #40a02b;
+        /* One color per life area in the progress network. */
+        --area-health: #40a02b;
+        --area-learning: #1e66f5;
+        --area-mind: #ea76cb;
+        --area-career: #fe640b;
+        --area-creativity: #df8e1d;
+        --area-relationships: #d20f39;
+        --area-money: #179299;
+        --area-other: #7c7f93;
         /* Monospace stays for headings and labels; longer text uses a
            regular font because it is much easier to read in paragraphs. */
         --font-body: "Instrument Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -57,6 +66,14 @@
         --sun: #f9e2af;
         --moon: #89b4fa;
         --leaf: #a6e3a1;
+        --area-health: #a6e3a1;
+        --area-learning: #89b4fa;
+        --area-mind: #f5c2e7;
+        --area-career: #fab387;
+        --area-creativity: #f9e2af;
+        --area-relationships: #f38ba8;
+        --area-money: #94e2d5;
+        --area-other: #bac2de;
       }
 
       @font-face {
@@ -751,10 +768,6 @@
         border-radius: 50%;
       }
 
-      .net-item .net-swatch.is-done {
-        border-color: var(--leaf);
-        background: var(--leaf);
-      }
 
       .net-item span:nth-child(2) {
         flex: 1;
@@ -1351,6 +1364,20 @@
         font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
         font-size: 12px;
         font-weight: 700;
+        opacity: 1;
+      }
+
+      .tree-growth .net-node.is-area text {
+        font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 1;
+      }
+
+      .tree-growth .net-node.is-seed text {
+        fill: var(--muted);
         opacity: 1;
       }
 
@@ -1962,15 +1989,11 @@
           <svg class="tree-growth" id="tree-growth" role="img" aria-label="Your progress network"></svg>
           <div class="net-controls" id="net-controls" hidden>
             <button class="net-ctl" id="net-skills" type="button" aria-pressed="true">Skills</button>
+            <button class="net-ctl" id="net-focus-only" type="button" aria-pressed="false">Only my focus goal</button>
             <button class="net-ctl" id="net-timelapse" type="button">&#9654; Timelapse</button>
             <button class="net-ctl" id="net-recenter" type="button">Recenter</button>
           </div>
-          <div class="net-legend" aria-hidden="true">
-            <span><b class="is-done"></b>Done</span>
-            <span><b class="is-today"></b>Today</span>
-            <span><b class="is-skill"></b>Skill</span>
-            <span><b class="is-locked"></b>Locked</span>
-          </div>
+          <div class="net-legend" id="net-legend" aria-hidden="true"></div>
           <p class="net-hint" id="tree-network-hint">Hover to see names &middot; drag &middot; scroll to zoom</p>
         </section>
         <aside class="home-panel" id="progress-tree-page" data-mode="overview" aria-labelledby="progress-tree-title">
@@ -1985,13 +2008,13 @@
           <section class="tree-view" id="tree-view" hidden>
             <div id="tree-details">
               <div class="tree-heading">
-                <h1 id="progress-tree-title">Your network</h1>
+                <h1 id="progress-tree-title">Your focus goal</h1>
                 <h2 id="tree-goal"></h2>
                 <p id="tree-summary"></p>
               </div>
               <div class="net-stats">
                 <div class="net-stat"><b id="net-stat-done">0</b><span>steps done</span></div>
-                <div class="net-stat"><b id="net-stat-left">0</b><span>steps left</span></div>
+                <div class="net-stat"><b id="net-stat-goals">0</b><span>goals reached</span></div>
                 <div class="net-stat"><b id="net-stat-skills">0</b><span>skills</span></div>
               </div>
               <div class="tree-progress">
@@ -2026,11 +2049,12 @@
                 <button class="save-button" id="tree-complete" type="button">Complete step</button>
               </article>
               <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
+              <div class="net-list" id="net-goal-list" hidden></div>
               <div class="net-list" id="net-top-skills" hidden></div>
               <div class="tree-actions">
                 <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
                 <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
-                <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>Start a new progress tree</button>
+                <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>+ Add a new goal</button>
               </div>
             </div>
             <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
@@ -3200,31 +3224,46 @@
       };
 
       // ---- The progress network (the home screen) ----
-      // Works like Obsidian's graph view. The goal is the big dot; steps hang
-      // off it in a chain: finished steps glow green, today's step pulses,
+      // Works like Obsidian's graph view. Every goal is a big dot attached to
+      // its life area (Health, Learning, ...). Steps hang off each goal in a
+      // chain: finished steps glow in the area's color, today's steps pulse,
       // and future steps are faint "locked" dots whose names the server keeps
-      // secret. Skills the AI tagged on each step become their own dots and
-      // link every step that trains them, so the network branches out as you
-      // finish more. Names of steps and skills only show on hover or click.
+      // secret. Skills the AI tagged on steps become their own dots and link
+      // every step that trains them, across all goals, so the network grows
+      // denser the more you finish. Names only show on hover or click.
       // Node objects are kept between redraws (in `network.cache`) so the
       // layout doesn't jump when something changes; only new dots appear.
+      // One goal is your "focus": its current step is the card in the panel.
       const netStage = document.querySelector("#net-stage");
       const netControls = document.querySelector("#net-controls");
+      const netLegend = document.querySelector("#net-legend");
       const netSkillsButton = document.querySelector("#net-skills");
+      const netFocusOnlyButton = document.querySelector("#net-focus-only");
       const netTimelapseButton = document.querySelector("#net-timelapse");
       const netRecenterButton = document.querySelector("#net-recenter");
       const netStatDone = document.querySelector("#net-stat-done");
-      const netStatLeft = document.querySelector("#net-stat-left");
+      const netStatGoals = document.querySelector("#net-stat-goals");
       const netStatSkills = document.querySelector("#net-stat-skills");
+      const netGoalList = document.querySelector("#net-goal-list");
       const netTopSkills = document.querySelector("#net-top-skills");
       const treeNodeDetails = document.querySelector("#tree-node-details");
       const homePanel = document.querySelector("#progress-tree-page");
       // On phones the page scrolls, so wheel/trackpad zoom needs Ctrl there.
       const narrowLayout = window.matchMedia("(max-width: 820px)");
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const AREA_COLORS = {
+        Health: "var(--area-health)",
+        Learning: "var(--area-learning)",
+        Mind: "var(--area-mind)",
+        Career: "var(--area-career)",
+        Creativity: "var(--area-creativity)",
+        Relationships: "var(--area-relationships)",
+        Money: "var(--area-money)",
+        Other: "var(--area-other)",
+      };
+      const areaColor = (area) => AREA_COLORS[area] || AREA_COLORS.Other;
       const network = {
         cache: new Map(),
-        goal: null,
         hasDrawn: false,
         sim: null,
         zoom: null,
@@ -3234,18 +3273,46 @@
         effectLayer: null,
         nodes: [],
         links: [],
+        goals: [],
         hovered: null,
         selected: null,
         showSkills: true,
+        focusOnly: false,
         lastTree: null,
         playing: false,
+        confirmingDelete: null,
+      };
+
+      // Turns the server's answer into a list of goals. Older servers only
+      // send the active tree, so that becomes a one-goal list.
+      const goalsFromTree = (tree) => {
+        if (Array.isArray(tree.goals) && tree.goals.length) {
+          return tree.goals.map((goal) => ({
+            ...goal,
+            area: goal.area || "Other",
+            completed: Array.isArray(goal.completed) ? goal.completed : [],
+          }));
+        }
+        if (!tree.exists) return [];
+        return [{
+          id: tree.id ?? "focus",
+          active: true,
+          goal: tree.goal,
+          area: tree.area || "Other",
+          completed: Array.isArray(tree.completed) ? tree.completed : [],
+          current_step: tree.current_step ? { title: tree.current_step.title, skills: tree.current_step.skills } : null,
+          total_steps: tree.total_steps,
+          finished: tree.finished,
+        }];
       };
 
       const fitProgressNetwork = (animate = true) => {
         if (!network.zoom) return;
         const box = netStage.getBoundingClientRect();
         if (!box.width || !box.height) return;
-        const scale = Math.min(1.3, Math.max(0.5, Math.min(box.width, box.height) / 480));
+        const shownGoals = network.focusOnly ? 1 : network.goals.length;
+        const span = shownGoals > 1 ? 700 : 480;
+        const scale = Math.min(1.3, Math.max(0.45, Math.min(box.width, box.height) / span));
         const transform = d3.zoomIdentity.translate(box.width / 2, box.height / 2).scale(scale);
         const svg = d3.select(treeGrowth);
         (animate ? svg.transition().duration(600) : svg).call(network.zoom.transform, transform);
@@ -3286,7 +3353,7 @@
         network.sim = d3.forceSimulation()
           .force("link", d3.forceLink().id((node) => node.id)
             .distance((link) => link.distance)
-            .strength((link) => (link.kind === "skill" ? 0.08 : 0.9)))
+            .strength((link) => (link.kind === "skill" ? 0.08 : link.kind === "area" ? 0.5 : 0.9)))
           .force("charge", d3.forceManyBody().strength((node) => node.charge).distanceMax(420))
           .force("collide", d3.forceCollide((node) => node.r + 6))
           .force("x", d3.forceX(0).strength(0.07))
@@ -3312,8 +3379,8 @@
           const parent = network.cache.get(growsFrom);
           node = {
             id,
-            x: (parent?.x ?? 0) + (Math.random() - 0.5) * 20,
-            y: (parent?.y ?? 0) + (Math.random() - 0.5) * 20,
+            x: (parent?.x ?? (Math.random() - 0.5) * 200) + (Math.random() - 0.5) * 20,
+            y: (parent?.y ?? (Math.random() - 0.5) * 200) + (Math.random() - 0.5) * 20,
             // Only dots that appear after the first drawing get the bloom effect.
             isNew: network.hasDrawn,
           };
@@ -3344,8 +3411,8 @@
         lines.classed("net-dim", (link) => !touches(link)).classed("is-lit", touches);
       };
 
-      // Small helper for building panel content safely: text from the AI is
-      // always set with textContent, never as HTML.
+      // Small helpers for building panel content safely: text from the AI
+      // is always set with textContent, never as HTML.
       const createElement = (tag, className, text) => {
         const element = document.createElement(tag);
         if (className) element.className = className;
@@ -3353,20 +3420,51 @@
         return element;
       };
 
-      const networkListItem = (label, meta, swatchClass, targetId) => {
+      const networkListItem = (label, meta, swatchColor, targetId, filled = false) => {
         const button = createElement("button", "net-item");
         button.type = "button";
-        button.append(createElement("i", `net-swatch ${swatchClass}`), createElement("span", "", label));
+        const swatch = createElement("i", "net-swatch");
+        swatch.style.borderColor = swatchColor;
+        if (filled) swatch.style.background = swatchColor;
+        button.append(swatch, createElement("span", "", label));
         if (meta) button.append(createElement("small", "", meta));
         button.addEventListener("click", () => selectNetworkNode(targetId));
         return button;
       };
 
+      const panelButton = (label, className, onClick) => {
+        const button = createElement("button", className, label);
+        button.type = "button";
+        button.addEventListener("click", onClick);
+        return button;
+      };
+
+      // Switches which goal is in focus (shown in the panel), or removes one.
+      const changeGoal = async (action, goalId, button) => {
+        button.disabled = true;
+        treeStatus.textContent = action === "focus_goal" ? "Switching your focus..." : "Removing the goal...";
+        try {
+          network.selected = null;
+          // Switching goals closes the chat (it belongs to the previous goal).
+          treeAssistantOpen = false;
+          treeAssistant.hidden = true;
+          await postProgressTree({ action, goalId });
+          treeStatus.textContent = action === "focus_goal"
+            ? "This goal is now your focus."
+            : "The goal was removed from your network.";
+        } catch (error) {
+          treeStatus.textContent = error.message;
+          button.disabled = false;
+        }
+      };
+
+      const goalById = (goalId) => network.goals.find((goal) => String(goal.id) === String(goalId));
+
       // The side panel shows details for the selected dot, or the overview
-      // (goal, stats and today's step) when nothing is selected.
+      // (focus goal, stats, today's step) when nothing is selected.
       const renderNetworkDetails = () => {
         const node = network.selected && network.nodes.find((item) => item.id === network.selected);
-        if (!node) {
+        if (!node || node.kind === "seed") {
           network.selected = null;
           homePanel.dataset.mode = "overview";
           treeNodeDetails.hidden = true;
@@ -3375,114 +3473,174 @@
         homePanel.dataset.mode = "node";
         treeNodeDetails.hidden = false;
         treeNodeDetails.replaceChildren();
-        const back = createElement("button", "net-back", "← Back to today's step");
-        back.type = "button";
-        back.addEventListener("click", () => selectNetworkNode(null));
         const heading = createElement("div");
-        treeNodeDetails.append(back, heading);
-        const tree = network.lastTree;
+        treeNodeDetails.append(panelButton("← Back to today's step", "net-back", () => selectNetworkNode(null)), heading);
 
-        if (node.kind === "goal") {
-          heading.append(createElement("span", "tree-step-label", tree.finished ? "Goal reached" : "Your goal"), createElement("h2", "", tree.goal));
-          treeNodeDetails.append(createElement("p", "",
-            `${(tree.completed || []).length} of ${tree.total_steps} steps done.${tree.finished ? " This goal is now a permanent star in your network." : ""}`));
-          return;
-        }
-        if (node.kind === "skill") {
-          const steps = node.stepIds.map((id) => network.nodes.find((item) => item.id === id)).filter(Boolean);
-          const done = steps.filter((step) => step.status === "done");
-          heading.append(createElement("span", "tree-step-label", "Skill"), createElement("h2", "", node.label));
-          treeNodeDetails.append(createElement("p", "",
-            `Practiced in ${done.length} finished ${done.length === 1 ? "step" : "steps"}. The dot grows each time a step trains it.`));
+        if (node.kind === "area") {
+          heading.append(createElement("span", "tree-step-label", "Life area"), createElement("h2", "", node.label));
           const list = createElement("div", "net-list");
-          for (const step of steps) {
-            list.append(networkListItem(step.label, step.status === "done" ? "done" : "today",
-              step.status === "done" ? "is-done" : "", step.id));
+          for (const goal of network.goals.filter((item) => item.area === node.label)) {
+            list.append(networkListItem(goal.goal, `${goal.completed.length}/${goal.total_steps}`,
+              areaColor(goal.area), `goal:${goal.id}`, true));
           }
           treeNodeDetails.append(list);
           return;
         }
-        // A step that is done or locked (today's step uses the main card).
-        const position = `Step ${node.stepIndex + 1} of ${tree.total_steps}`;
+
+        if (node.kind === "goal") {
+          const goal = goalById(node.goalId);
+          heading.append(
+            createElement("span", "tree-step-label", `${goal.finished ? "Goal reached" : "Goal"} · ${goal.area}`),
+            createElement("h2", "", goal.goal),
+          );
+          treeNodeDetails.append(createElement("p", "",
+            `${goal.completed.length} of ${goal.total_steps} steps done.${goal.finished ? " This goal is now a permanent star in your network." : ""}`));
+          const actions = createElement("div", "tree-actions");
+          if (goal.active) {
+            treeNodeDetails.append(createElement("p", "", "This is your focus goal: its current step is shown in the panel."));
+          } else if (typeof goal.id === "number") {
+            actions.append(panelButton("Focus on this goal", "save-button", (event) => changeGoal("focus_goal", goal.id, event.currentTarget)));
+          }
+          if (typeof goal.id === "number") {
+            // Removing is permanent, so it takes two clicks.
+            const confirming = network.confirmingDelete === goal.id;
+            actions.append(panelButton(confirming ? "Click again to remove it for good" : "Remove goal",
+              "profile-secondary-button", (event) => {
+                if (network.confirmingDelete !== goal.id) {
+                  network.confirmingDelete = goal.id;
+                  renderNetworkDetails();
+                  return;
+                }
+                network.confirmingDelete = null;
+                changeGoal("delete_goal", goal.id, event.currentTarget);
+              }));
+          }
+          treeNodeDetails.append(actions);
+          return;
+        }
+
+        if (node.kind === "skill") {
+          const steps = node.stepIds.map((id) => network.nodes.find((item) => item.id === id)).filter(Boolean);
+          const done = steps.filter((step) => step.status === "done");
+          const goalCount = new Set(done.map((step) => step.goalId)).size;
+          heading.append(createElement("span", "tree-step-label", "Skill"), createElement("h2", "", node.label));
+          treeNodeDetails.append(createElement("p", "",
+            `Practiced in ${done.length} finished ${done.length === 1 ? "step" : "steps"} across ${goalCount} ${goalCount === 1 ? "goal" : "goals"}. The dot grows each time a step trains it.`));
+          const list = createElement("div", "net-list");
+          for (const step of steps) {
+            list.append(networkListItem(step.label, step.status === "done" ? "done" : "today",
+              areaColor(goalById(step.goalId)?.area), step.id, step.status === "done"));
+          }
+          treeNodeDetails.append(list);
+          return;
+        }
+
+        // A step.
+        const goal = goalById(node.goalId);
+        const position = `Step ${node.stepIndex + 1} of ${goal.total_steps}`;
+        const goalChip = panelButton(goal.goal, "net-chip", () => selectNetworkNode(`goal:${goal.id}`));
         if (node.status === "locked") {
           heading.append(createElement("span", "tree-step-label", position), createElement("h2", "", "Locked step"));
-          treeNodeDetails.append(createElement("p", "", `This step appears when you finish step ${node.stepIndex}.`));
+          treeNodeDetails.append(createElement("p", "", `This step appears when you finish step ${node.stepIndex}.`), goalChip);
+          return;
+        }
+        if (node.status === "current") {
+          heading.append(createElement("span", "tree-step-label", `${position} · today`), createElement("h2", "", node.label));
+          treeNodeDetails.append(goalChip, createElement("p", "",
+            "Focus on this goal to see the whole step and complete it."));
+          if (typeof goal.id === "number") {
+            treeNodeDetails.append(panelButton("Focus on this goal", "save-button", (event) => changeGoal("focus_goal", goal.id, event.currentTarget)));
+          }
           return;
         }
         heading.append(createElement("span", "tree-step-label", `${position} · done`), createElement("h2", "", node.label));
+        treeNodeDetails.append(goalChip);
         if (node.skills.length) {
           const chips = createElement("div", "net-chips");
           for (const skill of node.skills) {
-            const chip = createElement("button", "net-chip", skill);
-            chip.type = "button";
-            chip.addEventListener("click", () => selectNetworkNode(`skill:${skill.trim().toLowerCase()}`));
-            chips.append(chip);
+            chips.append(panelButton(skill, "net-chip", () => selectNetworkNode(`skill:${skill.trim().toLowerCase()}`)));
           }
           treeNodeDetails.append(createElement("span", "tree-step-label", "Skills it built"), chips);
         }
       };
 
       const selectNetworkNode = (id) => {
+        if (id !== network.selected) network.confirmingDelete = null;
         if (id && id.startsWith("skill:") && !network.showSkills) {
           network.showSkills = true;
           netSkillsButton.setAttribute("aria-pressed", "true");
-          drawProgressNetwork(network.lastTree);
+          renderNetwork();
         }
         network.selected = id;
         highlightProgressNetwork();
         renderNetworkDetails();
       };
 
-      const drawProgressNetwork = (tree, sproutIndex = -1) => {
-        // A different goal means a brand-new tree, so start a fresh layout.
-        if (network.goal !== tree.goal) {
-          network.cache.clear();
-          network.goal = tree.goal;
-          network.selected = null;
-          network.hasDrawn = false;
-        }
-        const firstDraw = !network.sim;
-        if (firstDraw) setUpProgressNetwork();
-        if (!network.playing) network.lastTree = tree;
-
-        const completed = Array.isArray(tree.completed) ? tree.completed : [];
-        const total = Math.max(Number(tree.total_steps) || 0, completed.length + (tree.current_step ? 1 : 0));
+      // Builds the dots and lines for a list of goals and updates the graph.
+      // `sproutId` is a step that was just completed (it gets a flash).
+      const renderNetwork = (goals = network.goals, sproutId = null) => {
+        if (!network.sim) setUpProgressNetwork();
+        const firstDraw = !network.hasDrawn;
+        const shown = network.focusOnly ? goals.filter((goal) => goal.active).slice(0, 1) : goals;
         const nodes = [];
         const links = [];
-        nodes.push(networkNode("goal", {
-          kind: "goal",
-          label: tree.goal,
-          r: tree.finished ? 20 : 15,
-          charge: -350,
-        }));
-
         const skillUses = new Map();
-        let previous = "goal";
-        for (let index = 0; index < total; index += 1) {
-          const isDone = index < completed.length;
-          const isCurrent = !isDone && index === completed.length && Boolean(tree.current_step);
-          const step = isDone ? completed[index] : isCurrent ? tree.current_step : null;
-          const skills = Array.isArray(step?.skills) ? step.skills.map(String) : [];
-          const id = `step-${index}`;
-          nodes.push(networkNode(id, {
-            kind: "step",
-            // Not called "index": d3 uses that name for its own numbering.
-            stepIndex: index,
-            status: isDone ? "done" : isCurrent ? "current" : "locked",
-            label: step ? step.title : "Locked",
-            skills,
-            // The three most recently finished steps glow brightest.
-            recent: isDone && index >= completed.length - 3,
-            r: isCurrent ? 8 : isDone ? 6.5 : 4.5,
-            charge: -120,
-          }, previous));
-          links.push({ source: previous, target: id, kind: "chain", grown: isDone || isCurrent, distance: index === 0 ? 46 : 30 });
-          previous = id;
-          for (const skill of skills) {
-            const key = `skill:${skill.trim().toLowerCase()}`;
-            if (!skillUses.has(key)) skillUses.set(key, { label: skill, stepIds: [], done: 0 });
-            skillUses.get(key).stepIds.push(id);
-            if (isDone) skillUses.get(key).done += 1;
+
+        if (shown.length === 0) {
+          nodes.push(networkNode("seed", { kind: "seed", label: "Your first goal will grow here", r: 12, charge: -200 }));
+        }
+        const areas = [...new Set(shown.map((goal) => goal.area))];
+        if (!network.focusOnly) {
+          for (const area of areas) {
+            nodes.push(networkNode(`area:${area}`, {
+              kind: "area", label: area, color: areaColor(area), r: 22, charge: -600,
+            }));
+          }
+        }
+        for (const goal of shown) {
+          const color = areaColor(goal.area);
+          const goalId = `goal:${goal.id}`;
+          nodes.push(networkNode(goalId, {
+            kind: "goal",
+            goalId: goal.id,
+            label: goal.goal,
+            color,
+            active: goal.active,
+            finished: goal.finished,
+            r: goal.finished ? 20 : 15,
+            charge: -350,
+          }, `area:${goal.area}`));
+          if (!network.focusOnly) links.push({ source: `area:${goal.area}`, target: goalId, kind: "area", distance: 90 });
+          const total = Math.max(Number(goal.total_steps) || 0, goal.completed.length + (goal.current_step ? 1 : 0));
+          let previous = goalId;
+          for (let index = 0; index < total; index += 1) {
+            const isDone = index < goal.completed.length;
+            const isCurrent = !isDone && index === goal.completed.length && Boolean(goal.current_step);
+            const step = isDone ? goal.completed[index] : isCurrent ? goal.current_step : null;
+            const skills = Array.isArray(step?.skills) ? step.skills.map(String) : [];
+            const id = `${goalId}:step:${index}`;
+            nodes.push(networkNode(id, {
+              kind: "step",
+              goalId: goal.id,
+              // Not called "index": d3 uses that name for its own numbering.
+              stepIndex: index,
+              status: isDone ? "done" : isCurrent ? "current" : "locked",
+              label: step ? step.title : "Locked",
+              color,
+              skills,
+              // The three most recently finished steps of a goal glow brightest.
+              recent: isDone && index >= goal.completed.length - 3,
+              r: isCurrent ? 8 : isDone ? 6.5 : 4.5,
+              charge: -120,
+            }, previous));
+            links.push({ source: previous, target: id, kind: "chain", grown: isDone || isCurrent, distance: index === 0 ? 46 : 30 });
+            previous = id;
+            for (const skill of skills) {
+              const key = `skill:${skill.trim().toLowerCase()}`;
+              if (!skillUses.has(key)) skillUses.set(key, { label: skill, stepIds: [], done: 0 });
+              skillUses.get(key).stepIds.push(id);
+              if (isDone) skillUses.get(key).done += 1;
+            }
           }
         }
         if (network.showSkills) {
@@ -3515,6 +3673,7 @@
             const group = enter.append("g");
             group.append("circle").attr("class", "tree-pulse");
             group.append("circle").attr("class", "net-core");
+            group.append("circle").attr("class", "net-focus-ring");
             group.append("text");
             group.append("title");
             group
@@ -3528,9 +3687,9 @@
               })
               .on("click", (event, node) => {
                 event.stopPropagation();
-                if (network.playing) return;
-                // Today's step lives in the main card of the panel.
-                if (node.status === "current") {
+                if (network.playing || node.kind === "seed") return;
+                // The focus goal's step for today lives in the panel's main card.
+                if (node.status === "current" && goalById(node.goalId)?.active) {
                   selectNetworkNode(null);
                   treeCurrentStep.scrollIntoView({ behavior: "smooth", block: "nearest" });
                   return;
@@ -3566,40 +3725,51 @@
           .attr("fill", "none")
           .attr("stroke", (node) => (node.kind === "goal" ? "#fab387" : "var(--accent)"))
           .attr("stroke-width", 2)
-          .attr("display", (node) => (node.status === "current" || (node.kind === "goal" && tree.finished) ? null : "none"));
+          .attr("display", (node) => (node.status === "current" || (node.kind === "goal" && node.finished) ? null : "none"));
         nodeGroups.select(".net-core")
           .attr("r", (node) => node.r)
           .attr("fill", (node) => {
-            if (node.kind === "goal") return tree.finished ? "url(#net-sun)" : "var(--leaf)";
+            if (node.kind === "goal") return node.finished ? "url(#net-sun)" : node.color;
+            if (node.kind === "area" || node.kind === "seed") return "var(--base)";
             if (node.kind === "skill" || node.status === "current") return "var(--base)";
             if (node.status === "locked") return "var(--surface)";
-            return "var(--leaf)";
+            return node.color;
           })
           .attr("stroke", (node) => {
+            if (node.kind === "area") return node.color;
             if (node.kind === "goal") return "var(--base)";
+            if (node.kind === "seed") return "var(--muted)";
             if (node.kind === "skill" || node.status === "current") return "var(--accent)";
             if (node.status === "locked") return "var(--muted)";
             return "none";
           })
-          .attr("stroke-width", (node) => (node.status === "current" ? 3 : node.kind === "goal" ? 2 : 1.8))
-          .attr("stroke-dasharray", (node) => (node.status === "locked" ? "2 2" : null))
+          .attr("stroke-width", (node) => (node.kind === "area" || node.status === "current" ? 3 : node.kind === "goal" ? 2 : 1.8))
+          .attr("stroke-dasharray", (node) => (node.status === "locked" || node.kind === "seed" ? "2 2" : null))
           .attr("opacity", (node) => (node.status === "done" && !node.recent ? 0.78 : 1))
           .attr("filter", (node) => (node.kind === "goal" || node.recent || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
+        // A thin ring marks the focus goal.
+        nodeGroups.select(".net-focus-ring")
+          .attr("r", (node) => node.r + 5)
+          .attr("fill", "none")
+          .attr("stroke", "var(--accent)")
+          .attr("stroke-width", 1.5)
+          .attr("display", (node) => (node.kind === "goal" && node.active && network.goals.length > 1 ? null : "none"));
         // Long names are shortened on the dot; the full name is in the
         // tooltip and in the side panel.
         nodeGroups.select("text")
           .text((node) => (node.label.length > 32 ? `${node.label.slice(0, 30).trimEnd()}…` : node.label))
-          .attr("x", (node) => node.r + 6)
-          .attr("y", 4);
+          .attr("x", (node) => (node.kind === "area" ? 0 : node.r + 6))
+          .attr("y", (node) => (node.kind === "area" ? node.r + 18 : 4))
+          .attr("text-anchor", (node) => (node.kind === "area" ? "middle" : "start"));
         nodeGroups.select("title").text((node) => node.label);
 
         // A burst of light where a step was just completed.
-        const sprouted = network.cache.get(`step-${sproutIndex}`);
+        const sprouted = sproutId && network.cache.get(sproutId);
         if (sprouted && !reducedMotion.matches) {
           network.effectLayer.append("circle")
             .attr("class", "net-spark")
             .attr("cx", sprouted.x).attr("cy", sprouted.y).attr("r", 10)
-            .attr("fill", "none").attr("stroke", "var(--leaf)").attr("stroke-width", 2)
+            .attr("fill", "none").attr("stroke", sprouted.color || "var(--leaf)").attr("stroke-width", 2)
             .transition().delay(1000).remove();
         }
 
@@ -3609,11 +3779,48 @@
         network.hasDrawn = true;
         if (firstDraw) fitProgressNetwork(false);
 
-        // Overview numbers and the strongest skills in the side panel.
-        netControls.hidden = !tree.exists;
-        netStatDone.textContent = String(completed.length);
-        netStatLeft.textContent = String(Math.max(total - completed.length, 0));
+        // Legend: one entry per life area in the network.
+        netLegend.replaceChildren();
+        for (const area of areas) {
+          const swatch = createElement("b");
+          swatch.style.background = areaColor(area);
+          const entry = createElement("span");
+          entry.append(swatch, document.createTextNode(area));
+          netLegend.append(entry);
+        }
+        for (const [className, label] of [["is-today", "Today"], ["is-skill", "Skill"], ["is-locked", "Locked"]]) {
+          const entry = createElement("span");
+          entry.append(createElement("b", className), document.createTextNode(label));
+          netLegend.append(entry);
+        }
+
+        treeGrowth.setAttribute("aria-label", shown.length
+          ? `Your progress network: ${shown.length} ${shown.length === 1 ? "goal" : "goals"}, ${skillUses.size} skills.`
+          : "Your progress network is empty. Create your first goal to start it.");
+        highlightProgressNetwork();
+        if (!network.playing) {
+          renderNetworkSummary(goals, skillUses);
+          renderNetworkDetails();
+        }
+      };
+
+      // Stats, the goal list and the strongest skills in the panel overview.
+      const renderNetworkSummary = (goals, skillUses) => {
+        netControls.hidden = goals.length === 0;
+        netStatDone.textContent = String(goals.reduce((sum, goal) => sum + goal.completed.length, 0));
+        netStatGoals.textContent = String(goals.filter((goal) => goal.finished).length);
         netStatSkills.textContent = String(skillUses.size);
+
+        netGoalList.replaceChildren();
+        netGoalList.hidden = goals.length === 0;
+        if (goals.length) {
+          netGoalList.append(createElement("span", "tree-step-label", "Your goals"));
+          for (const goal of goals) {
+            const meta = goal.finished ? "done" : `${goal.completed.length}/${goal.total_steps}${goal.active ? " · focus" : ""}`;
+            netGoalList.append(networkListItem(goal.goal, meta, areaColor(goal.area), `goal:${goal.id}`, true));
+          }
+        }
+
         const topSkills = [...skillUses.entries()]
           .filter(([, skill]) => skill.done > 0)
           .sort((first, second) => second[1].done - first[1].done)
@@ -3623,26 +3830,39 @@
         if (topSkills.length) {
           netTopSkills.append(createElement("span", "tree-step-label", "Strongest skills"));
           for (const [key, skill] of topSkills) {
-            netTopSkills.append(networkListItem(skill.label, `${skill.done} ${skill.done === 1 ? "step" : "steps"}`, "", key));
+            netTopSkills.append(networkListItem(skill.label, `${skill.done} ${skill.done === 1 ? "step" : "steps"}`, "var(--accent)", key));
           }
         }
-        treeGrowth.setAttribute("aria-label",
-          `Your progress network: ${completed.length} of ${total} steps done, ${skillUses.size} skills.`);
-        highlightProgressNetwork();
-        if (!network.playing) renderNetworkDetails();
       };
 
-      // Replays the network growing from the first finished step to now.
+      // Called with each answer from the server.
+      const drawProgressNetwork = (tree, sproutIndex = -1) => {
+        network.lastTree = tree;
+        network.goals = goalsFromTree(tree);
+        const focusGoal = network.goals.find((goal) => goal.active);
+        const sproutId = sproutIndex >= 0 && focusGoal ? `goal:${focusGoal.id}:step:${sproutIndex}` : null;
+        if (!network.playing) renderNetwork(network.goals, sproutId);
+      };
+
+      // Replays the network growing: goal by goal, step by step.
       const playNetworkTimelapse = () => {
-        const tree = network.lastTree;
-        if (!tree?.exists || network.playing) return;
-        const completed = Array.isArray(tree.completed) ? tree.completed : [];
-        const frame = (count) => ({
-          ...tree,
-          completed: completed.slice(0, count),
-          current_step: count < completed.length ? completed[count] : tree.current_step,
-          finished: count === completed.length && tree.finished,
-        });
+        const goals = network.goals;
+        if (!goals.length || network.playing) return;
+        const order = goals.flatMap((goal, goalIndex) => goal.completed.map((_, stepIndex) => [goalIndex, stepIndex]));
+        const frame = (count) => {
+          const doneByGoal = goals.map(() => 0);
+          for (const [goalIndex] of order.slice(0, count)) doneByGoal[goalIndex] += 1;
+          return goals.map((goal, goalIndex) => {
+            const done = doneByGoal[goalIndex];
+            const replaying = done < goal.completed.length;
+            return {
+              ...goal,
+              completed: goal.completed.slice(0, done),
+              current_step: replaying ? goal.completed[done] : goal.current_step,
+              finished: !replaying && goal.finished,
+            };
+          });
+        };
         selectNetworkNode(null);
         network.playing = true;
         netTimelapseButton.disabled = true;
@@ -3650,19 +3870,20 @@
         network.hasDrawn = false;
         network.linkLayer.selectAll("*").remove();
         network.nodeLayer.selectAll("*").remove();
-        drawProgressNetwork(frame(0));
+        renderNetwork(frame(0));
         fitProgressNetwork(true);
         let count = 0;
-        const delay = reducedMotion.matches ? 150 : 550;
+        const delay = reducedMotion.matches ? 150 : 500;
         const next = () => {
-          if (count >= completed.length) {
+          if (count >= order.length) {
             network.playing = false;
             netTimelapseButton.disabled = false;
-            drawProgressNetwork(tree);
+            renderNetwork(network.goals);
             return;
           }
+          const [goalIndex, stepIndex] = order[count];
           count += 1;
-          drawProgressNetwork(frame(count), count - 1);
+          renderNetwork(frame(count), `goal:${goals[goalIndex].id}:step:${stepIndex}`);
           window.setTimeout(next, delay);
         };
         window.setTimeout(next, 700);
@@ -3672,7 +3893,14 @@
         network.showSkills = !network.showSkills;
         netSkillsButton.setAttribute("aria-pressed", String(network.showSkills));
         if (!network.showSkills && network.selected?.startsWith("skill:")) network.selected = null;
-        if (network.lastTree) drawProgressNetwork(network.lastTree);
+        renderNetwork();
+      });
+      netFocusOnlyButton.addEventListener("click", () => {
+        network.focusOnly = !network.focusOnly;
+        netFocusOnlyButton.setAttribute("aria-pressed", String(network.focusOnly));
+        network.selected = null;
+        renderNetwork();
+        fitProgressNetwork(true);
       });
       netTimelapseButton.addEventListener("click", playNetworkTimelapse);
       netRecenterButton.addEventListener("click", () => fitProgressNetwork(true));
@@ -3721,17 +3949,9 @@
         treeStatus.textContent = "";
         if (!tree.exists) {
           treeActions.hidden = true;
-          // Before the first tree exists, the network shows a single seed.
-          if (window.d3) {
-            drawProgressNetwork({
-              exists: false,
-              goal: "Your goal will grow here",
-              completed: [],
-              total_steps: 0,
-              current_step: null,
-              finished: false,
-            });
-          }
+          // During an interview (or before the first goal) the network still
+          // shows every other goal, or a single seed when there are none.
+          if (window.d3) drawProgressNetwork(tree);
           if (hasConversation) {
             treeAssistantOpen = true;
             treeAssistant.hidden = false;
@@ -3842,11 +4062,8 @@
       };
 
       const startNewProgressTree = async () => {
-        if (!window.confirm("Start a new progress tree? Your current tree and its progress will be replaced.")) {
-          return;
-        }
         treeStartNewButton.disabled = true;
-        treeStatus.textContent = "Starting a new skill-tree interview...";
+        treeStatus.textContent = "Starting the interview for your new goal...";
         treeAssistantOpen = true;
         try {
           await postProgressTree({ action: "start_new" });

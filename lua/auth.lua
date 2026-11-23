@@ -448,12 +448,30 @@ local function decode_json_value(value, fallback)
     return fallback
 end
 
+-- Each goal belongs to one life area. Goals in the same area are grouped
+-- around one hub in the progress network.
+local LIFE_AREAS = { "Health", "Learning", "Mind", "Career", "Creativity", "Relationships", "Money", "Other" }
+
+-- How many goals (finished or not) one person can keep in their network.
+local MAX_GOALS = 8
+
 local function validate_tree(tree)
     if type(tree) ~= "table"
         or type(tree.goal) ~= "string" or #tree.goal == 0 or #tree.goal > 200
         or type(tree.summary) ~= "string" or #tree.summary > 500
         or type(tree.steps) ~= "table" or #tree.steps < 3 or #tree.steps > 30 then
         return false, "tree goal, summary, or step count is outside its limits"
+    end
+    -- The area only groups goals in the network, so an unknown value becomes
+    -- "Other" instead of rejecting the whole tree.
+    local known_area = false
+    for _, area in ipairs(LIFE_AREAS) do
+        if tree.area == area then
+            known_area = true
+        end
+    end
+    if not known_area then
+        tree.area = "Other"
     end
     for index, step in ipairs(tree.steps) do
         if type(step) ~= "table"
@@ -535,7 +553,9 @@ local function progress_tree_view(row)
     local current = steps[completed_count + 1]
     return {
         exists = true,
+        id = tonumber(row.id),
         goal = tree.goal,
+        area = tree.area or "Other",
         summary = tree.summary,
         completed_count = completed_count,
         total_steps = #steps,
@@ -547,11 +567,13 @@ local function progress_tree_view(row)
     }
 end
 
+-- Loads the user's active goal: the one shown in the side panel, which the
+-- interview, the AI coach and "Complete step" work on.
 local function load_progress_tree(user_id)
     local rows = database_query([[
-        SELECT tree_data, completed_count, conversation, ai_memory
+        SELECT id, tree_data, completed_count, conversation, ai_memory
         FROM public.user_progress_trees
-        WHERE user_id = $1
+        WHERE user_id = $1 AND is_active
     ]], user_id)
     if not rows then
         return nil, true
@@ -563,10 +585,57 @@ local function create_progress_tree_row(user_id)
     local rows = database_query([[
         INSERT INTO public.user_progress_trees (user_id)
         VALUES ($1)
-        ON CONFLICT (user_id) DO NOTHING
+        ON CONFLICT (user_id) WHERE is_active DO NOTHING
         RETURNING user_id
     ]], user_id)
     return rows ~= nil
+end
+
+-- A short summary of every goal that has a roadmap, for drawing the whole
+-- network. Like the main view, it only reveals finished steps and the
+-- current step; later steps stay hidden.
+local function load_goal_summaries(user_id)
+    local rows = database_query([[
+        SELECT id, is_active, tree_data, completed_count
+        FROM public.user_progress_trees
+        WHERE user_id = $1 AND tree_data IS NOT NULL
+        ORDER BY created_at, id
+    ]], user_id)
+    if not rows then
+        return nil
+    end
+    local goals = {}
+    for _, row in ipairs(rows) do
+        local tree = decode_json_value(row.tree_data, nil)
+        if type(tree) == "table" and type(tree.steps) == "table" and #tree.steps > 0 then
+            local completed_count = tonumber(row.completed_count) or 0
+            local completed = {}
+            for index = 1, math.min(completed_count, #tree.steps) do
+                completed[#completed + 1] = { title = tree.steps[index].title, skills = tree.steps[index].skills }
+            end
+            local current = tree.steps[completed_count + 1]
+            goals[#goals + 1] = {
+                id = tonumber(row.id),
+                active = row.is_active == true or row.is_active == "t",
+                goal = tree.goal,
+                area = tree.area or "Other",
+                completed_count = completed_count,
+                total_steps = #tree.steps,
+                completed = completed,
+                current_step = current and { title = current.title, skills = current.skills } or nil,
+                finished = current == nil,
+            }
+        end
+    end
+    return goals
+end
+
+-- The active goal's full view plus the summary of all goals.
+local function progress_tree_payload(row, user_id)
+    local view = row and progress_tree_view(row) or { exists = false, conversation = {} }
+    view.goals = load_goal_summaries(user_id) or {}
+    view.max_goals = MAX_GOALS
+    return view
 end
 
 local function is_progress_debug_user(user)
@@ -673,7 +742,7 @@ local function handle_progress_tree()
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your progress tree." })
         end
         return respond(ngx.HTTP_OK, {
-            tree = row and progress_tree_view(row) or { exists = false, conversation = {} },
+            tree = progress_tree_payload(row, user.id),
         })
     end
     if method ~= "POST" then
@@ -692,6 +761,74 @@ local function handle_progress_tree()
     local row, load_error = load_progress_tree(user.id)
     if load_error then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your progress tree." })
+    end
+
+    -- Make another goal the active one, or remove a goal from the network.
+    if body.action == "focus_goal" or body.action == "delete_goal" then
+        local goal_id = tonumber(body.goalId)
+        if not goal_id or goal_id < 1 or goal_id % 1 ~= 0 then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose one of your goals." })
+        end
+        local owned = database_query([[
+            SELECT id FROM public.user_progress_trees
+            WHERE id = $1 AND user_id = $2 AND tree_data IS NOT NULL
+        ]], goal_id, user.id)
+        if not owned then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your goals." })
+        end
+        if not owned[1] then
+            return respond(ngx.HTTP_NOT_FOUND, { error = "That goal was not found." })
+        end
+        if body.action == "focus_goal" then
+            -- Switching focus cancels an unfinished interview for a new goal.
+            -- These run one after another because only one goal may be
+            -- active at a time (a unique index enforces that).
+            if not database_query([[
+                    DELETE FROM public.user_progress_trees
+                    WHERE user_id = $1 AND tree_data IS NULL
+                ]], user.id)
+                or not database_query([[
+                    UPDATE public.user_progress_trees SET is_active = false
+                    WHERE user_id = $1 AND is_active AND id <> $2
+                ]], user.id, goal_id)
+                or not database_query([[
+                    UPDATE public.user_progress_trees SET is_active = true, updated_at = now()
+                    WHERE id = $1 AND user_id = $2
+                ]], goal_id, user.id) then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not switch goals." })
+            end
+        else
+            -- If the removed goal was the active one, the most recently used
+            -- remaining goal becomes active.
+            if not database_query([[
+                    DELETE FROM public.user_progress_trees
+                    WHERE id = $1 AND user_id = $2
+                ]], goal_id, user.id)
+                or not database_query([[
+                    UPDATE public.user_progress_trees SET is_active = true
+                    WHERE id = (
+                        SELECT id FROM public.user_progress_trees
+                        WHERE user_id = $1
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1 FROM public.user_progress_trees
+                        WHERE user_id = $1 AND is_active
+                    )
+                ]], user.id) then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not remove that goal." })
+            end
+        end
+        row, load_error = load_progress_tree(user.id)
+        if load_error then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your progress tree." })
+        end
+        return respond(ngx.HTTP_OK, {
+            tree = progress_tree_payload(row, user.id),
+            focused = body.action == "focus_goal",
+            deleted = body.action == "delete_goal",
+        })
     end
 
     if body.action == "begin" then
@@ -726,7 +863,7 @@ local function handle_progress_tree()
             local saved = database_query([[
                 UPDATE public.user_progress_trees
                 SET conversation = $2::jsonb, updated_at = now()
-                WHERE user_id = $1 AND tree_data IS NULL AND conversation = $3::jsonb
+                WHERE user_id = $1 AND is_active AND tree_data IS NULL AND conversation = $3::jsonb
                 RETURNING user_id
             ]], user.id, cjson.encode(history), previous_history)
             if not saved then
@@ -737,7 +874,7 @@ local function handle_progress_tree()
                 return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your progress-tree conversation." })
             end
         end
-        return respond(ngx.HTTP_OK, { tree = progress_tree_view(row) })
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(row, user.id) })
     end
 
     if body.action == "start_new" or body.action == "debug_reset" then
@@ -753,21 +890,48 @@ local function handle_progress_tree()
                 "Explore another personal goal",
             },
         }}
+        if body.action == "debug_reset" then
+            -- Debug: remove every goal and start again from the interview.
+            if not database_query([[
+                DELETE FROM public.user_progress_trees WHERE user_id = $1
+            ]], user.id) then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not reset your goals." })
+            end
+        else
+            -- "Start new" adds a goal: earlier goals stay in the network but
+            -- are no longer active. An unfinished interview is replaced.
+            local counts = database_query([[
+                SELECT count(*) AS goal_count FROM public.user_progress_trees
+                WHERE user_id = $1 AND tree_data IS NOT NULL
+            ]], user.id)
+            if not counts then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your goals." })
+            end
+            if (tonumber(counts[1].goal_count) or 0) >= MAX_GOALS then
+                return respond(ngx.HTTP_CONFLICT, {
+                    error = "You can have up to " .. MAX_GOALS .. " goals. Remove one before adding another.",
+                })
+            end
+            if not database_query([[
+                    DELETE FROM public.user_progress_trees
+                    WHERE user_id = $1 AND tree_data IS NULL
+                ]], user.id)
+                or not database_query([[
+                    UPDATE public.user_progress_trees SET is_active = false
+                    WHERE user_id = $1 AND is_active
+                ]], user.id) then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start a new goal." })
+            end
+        end
         local reset = database_query([[
-            INSERT INTO public.user_progress_trees (user_id, tree_data, completed_count, conversation, ai_memory)
-            VALUES ($1, NULL, 0, $2::jsonb, '')
-            ON CONFLICT (user_id) DO UPDATE
-            SET tree_data = NULL,
-                completed_count = 0,
-                conversation = EXCLUDED.conversation,
-                ai_memory = '',
-                updated_at = now()
-            RETURNING tree_data, completed_count, conversation, ai_memory
+            INSERT INTO public.user_progress_trees (user_id, tree_data, completed_count, conversation, ai_memory, is_active)
+            VALUES ($1, NULL, 0, $2::jsonb, '', true)
+            RETURNING id, tree_data, completed_count, conversation, ai_memory
         ]], user.id, cjson.encode(initial_conversation))
         if not reset or not reset[1] then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start a new progress tree." })
         end
-        return respond(ngx.HTTP_OK, { tree = progress_tree_view(reset[1]), restarted = true })
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(reset[1], user.id), restarted = true })
     end
 
     if body.action == "debug_skip" then
@@ -782,10 +946,10 @@ local function handle_progress_tree()
                     jsonb_array_length(tree_data->'steps')
                 ),
                 updated_at = now()
-            WHERE user_id = $1
+            WHERE user_id = $1 AND is_active
               AND tree_data IS NOT NULL
               AND jsonb_typeof(tree_data->'steps') = 'array'
-            RETURNING tree_data, completed_count, conversation, ai_memory
+            RETURNING id, tree_data, completed_count, conversation, ai_memory
         ]], user.id, count)
         if not skipped then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not skip progress-tree steps." })
@@ -793,7 +957,7 @@ local function handle_progress_tree()
         if not skipped[1] then
             return respond(ngx.HTTP_CONFLICT, { error = "Create a progress tree before skipping steps." })
         end
-        return respond(ngx.HTTP_OK, { tree = progress_tree_view(skipped[1]), skipped = true })
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(skipped[1], user.id), skipped = true })
     end
 
     if body.action == "complete" then
@@ -821,10 +985,10 @@ local function handle_progress_tree()
             WITH changed AS (
                 UPDATE public.user_progress_trees
                 SET completed_count = completed_count + 1, updated_at = now()
-                WHERE user_id = $1
+                WHERE user_id = $1 AND is_active
                   AND completed_count = $2
                   AND completed_count < jsonb_array_length(tree_data->'steps')
-                RETURNING user_id, tree_data, completed_count, conversation, ai_memory
+                RETURNING id, user_id, tree_data, completed_count, conversation, ai_memory
             ),
             activity AS (
                 INSERT INTO public.community_activities (actor_id, activity_type, details)
@@ -856,7 +1020,7 @@ local function handle_progress_tree()
                 WHERE settings.show_activity
                 RETURNING id
             )
-            SELECT tree_data, completed_count, conversation, ai_memory FROM changed
+            SELECT id, tree_data, completed_count, conversation, ai_memory FROM changed
         ]], user.id, expected_step)
         if not updated then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save your progress." })
@@ -868,10 +1032,10 @@ local function handle_progress_tree()
             end
             return respond(ngx.HTTP_CONFLICT, {
                 error = "Your progress changed in another session. Your tree has been refreshed.",
-                tree = row and progress_tree_view(row) or { exists = false, conversation = {} },
+                tree = progress_tree_payload(row, user.id),
             })
         end
-        return respond(ngx.HTTP_OK, { tree = progress_tree_view(updated[1]), completed = true })
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(updated[1], user.id), completed = true })
     end
 
     local action = body.action
@@ -966,7 +1130,7 @@ For action "interview_answer", run a guided interview with exactly 10 selected a
 For action "chat" when a tree already exists, discuss the user's goal and current step without changing the roadmap; set ready=false.
 For action "help", give focused, actionable support for the current step without changing the tree; set ready=false and tree=null.
 For action "adjust", discuss the requested change and return a replacement roadmap only when you and the user agree it is appropriate. The replacement tree.steps must contain only new, not-yet-completed steps; completed steps are preserved by the server. Set ready=true only when returning that revised path.
-Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. When a step has several concrete sub-actions, include 2-4 concise tasks in its tasks array; omit tasks when the step is already one clear action. These listed tasks become a checklist the user must complete before they can mark that step done. Every step should also have skills: an array of 1-3 short skill names (1-30 characters each, for example "Consistency", "Meal prep" or "HTML") that the step builds; reuse exactly the same skill name whenever different steps train the same skill, because these names connect the steps in the user's progress network. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
+Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), area (exactly one of "Health", "Learning", "Mind", "Career", "Creativity", "Relationships", "Money" or "Other": the life area this goal belongs to), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. When a step has several concrete sub-actions, include 2-4 concise tasks in its tasks array; omit tasks when the step is already one clear action. These listed tasks become a checklist the user must complete before they can mark that step done. Every step should also have skills: an array of 1-3 short skill names (1-30 characters each, for example "Consistency", "Meal prep" or "HTML") that the step builds; reuse exactly the same skill name whenever different steps train the same skill, because these names connect the steps in the user's progress network. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
     local prompt = cjson.encode({
         instructions = instructions,
         action = action,
@@ -1030,7 +1194,7 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
         if not valid_tree then
             ngx.log(ngx.WARN, "Progress-tree AI returned an invalid roadmap: ", validation_error)
             local repair_prompt = cjson.encode({
-                instructions = [[Repair this personalized roadmap and return JSON only in the form {"tree":{"goal":"...","summary":"...","steps":[...]}}. Preserve the user's intended goal and the useful personalized milestones; change only what is needed to satisfy the schema. The tree needs a goal string of 1-200 characters, a summary string of at most 500 characters, and 3-30 ordered steps. Every step must have a title string (1-100 characters), description string (1-500 characters), and why string (1-400 characters). Optional tip must be a string of at most 300 characters. Optional tasks must be an array of at most 4 strings, each 1-160 characters. Optional skills must be an array of 1-3 short skill names, each 1-30 characters. Do not include markdown or any other keys outside the tree object.]],
+                instructions = [[Repair this personalized roadmap and return JSON only in the form {"tree":{"goal":"...","summary":"...","area":"...","steps":[...]}}. Preserve the user's intended goal and the useful personalized milestones; change only what is needed to satisfy the schema. The tree needs a goal string of 1-200 characters, a summary string of at most 500 characters, an area string that is exactly one of "Health", "Learning", "Mind", "Career", "Creativity", "Relationships", "Money" or "Other", and 3-30 ordered steps. Every step must have a title string (1-100 characters), description string (1-500 characters), and why string (1-400 characters). Optional tip must be a string of at most 300 characters. Optional tasks must be an array of at most 4 strings, each 1-160 characters. Optional skills must be an array of 1-3 short skill names, each 1-30 characters. Do not include markdown or any other keys outside the tree object.]],
                 candidate_tree = ai_result.tree,
             })
             local repaired_response = repair_prompt and request_progress_ai(repair_prompt)
@@ -1067,6 +1231,7 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
             updated_tree = {
                 goal = ai_result.tree.goal,
                 summary = ai_result.tree.summary,
+                area = existing_tree.area or ai_result.tree.area,
                 steps = {},
             }
             for index = 1, completed_count do
@@ -1126,14 +1291,14 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
                 END,
                 completed_count = CASE WHEN $5::boolean THEN $6::integer ELSE completed_count END,
                 updated_at = now()
-            WHERE user_id = $1
+            WHERE user_id = $1 AND is_active
               AND conversation = $9::jsonb
               AND completed_count = $7::integer
               AND (
                   (tree_data IS NULL AND $8::jsonb = 'null'::jsonb)
                   OR tree_data = $8::jsonb
               )
-            RETURNING tree_data, completed_count, conversation, ai_memory, user_id
+            RETURNING id, tree_data, completed_count, conversation, ai_memory, user_id
         ),
         activity AS (
             INSERT INTO public.community_activities (actor_id, activity_type, details)
@@ -1141,7 +1306,7 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
             WHERE $10::boolean
             RETURNING id
         )
-        SELECT tree_data, completed_count, conversation, ai_memory FROM saved
+        SELECT id, tree_data, completed_count, conversation, ai_memory FROM saved
     ]], user.id, cjson.encode(saved_conversation), ai_result.memory,
         updated_tree and cjson.encode(updated_tree) or "", action == "adjust" and updated_tree ~= nil,
         next_completed_count or completed_count, completed_count, expected_tree or "null", expected_conversation,
@@ -1156,11 +1321,11 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
         end
         return respond(ngx.HTTP_CONFLICT, {
             error = "Your progress or conversation changed in another session. Your latest tree has been refreshed; please try again.",
-            tree = row and progress_tree_view(row) or { exists = false, conversation = {} },
+            tree = progress_tree_payload(row, user.id),
         })
     end
     return respond(ngx.HTTP_OK, {
-        tree = progress_tree_view(saved[1]),
+        tree = progress_tree_payload(saved[1], user.id),
         reply = ai_result.reply,
         created = created_tree,
         adjusted = action == "adjust" and updated_tree ~= nil,
@@ -1345,9 +1510,9 @@ local function social_profile(user_id, target_id)
     }
     if database_boolean(access[1].show_progress) then
         local tree_rows = database_query([[
-            SELECT tree_data, completed_count, conversation, ai_memory
+            SELECT id, tree_data, completed_count, conversation, ai_memory
             FROM public.user_progress_trees
-            WHERE user_id = $1
+            WHERE user_id = $1 AND is_active
         ]], target_id)
         if not tree_rows then
             return nil, "database"

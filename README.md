@@ -60,9 +60,14 @@ free. New trees start with a 10-answer, multiple-choice AI interview; the full
 personalized roadmap is stored, while the interface reveals completed steps
 and only the current step. Steps with several subtasks include a checklist;
 all listed tasks must be checked before the step can be completed. Steps
-without subtasks keep the simple completion flow. Existing trees can be
-replaced by starting a new tree; the interface asks for confirmation because
-this resets the current tree's progress.
+without subtasks keep the simple completion flow. Each person can keep up to 8 goals, each with its own roadmap, progress,
+conversation and AI memory (one row per goal in `user_progress_trees`). One
+goal is the "focus": the side panel, the AI coach and "Complete step" work on
+it. "+ Add a new goal" starts a new interview and keeps the earlier goals;
+any goal can be made the focus or removed from the network. The AI places
+every goal in a life area (Health, Learning, Mind, Career, Creativity,
+Relationships, Money or Other), and the network groups goals around one hub
+per area.
 
 The progress tree is the whole home screen: an interactive network (like
 Obsidian's graph view) fills the page, drawn with the free d3 library loaded
