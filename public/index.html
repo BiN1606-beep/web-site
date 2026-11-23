@@ -30,6 +30,11 @@
         --backdrop: rgba(76, 79, 105, 0.35);
         --sun: #df8e1d;
         --moon: #1e66f5;
+        /* Green for finished steps and the leaves on the progress tree. */
+        --leaf: #40a02b;
+        /* Monospace stays for headings and labels; longer text uses a
+           regular font because it is much easier to read in paragraphs. */
+        --font-body: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       }
 
       html.is-dark {
@@ -48,6 +53,7 @@
         --backdrop: rgba(17, 17, 27, 0.72);
         --sun: #f9e2af;
         --moon: #89b4fa;
+        --leaf: #a6e3a1;
       }
 
       @font-face {
@@ -80,8 +86,6 @@
       body {
         margin: 0;
         min-height: 100vh;
-        display: grid;
-        place-items: center;
         font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
         background: var(--base);
         color: var(--text);
@@ -247,8 +251,45 @@
         outline-offset: 4px;
       }
 
+      /* The progress tree is the home page, so main is a normal page
+         column instead of an empty centered area for popups. */
       main {
-        width: min(90vw, 700px);
+        position: relative;
+        width: min(100% - 2rem, 1180px);
+        margin: 0 auto;
+        padding: 1rem 0 4rem;
+      }
+
+      .site-header,
+      .tree-page {
+        position: relative;
+        z-index: 1;
+      }
+
+      .site-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        color: var(--text);
+        font-size: 1.35rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .brand img {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
       }
 
       .main-logo-watermark {
@@ -263,7 +304,8 @@
         z-index: 1;
         inset: 0;
         background: url("/background-logo.png") center / min(136vmin, 1000px) no-repeat;
-        opacity: 0.4;
+        /* Faint, so the logo stays as atmosphere behind real content. */
+        opacity: 0.1;
         content: "";
       }
 
@@ -271,40 +313,34 @@
         background-image: url("/arvid-logo.png");
       }
 
+      /* Top navigation: icon plus a visible text label, so people can
+         tell what each button does without guessing. */
       .launcher-actions {
-        position: fixed;
-        top: 1.5rem;
-        right: 1.5rem;
-        z-index: 1;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.75rem;
-        pointer-events: none;
-      }
-
-      .launcher-actions .launcher {
-        pointer-events: auto;
+        gap: 0.4rem;
       }
 
       .launcher {
-        display: grid;
-        width: 3.5rem;
-        aspect-ratio: 1;
-        place-items: center;
-        border: 0;
-        border-radius: 50%;
-        background: var(--accent);
-        color: var(--button-text);
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.5rem 0.85rem;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
         font: inherit;
-        font-size: 1.75rem;
+        font-size: 0.95rem;
         line-height: 1;
         cursor: pointer;
-        transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
+        transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
       }
 
       .launcher svg {
-        width: 1.5rem;
-        height: 1.5rem;
+        width: 1.15rem;
+        height: 1.15rem;
         fill: none;
         stroke: currentColor;
         stroke-linecap: round;
@@ -312,8 +348,11 @@
         stroke-width: 1.8;
       }
 
-      .launcher:hover {
-        transform: scale(1.08);
+      .launcher:hover,
+      .launcher[aria-expanded="true"] {
+        border-color: var(--panel-border);
+        background: var(--accent-soft);
+        color: var(--text);
       }
 
       .launcher:focus-visible,
@@ -613,16 +652,18 @@
         overflow-wrap: anywhere;
       }
 
-      .progress-tree-panel {
-        width: min(94vw, 780px);
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: clamp(1.25rem, 5vw, 2.75rem);
+      .tree-page {
+        padding-top: clamp(1.25rem, 4vw, 2.5rem);
       }
 
-      .progress-tree-panel h1 {
-        padding-right: 1.5rem;
-        font-size: clamp(1.7rem, 5vw, 2.6rem);
+      /* "My progress tree" is a small label; the goal itself is the big heading. */
+      .tree-page h1 {
+        margin: 0 0 0.35rem;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 400;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
       }
 
       .debug-panel {
@@ -876,7 +917,12 @@
         display: grid;
         justify-items: center;
         gap: 1rem;
-        padding: clamp(1.5rem, 6vw, 3rem) 0;
+        max-width: 640px;
+        margin: clamp(1rem, 6vw, 3rem) auto 0;
+        padding: clamp(1.5rem, 6vw, 3rem);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        background: var(--panel);
         text-align: center;
       }
 
@@ -896,23 +942,72 @@
       .tree-heading h2 {
         margin: 0;
         color: var(--accent);
-        font-size: clamp(1.2rem, 4vw, 1.65rem);
+        font-size: clamp(1.3rem, 4vw, 1.9rem);
+        line-height: 1.25;
+        text-wrap: balance;
       }
 
       .tree-empty-state p,
       .tree-heading p {
+        margin: 0;
+        color: var(--muted);
+        font-family: var(--font-body);
         font-size: 1rem;
+        line-height: 1.6;
       }
 
+      /* Two columns on wide screens: the tree on the left, today's step on
+         the right. #tree-details uses "display: contents" so its two
+         children can sit directly in this grid. */
       .tree-view {
         display: grid;
-        gap: 1.25rem;
-        margin-top: 1.5rem;
+        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+        align-items: start;
+        gap: 1.5rem 2.5rem;
+        margin-top: 0.5rem;
       }
 
       #tree-details {
+        display: contents;
+      }
+
+      .tree-column {
+        position: sticky;
+        top: 1rem;
         display: grid;
-        gap: 1.25rem;
+        gap: 1.1rem;
+        min-width: 0;
+      }
+
+      .tree-step-column {
+        display: grid;
+        gap: 1rem;
+        min-width: 0;
+      }
+
+      /* While the interview is running there is no tree yet, so the chat
+         gets the full width. */
+      .tree-view:has(#tree-details[hidden]) .tree-assistant {
+        grid-column: 1 / -1;
+        max-width: 760px;
+      }
+
+      .tree-view .tree-assistant {
+        grid-column: 2;
+      }
+
+      @media (max-width: 820px) {
+        .tree-view {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .tree-column {
+          position: static;
+        }
+
+        .tree-view .tree-assistant {
+          grid-column: 1;
+        }
       }
 
       .tree-heading {
@@ -948,69 +1043,79 @@
         transition: width 550ms ease;
       }
 
+      /* The drawn tree. drawProgressTree() in the script builds this SVG:
+         it grows from "Start" at the bottom up to the goal (the sun). */
       .tree-growth {
-        display: grid;
-        gap: 0.75rem;
-        margin: 0;
-        padding: 0.25rem 0 0.25rem 1.25rem;
-        list-style: none;
+        display: block;
+        width: 100%;
+        max-width: 380px;
+        height: auto;
+        overflow: visible;
       }
 
-      .tree-growth li {
-        position: relative;
-        min-height: 2.25rem;
-        padding: 0.35rem 0 0.35rem 1.5rem;
-        border-left: 2px solid var(--panel-border);
-        color: var(--muted);
-        overflow-wrap: anywhere;
+      .tree-growth text {
+        fill: var(--text);
+        font-family: var(--font-body);
+        font-size: 13.5px;
       }
 
-      .tree-growth li::before {
-        position: absolute;
-        top: 0.4rem;
-        left: -0.62rem;
-        display: grid;
-        width: 1.1rem;
-        aspect-ratio: 1;
-        place-items: center;
-        border: 2px solid var(--panel-border);
-        border-radius: 50%;
-        background: var(--base);
-        content: "";
+      .tree-growth .tree-node-tag {
+        fill: var(--muted);
+        font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.12em;
       }
 
-      .tree-growth li.is-complete {
-        border-left-color: var(--accent);
-        color: var(--text);
+      .tree-growth .is-locked text {
+        fill: var(--muted);
       }
 
-      .tree-growth li.is-complete::before {
-        border-color: var(--accent);
-        background: var(--accent);
-        box-shadow: 0 0 0 4px var(--accent-soft);
-        content: "✓";
-        color: var(--button-text);
-        font-size: 0.65rem;
-      }
-
-      .tree-growth li.is-current {
-        border-left-color: var(--accent);
-        color: var(--text);
+      .tree-growth .is-current .tree-node-title {
+        fill: var(--accent);
         font-weight: 700;
       }
 
-      .tree-growth li.is-current::before {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-        box-shadow: 0 0 0 5px var(--accent-soft);
+      .tree-pulse {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: tree-pulse 2.2s ease-out infinite;
+      }
+
+      .tree-sprout {
+        transform-box: fill-box;
+        transform-origin: right bottom;
+        animation: tree-sprout 900ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+      }
+
+      @keyframes tree-pulse {
+        from {
+          opacity: 0.7;
+          transform: scale(1);
+        }
+
+        to {
+          opacity: 0;
+          transform: scale(1.9);
+        }
+      }
+
+      @keyframes tree-sprout {
+        from {
+          transform: scale(0);
+        }
+
+        to {
+          transform: scale(1);
+        }
       }
 
       .tree-step-card {
+        position: relative;
         display: grid;
-        gap: 0.75rem;
-        padding: clamp(1rem, 4vw, 1.5rem);
+        gap: 1rem;
+        padding: clamp(1.25rem, 4vw, 2rem);
         border: 1px solid var(--panel-border);
-        border-radius: 1rem;
+        border-radius: 1.25rem;
         background: var(--panel);
         box-shadow: 0 0.75rem 2rem var(--shadow);
         animation: expand-in 260ms ease-out both;
@@ -1018,14 +1123,61 @@
 
       .tree-step-card h3 {
         margin: 0;
-        color: var(--accent);
-        font-size: 1.2rem;
+        color: var(--text);
+        font-size: clamp(1.25rem, 3vw, 1.55rem);
+        line-height: 1.3;
+        text-wrap: balance;
       }
 
       .tree-step-card p,
       .tree-step-card li {
-        font-size: 0.98rem;
+        margin: 0;
+        font-family: var(--font-body);
+        font-size: 1rem;
+        line-height: 1.6;
         overflow-wrap: anywhere;
+      }
+
+      .tree-step-card > div {
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      .tree-step-card .tree-step-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .tree-step-chip {
+        padding: 0.25rem 0.7rem;
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .tree-step-chip.is-today {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      /* Small leaves that fly out of the button when a step is completed. */
+      .tree-leaf-burst {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 0 100% 0 100%;
+        background: var(--leaf);
+        pointer-events: none;
+        animation: tree-leaf-burst 1s ease-out forwards;
+      }
+
+      @keyframes tree-leaf-burst {
+        to {
+          opacity: 0;
+          transform: translate(var(--dx), var(--dy)) rotate(var(--turn));
+        }
       }
 
       .tree-step-card ul {
@@ -1040,6 +1192,29 @@
         padding: 0.65rem 0.85rem 0;
         border: 1px solid var(--panel-border);
         border-radius: 0.75rem;
+      }
+
+      .tree-step-checklist li + li {
+        margin-top: 0.55rem;
+      }
+
+      .tree-step-checklist input:checked + span {
+        color: var(--muted);
+        text-decoration: line-through;
+      }
+
+      /* The complete button must look clearly unavailable until every
+         task is checked, not just slightly faded. */
+      #tree-complete {
+        padding: 0.8rem 1.3rem;
+        font-weight: 700;
+      }
+
+      #tree-complete:disabled {
+        background: var(--surface);
+        color: var(--muted);
+        cursor: not-allowed;
+        opacity: 1;
       }
 
       .tree-step-checklist legend {
@@ -1379,18 +1554,12 @@
 
       @media (max-width: 480px) {
         .launcher-actions {
-          top: 0.75rem;
-          right: 0.75rem;
-          gap: 0.4rem;
+          gap: 0.2rem;
         }
 
         .launcher {
-          width: 2.8rem;
-        }
-
-        .launcher svg {
-          width: 1.25rem;
-          height: 1.25rem;
+          padding: 0.45rem 0.6rem;
+          font-size: 0.85rem;
         }
       }
 
@@ -1442,7 +1611,90 @@
     </div>
     <main>
       <div class="main-logo-watermark" aria-hidden="true"></div>
-      <nav class="launcher-actions" id="launcher-actions" aria-label="Quick access"></nav>
+      <header class="site-header">
+        <a class="brand" href="/">
+          <img src="/arvid-logo.png" alt="" width="32" height="32">
+          Osiris
+        </a>
+        <nav class="launcher-actions" id="launcher-actions" aria-label="Main"></nav>
+      </header>
+      <!-- The progress tree is the home page. It used to be a popup
+           (dialog) opened from an icon; now it is what you see first. -->
+      <section class="tree-page" id="progress-tree-page" aria-labelledby="progress-tree-title">
+        <p id="tree-status" role="status" aria-live="polite"></p>
+        <section class="tree-empty-state" id="tree-empty-state" hidden>
+          <div class="tree-empty-icon" aria-hidden="true">✦</div>
+          <h2>What do you want to achieve?</h2>
+          <p>Answer 10 quick multiple-choice questions. Your AI coach builds a step-by-step path to your goal and shows you one step at a time.</p>
+          <button class="save-button" id="tree-create" type="button">Create My Progress Tree</button>
+        </section>
+        <section class="tree-view" id="tree-view" hidden>
+          <div id="tree-details">
+            <div class="tree-column">
+              <div class="tree-heading">
+                <h1 id="progress-tree-title">My progress tree</h1>
+                <h2 id="tree-goal"></h2>
+                <p id="tree-summary"></p>
+              </div>
+              <div class="tree-progress">
+                <div class="tree-progress-label">
+                  <span id="tree-progress-count">Step 1</span>
+                  <span id="tree-progress-percent">0%</span>
+                </div>
+                <div class="tree-progress-track" role="progressbar" aria-label="Progress through your tree" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="tree-progress-fill" id="tree-progress-fill"></div>
+                </div>
+              </div>
+              <svg class="tree-growth" id="tree-growth" role="img" aria-label="Your progress tree"></svg>
+            </div>
+            <div class="tree-step-column">
+              <article class="tree-step-card" id="tree-current-step" hidden>
+                <div class="tree-step-chips">
+                  <span class="tree-step-chip is-today">Today's step</span>
+                  <span class="tree-step-chip" id="tree-step-number"></span>
+                </div>
+                <h3 id="tree-step-title"></h3>
+                <p id="tree-step-description"></p>
+                <div>
+                  <span class="tree-step-label">Why it matters</span>
+                  <p id="tree-step-why"></p>
+                </div>
+                <div id="tree-step-tip-container">
+                  <span class="tree-step-label">A helpful tip</span>
+                  <p id="tree-step-tip"></p>
+                </div>
+                <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
+                  <legend>Checklist</legend>
+                  <ul id="tree-step-tasks"></ul>
+                  <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
+                </fieldset>
+                <button class="save-button" id="tree-complete" type="button">Complete step</button>
+              </article>
+              <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
+              <div class="tree-actions">
+                <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
+                <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
+                <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>Start a new progress tree</button>
+              </div>
+            </div>
+          </div>
+          <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
+            <h2 id="tree-assistant-title">Build your personalized skill tree</h2>
+            <p id="tree-interview-progress" class="tree-interview-progress" hidden></p>
+            <div class="tree-chat" id="tree-chat" aria-live="polite"></div>
+            <div class="tree-interview-choices" id="tree-interview-choices" role="group" aria-label="Choose your answer" hidden></div>
+            <form class="tree-chat-form" id="tree-chat-form">
+              <label for="tree-chat-input">What's on your mind?</label>
+              <textarea id="tree-chat-input" maxlength="1500" required></textarea>
+              <div class="tree-assistant-actions">
+                <button class="save-button" id="tree-chat-send" type="submit">Send</button>
+                <button class="profile-secondary-button" id="tree-chat-close" type="button">Hide conversation</button>
+              </div>
+            </form>
+            <p id="tree-chat-status" role="status" aria-live="polite"></p>
+          </section>
+        </section>
+      </section>
       <dialog class="content-panel" id="content-panel" aria-labelledby="panel-title">
         <button class="close-button" type="button" aria-label="Close panel">&times;</button>
         <h1 id="panel-title">Shared text</h1>
@@ -1480,6 +1732,14 @@
               <span id="background-toggle-label">Switch to dark theme</span>
             </button>
           </div>
+        </section>
+        <!-- The shared-text and Groq demos test the server integrations.
+             They live here instead of the main navigation so regular
+             visitors are not confused by them. -->
+        <section class="settings-section" aria-labelledby="developer-title">
+          <h2 id="developer-title">Developer demos</h2>
+          <button class="profile-secondary-button" id="open-shared-text-demo" type="button" aria-controls="content-panel" aria-expanded="false">Shared text demo</button>
+          <button class="profile-secondary-button" id="open-groq-demo" type="button" aria-controls="groq-panel" aria-expanded="false">Groq AI demo</button>
         </section>
       </dialog>
       <dialog class="content-panel" id="profile-view-panel" aria-labelledby="profile-view-title">
@@ -1603,75 +1863,6 @@
           </div>
         </form>
       </dialog>
-      <dialog class="content-panel progress-tree-panel" id="progress-tree-panel" aria-labelledby="progress-tree-title">
-        <button class="close-button" type="button" aria-label="Close progress tree">&times;</button>
-        <h1 id="progress-tree-title">My Progress Tree</h1>
-        <p id="tree-status" role="status" aria-live="polite"></p>
-        <section class="tree-empty-state" id="tree-empty-state" hidden>
-          <div class="tree-empty-icon" aria-hidden="true">✦</div>
-          <h2>Your journey starts here.</h2>
-          <p>Answer 10 quick multiple-choice questions. Your AI coach will build a complete skill tree and reveal one step at a time.</p>
-          <button class="save-button" id="tree-create" type="button">Create My Progress Tree</button>
-        </section>
-        <section class="tree-view" id="tree-view" hidden>
-          <div id="tree-details">
-          <div class="tree-heading">
-            <h2 id="tree-goal"></h2>
-            <p id="tree-summary"></p>
-          </div>
-          <div class="tree-progress">
-            <div class="tree-progress-label">
-              <span id="tree-progress-count">0 steps completed</span>
-              <span id="tree-progress-percent">0%</span>
-            </div>
-            <div class="tree-progress-track" role="progressbar" aria-label="Progress through your tree" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <div class="tree-progress-fill" id="tree-progress-fill"></div>
-            </div>
-          </div>
-          <ol class="tree-growth" id="tree-growth" aria-label="Completed and current progress"></ol>
-          <article class="tree-step-card" id="tree-current-step" hidden>
-            <span class="tree-step-label">Your step for today</span>
-            <h3 id="tree-step-title"></h3>
-            <p id="tree-step-description"></p>
-            <div>
-              <span class="tree-step-label">Why it matters</span>
-              <p id="tree-step-why"></p>
-            </div>
-            <div id="tree-step-tip-container">
-              <span class="tree-step-label">A helpful tip</span>
-              <p id="tree-step-tip"></p>
-            </div>
-            <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
-              <legend>Completion checklist</legend>
-              <ul id="tree-step-tasks"></ul>
-              <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
-            </fieldset>
-            <button class="save-button" id="tree-complete" type="button">Complete This Step</button>
-          </article>
-          <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
-          <div class="tree-actions">
-            <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Ask AI for Help</button>
-            <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust My Path</button>
-            <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>Start a new progress tree</button>
-          </div>
-          </div>
-          <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
-            <h2 id="tree-assistant-title">Build your personalized skill tree</h2>
-            <p id="tree-interview-progress" class="tree-interview-progress" hidden></p>
-            <div class="tree-chat" id="tree-chat" aria-live="polite"></div>
-            <div class="tree-interview-choices" id="tree-interview-choices" role="group" aria-label="Choose your answer" hidden></div>
-            <form class="tree-chat-form" id="tree-chat-form">
-              <label for="tree-chat-input">What's on your mind?</label>
-              <textarea id="tree-chat-input" maxlength="1500" required></textarea>
-              <div class="tree-assistant-actions">
-                <button class="save-button" id="tree-chat-send" type="submit">Send</button>
-                <button class="profile-secondary-button" id="tree-chat-close" type="button">Hide conversation</button>
-              </div>
-            </form>
-            <p id="tree-chat-status" role="status" aria-live="polite"></p>
-          </section>
-        </section>
-      </dialog>
       <dialog class="content-panel debug-panel" id="debug-panel" aria-labelledby="debug-title">
         <button class="close-button" type="button" aria-label="Close debug menu">&times;</button>
         <h1 id="debug-title">Progress Tree Debug</h1>
@@ -1704,41 +1895,12 @@
       const startupSkip = document.querySelector("#startup-skip");
       const launcherActions = document.querySelector("#launcher-actions");
       const mainPage = document.querySelector("main");
+      // Main navigation. The progress tree is the page itself, so it is not
+      // listed here. Each button shows a text label next to its icon.
       const launcherItems = [
         {
-          dialogId: "content-panel",
-          label: "Open shared text",
-          icon: [
-            { tag: "path", attributes: { d: "M12 5v14M5 12h14" } },
-          ],
-        },
-        {
-          dialogId: "settings-panel",
-          label: "Open settings",
-          icon: [
-            { tag: "path", attributes: { d: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" } },
-            { tag: "path", attributes: { d: "m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V4a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2.9Z" } },
-          ],
-        },
-        {
-          dialogId: "profile-view-panel",
-          label: "Open profile",
-          icon: [
-            { tag: "circle", attributes: { cx: "12", cy: "8", r: "4" } },
-            { tag: "path", attributes: { d: "M5 21a7 7 0 0 1 14 0" } },
-          ],
-        },
-        {
-          dialogId: "progress-tree-panel",
-          label: "Open My Progress Tree",
-          icon: [
-            { tag: "path", attributes: { d: "M12 21V10m0 4c-4 0-6-2-6-5 3 0 5 1 6 4m0-1c0-4 2-7 6-7 0 4-2 7-6 8" } },
-            { tag: "path", attributes: { d: "M8 21h8" } },
-          ],
-        },
-        {
           dialogId: "community-panel",
-          label: "Open Community",
+          label: "Community",
           icon: [
             { tag: "circle", attributes: { cx: "9", cy: "8", r: "3" } },
             { tag: "circle", attributes: { cx: "17", cy: "9", r: "2.5" } },
@@ -1746,11 +1908,19 @@
           ],
         },
         {
-          dialogId: "groq-panel",
-          label: "Open Groq AI test",
+          dialogId: "profile-view-panel",
+          label: "Profile",
           icon: [
-            { tag: "path", attributes: { d: "m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" } },
-            { tag: "path", attributes: { d: "m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z" } },
+            { tag: "circle", attributes: { cx: "12", cy: "8", r: "4" } },
+            { tag: "path", attributes: { d: "M5 21a7 7 0 0 1 14 0" } },
+          ],
+        },
+        {
+          dialogId: "settings-panel",
+          label: "Settings",
+          icon: [
+            { tag: "path", attributes: { d: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" } },
+            { tag: "path", attributes: { d: "m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V4a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2.9Z" } },
           ],
         },
       ];
@@ -1761,10 +1931,8 @@
         const button = document.createElement("button");
         button.className = "launcher";
         button.type = "button";
-        button.setAttribute("aria-label", item.label);
         button.setAttribute("aria-controls", item.dialogId);
         button.setAttribute("aria-expanded", "false");
-        button.title = item.label.replace(/^Open /, "");
 
         const icon = document.createElementNS(svgNamespace, "svg");
         icon.setAttribute("viewBox", "0 0 24 24");
@@ -1777,13 +1945,18 @@
           icon.append(element);
         }
 
-        button.append(icon);
+        const label = document.createElement("span");
+        label.textContent = item.label;
+        button.append(icon, label);
         launcherActions.append(button);
         launcherByDialog.set(item.dialogId, button);
       }
 
-      const launcher = launcherByDialog.get("content-panel");
+      const launcher = launcherActions.querySelector(".launcher");
       const panel = document.querySelector("#content-panel");
+      const groqDialog = document.querySelector("#groq-panel");
+      const openSharedTextDemoButton = document.querySelector("#open-shared-text-demo");
+      const openGroqDemoButton = document.querySelector("#open-groq-demo");
       const accountEmail = document.querySelector("#account-email");
       const accountStatus = document.querySelector("#account-status");
       const signOutButton = document.querySelector("#sign-out");
@@ -1836,7 +2009,6 @@
       let communitySearchTimer = null;
       let communitySearchSequence = 0;
       let communityReportUserId = null;
-      const progressTreeDialog = document.querySelector("#progress-tree-panel");
       const treeStatus = document.querySelector("#tree-status");
       const treeEmptyState = document.querySelector("#tree-empty-state");
       const treeCreateButton = document.querySelector("#tree-create");
@@ -1851,6 +2023,7 @@
       const treeGrowth = document.querySelector("#tree-growth");
       const treeCurrentStep = document.querySelector("#tree-current-step");
       const treeStepTitle = document.querySelector("#tree-step-title");
+      const treeStepNumber = document.querySelector("#tree-step-number");
       const treeStepDescription = document.querySelector("#tree-step-description");
       const treeStepWhy = document.querySelector("#tree-step-why");
       const treeStepTip = document.querySelector("#tree-step-tip");
@@ -1987,7 +2160,7 @@
         let badge = button.querySelector(".community-unread");
         if (!count) {
           badge?.remove();
-          button.setAttribute("aria-label", "Open Community");
+          button.removeAttribute("aria-label");
           return;
         }
         if (!badge) {
@@ -1997,7 +2170,7 @@
           button.append(badge);
         }
         badge.textContent = count > 99 ? "99+" : String(count);
-        button.setAttribute("aria-label", `Open Community, ${count} unread notifications`);
+        button.setAttribute("aria-label", `Community, ${count} unread notifications`);
       };
       const communityAvatar = (person) => {
         const avatar = document.createElement("div");
@@ -2505,14 +2678,198 @@
       const updateTreeChecklist = () => {
         const checkboxes = [...treeStepTasks.querySelectorAll("input[type='checkbox']")];
         const checkedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+        const remaining = checkboxes.length - checkedCount;
         treeStepChecklist.hidden = checkboxes.length === 0;
         treeChecklistStatus.textContent = checkboxes.length
-          ? `${checkedCount} of ${checkboxes.length} tasks checked. Check each task before completing this step.`
+          ? `${checkedCount} of ${checkboxes.length} tasks checked.`
           : "";
-        treeCompleteButton.disabled = completingTreeStep || checkedCount < checkboxes.length;
+        treeCompleteButton.disabled = completingTreeStep || remaining > 0;
+        // The button says what is missing instead of just looking disabled.
+        treeCompleteButton.textContent = remaining > 0
+          ? `${remaining} left to check`
+          : "Complete step";
+      };
+
+      // ---- Drawing the progress tree ----
+      // The tree is an SVG drawn from the data the server sends: titles of
+      // finished steps, the current step, and how many steps there are in
+      // total. Titles of future steps are kept secret by the server on
+      // purpose, so they are drawn as locked, unnamed nodes.
+
+      const createSvg = (tag, attributes = {}) => {
+        const element = document.createElementNS(svgNamespace, tag);
+        for (const [name, value] of Object.entries(attributes)) {
+          element.setAttribute(name, String(value));
+        }
+        return element;
+      };
+
+      // Splits a title into at most two short lines for the SVG labels.
+      const wrapTreeLabel = (text, maxLength = 26) => {
+        const lines = [""];
+        for (const word of String(text).split(/\s+/)) {
+          const current = lines.at(-1);
+          if (current && `${current} ${word}`.length > maxLength) {
+            if (lines.length === 2) {
+              lines[1] = `${current}…`;
+              break;
+            }
+            lines.push(word);
+          } else {
+            lines[lines.length - 1] = current ? `${current} ${word}` : word;
+          }
+        }
+        return lines;
+      };
+
+      const drawProgressTree = (tree, sproutIndex = -1) => {
+        const completed = Array.isArray(tree.completed) ? tree.completed : [];
+        const total = Math.max(Number(tree.total_steps) || 0, completed.length + (tree.current_step ? 1 : 0));
+        const doneCount = completed.length;
+        const width = 380;
+        const gap = 78;
+        const height = 130 + total * gap;
+        const labelX = 148;
+        // Nodes sway left and right a little so the trunk looks grown.
+        const nodes = Array.from({ length: total }, (_, index) => ({
+          x: index % 2 ? 98 : 62,
+          y: height - 70 - index * gap,
+        }));
+        const ground = { x: 80, y: height - 14 };
+        const crown = { x: 80, y: 44 };
+        const chain = [ground, ...nodes, crown];
+        const curve = (from, to) => `C ${from.x} ${from.y - gap / 2}, ${to.x} ${to.y + gap / 2}, ${to.x} ${to.y}`;
+        // The solid trunk reaches the current step (or the goal when finished).
+        const reach = tree.finished ? chain.length - 1 : doneCount + 1;
+        let grownPath = `M ${ground.x} ${ground.y}`;
+        for (let index = 1; index <= reach; index += 1) grownPath += ` ${curve(chain[index - 1], chain[index])}`;
+        let futurePath = `M ${chain[reach].x} ${chain[reach].y}`;
+        for (let index = reach + 1; index < chain.length; index += 1) futurePath += ` ${curve(chain[index - 1], chain[index])}`;
+
+        treeGrowth.replaceChildren();
+        treeGrowth.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        treeGrowth.setAttribute("aria-label", `Your progress tree: ${doneCount} of ${total} steps done.`);
+
+        // The goal at the top, drawn like the Osiris sun. It gets brighter
+        // as you get closer and fully lights up when you finish.
+        const defs = createSvg("defs");
+        const gradient = createSvg("linearGradient", { id: "tree-sun", x1: 0, y1: 0, x2: 0, y2: 1 });
+        gradient.append(
+          createSvg("stop", { offset: 0, "stop-color": "#fab387" }),
+          createSvg("stop", { offset: 1, "stop-color": "#f38ba8" }),
+        );
+        defs.append(gradient);
+        treeGrowth.append(defs);
+        const sun = createSvg("circle", {
+          cx: crown.x, cy: crown.y, r: 24, fill: "url(#tree-sun)",
+          opacity: tree.finished ? 1 : 0.3 + 0.5 * (doneCount / Math.max(total, 1)),
+        });
+        treeGrowth.append(sun);
+        if (tree.finished) {
+          treeGrowth.append(createSvg("circle", {
+            class: "tree-pulse", cx: crown.x, cy: crown.y, r: 24, fill: "none", stroke: "#fab387", "stroke-width": 2,
+          }));
+        }
+        const goalTag = createSvg("text", { class: "tree-node-tag", x: labelX, y: crown.y - 6 });
+        goalTag.textContent = tree.finished ? "GOAL REACHED" : "YOUR GOAL";
+        treeGrowth.append(goalTag);
+        wrapTreeLabel(tree.goal || "Your goal").forEach((line, lineIndex) => {
+          const text = createSvg("text", { x: labelX, y: crown.y + 12 + lineIndex * 17, "font-weight": 700 });
+          text.textContent = line;
+          treeGrowth.append(text);
+        });
+
+        treeGrowth.append(
+          createSvg("path", { d: futurePath, fill: "none", stroke: "var(--panel-border)", "stroke-width": 3, "stroke-dasharray": "3 7", "stroke-linecap": "round" }),
+          createSvg("path", { d: grownPath, fill: "none", stroke: "var(--accent)", "stroke-width": 6, "stroke-linecap": "round" }),
+          createSvg("line", { x1: 16, y1: ground.y, x2: width - 16, y2: ground.y, stroke: "var(--panel-border)", "stroke-width": 2, "stroke-linecap": "round" }),
+        );
+        const startTag = createSvg("text", { class: "tree-node-tag", x: labelX, y: ground.y - 6 });
+        startTag.textContent = "START";
+        treeGrowth.append(startTag);
+
+        nodes.forEach((point, index) => {
+          const isDone = index < doneCount;
+          const isCurrent = index === doneCount && Boolean(tree.current_step);
+          const group = createSvg("g", { class: isDone ? "is-done" : isCurrent ? "is-current" : "is-locked" });
+
+          // Finished steps grow a small branch with leaves.
+          if (isDone) {
+            const leaves = createSvg("g", { class: index === sproutIndex ? "tree-sprout" : "" });
+            const tipX = point.x - 30;
+            const tipY = point.y - 14;
+            leaves.append(
+              createSvg("path", { d: `M ${point.x} ${point.y} Q ${point.x - 14} ${point.y - 2} ${tipX} ${tipY}`, fill: "none", stroke: "var(--leaf)", "stroke-width": 3, "stroke-linecap": "round" }),
+              createSvg("ellipse", { cx: tipX - 6, cy: tipY - 4, rx: 10, ry: 5, fill: "var(--leaf)", transform: `rotate(-30 ${tipX - 6} ${tipY - 4})` }),
+              createSvg("ellipse", { cx: tipX + 2, cy: tipY - 10, rx: 9, ry: 4.5, fill: "var(--leaf)", opacity: 0.75, transform: `rotate(-70 ${tipX + 2} ${tipY - 10})` }),
+              createSvg("ellipse", { cx: tipX - 4, cy: tipY + 5, rx: 8, ry: 4, fill: "var(--leaf)", opacity: 0.75, transform: `rotate(15 ${tipX - 4} ${tipY + 5})` }),
+            );
+            group.append(leaves);
+          }
+
+          group.append(createSvg("line", { x1: point.x + 16, y1: point.y, x2: labelX - 8, y2: point.y, stroke: "var(--panel-border)", "stroke-dasharray": "2 4" }));
+          if (isCurrent) {
+            group.append(createSvg("circle", { class: "tree-pulse", cx: point.x, cy: point.y, r: 14, fill: "none", stroke: "var(--accent)", "stroke-width": 2 }));
+          }
+          group.append(createSvg("circle", {
+            cx: point.x, cy: point.y, r: 14,
+            fill: isDone ? "var(--leaf)" : "var(--base)",
+            stroke: isDone ? "var(--leaf)" : isCurrent ? "var(--accent)" : "var(--panel-border)",
+            "stroke-width": isCurrent ? 3 : 2,
+          }));
+          if (isDone) {
+            group.append(createSvg("path", { d: `M ${point.x - 5} ${point.y} l 3.5 3.5 l 6.5 -7`, fill: "none", stroke: "var(--base)", "stroke-width": 2.6, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+          } else {
+            const number = createSvg("text", { class: "tree-node-tag", x: point.x, y: point.y + 4, "text-anchor": "middle", "letter-spacing": 0 });
+            number.textContent = String(index + 1);
+            group.append(number);
+          }
+
+          const title = isDone ? completed[index].title : isCurrent ? tree.current_step.title : "Unlocks later";
+          const lines = wrapTreeLabel(title);
+          const tag = createSvg("text", { class: "tree-node-tag", x: labelX, y: point.y - (lines.length > 1 ? 14 : 6) });
+          tag.textContent = isDone ? "DONE" : isCurrent ? "TODAY" : `STEP ${index + 1}`;
+          group.append(tag);
+          lines.forEach((line, lineIndex) => {
+            const text = createSvg("text", { class: "tree-node-title", x: labelX, y: point.y + (lines.length > 1 ? 4 : 12) + lineIndex * 17 });
+            text.textContent = line;
+            group.append(text);
+          });
+          treeGrowth.append(group);
+        });
+      };
+
+      // A short burst of leaves from the button when a step is completed.
+      const celebrateStep = (origin) => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const card = treeCurrentStep;
+        const cardBox = card.getBoundingClientRect();
+        const originBox = origin.getBoundingClientRect();
+        for (let index = 0; index < 18; index += 1) {
+          const leaf = document.createElement("span");
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 60 + Math.random() * 90;
+          leaf.className = "tree-leaf-burst";
+          leaf.style.left = `${originBox.left - cardBox.left + originBox.width / 2}px`;
+          leaf.style.top = `${originBox.top - cardBox.top + originBox.height / 2}px`;
+          leaf.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+          leaf.style.setProperty("--dy", `${Math.sin(angle) * distance - 40}px`);
+          leaf.style.setProperty("--turn", `${Math.random() * 360}deg`);
+          if (index % 3 === 0) leaf.style.background = "var(--accent)";
+          card.append(leaf);
+          window.setTimeout(() => leaf.remove(), 1100);
+        }
       };
 
       const renderProgressTree = (tree) => {
+        // If exactly one more step is done than last time, that step's
+        // leaves get a "sprout" animation.
+        const previousCount = progressTreeState?.exists && progressTreeState.goal === tree.goal
+          ? progressTreeState.completed_count
+          : null;
+        const sproutIndex = previousCount !== null && tree.completed_count === previousCount + 1
+          ? previousCount
+          : -1;
         progressTreeState = tree;
         const conversation = Array.isArray(tree.conversation) ? tree.conversation : [];
         const hasConversation = conversation.length > 0;
@@ -2536,24 +2893,16 @@
         treeActions.hidden = false;
         treeGoal.textContent = tree.goal;
         treeSummary.textContent = tree.summary;
-        treeProgressCount.textContent = `${tree.completed_count} ${tree.completed_count === 1 ? "step" : "steps"} completed`;
+        treeProgressCount.textContent = tree.finished
+          ? `All ${tree.total_steps} steps done`
+          : `Step ${tree.completed_count + 1} of ${tree.total_steps}`;
         treeProgressPercent.textContent = `${tree.progress}%`;
         treeProgressBar.setAttribute("aria-valuenow", String(tree.progress));
         treeProgressFill.style.width = `${tree.progress}%`;
-        treeGrowth.replaceChildren();
-        const completedSteps = Array.isArray(tree.completed) ? tree.completed : [];
-        for (const step of completedSteps) {
-          const item = document.createElement("li");
-          item.className = "is-complete";
-          item.textContent = step.title;
-          treeGrowth.append(item);
-        }
+        drawProgressTree(tree, sproutIndex);
         if (tree.current_step) {
-          const item = document.createElement("li");
-          item.className = "is-current";
-          item.textContent = tree.current_step.title;
-          treeGrowth.append(item);
           treeCurrentStep.hidden = false;
+          treeStepNumber.textContent = `Step ${tree.completed_count + 1} of ${tree.total_steps}`;
           treeStepTitle.textContent = tree.current_step.title;
           treeStepDescription.textContent = tree.current_step.description;
           treeStepWhy.textContent = tree.current_step.why;
@@ -2568,7 +2917,9 @@
             checkbox.type = "checkbox";
             checkbox.value = String(index + 1);
             checkbox.addEventListener("change", updateTreeChecklist);
-            label.append(checkbox, document.createTextNode(task));
+            const taskText = document.createElement("span");
+            taskText.textContent = task;
+            label.append(checkbox, taskText);
             taskItem.append(label);
             treeStepTasks.append(taskItem);
           }
@@ -2652,9 +3003,11 @@
         }
       };
 
+      // The tree is the page itself now, so after a debug action we only
+      // close the debug menu and scroll back up to the tree.
       const openProgressTreeAfterDebug = () => {
         closePanel(debugMenuDialog);
-        openPanel(progressTreeDialog, launcherByDialog.get("progress-tree-panel"));
+        window.scrollTo({ top: 0, behavior: "smooth" });
       };
 
       const openDebugMenu = async () => {
@@ -2897,6 +3250,8 @@
         ]),
         [profileEditorDialog, null],
         [debugMenuDialog, null],
+        [panel, openSharedTextDemoButton],
+        [groqDialog, openGroqDemoButton],
       ];
 
       for (const [dialog, dialogTrigger] of dialogs) {
@@ -2936,7 +3291,6 @@
         trigger?.addEventListener("click", () => {
           openPanel(dialog, trigger);
           if (dialog.id === "profile-view-panel" && !profileLoaded) loadAccount();
-          if (dialog === progressTreeDialog) loadProgressTree();
           if (dialog === communityDialog) loadCommunity();
         });
       }
@@ -3095,8 +3449,9 @@
               .map((checkbox) => Number(checkbox.value)),
           });
           treeStatus.textContent = result.completed
-            ? "Step complete — a new branch has grown!"
+            ? "Step complete. A new branch has grown!"
             : "";
+          if (result.completed) celebrateStep(treeCompleteButton);
         } catch (error) {
           treeStatus.textContent = error.message;
         } finally {
@@ -3255,6 +3610,8 @@
 
       mainPage.inert = true;
       loadAccount();
+      // The progress tree is the home page, so load it right away.
+      loadProgressTree();
 
       groqForm.addEventListener("submit", async (event) => {
         event.preventDefault();
