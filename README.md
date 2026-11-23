@@ -64,8 +64,11 @@ without subtasks keep the simple completion flow. Existing trees can be
 replaced by starting a new tree; the interface asks for confirmation because
 this resets the current tree's progress.
 
-The progress tree is the home page and is drawn as an interactive network
-(like Obsidian's graph view) using the free d3 library, loaded from cdnjs.
+The progress tree is the whole home screen: an interactive network (like
+Obsidian's graph view) fills the page, drawn with the free d3 library loaded
+from cdnjs, and a side panel shows today's step or the dot you click. Skills
+can be hidden, the network can be replayed as a timelapse, and Recenter
+resets the view.
 The goal sits in the middle, finished and current steps link out from it,
 and the AI tags each step with 1-3 skills; steps that train the same skill
 are connected through that skill's node, which grows as more steps use it.

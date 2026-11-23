@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Osiris</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
     <script>
       if (document.cookie.split(";").some((cookie) => cookie.trim() === "background-theme=dark")) {
         document.documentElement.classList.add("is-dark");
@@ -34,18 +37,18 @@
         --leaf: #40a02b;
         /* Monospace stays for headings and labels; longer text uses a
            regular font because it is much easier to read in paragraphs. */
-        --font-body: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-body: "Instrument Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       }
 
       html.is-dark {
         color-scheme: dark;
-        --base: #1e1e2e;
-        --surface: #313244;
-        --panel: rgba(49, 50, 68, 0.96);
-        --panel-border: rgba(108, 112, 134, 0.55);
-        --text: #cdd6f4;
-        --muted: #a6adc8;
-        --accent: #cba6f7;
+        --base: #100f19;
+        --surface: #1d1b2c;
+        --panel: #1a1828;
+        --panel-border: #34314c;
+        --text: #ecebf6;
+        --muted: #a6a2c4;
+        --accent: #c6a6ff;
         --accent-hover: #b4befe;
         --accent-soft: rgba(203, 166, 247, 0.16);
         --button-text: #1e1e2e;
@@ -251,66 +254,95 @@
         outline-offset: 4px;
       }
 
-      /* The progress tree is the home page, so main is a normal page
-         column instead of an empty centered area for popups. */
-      main {
-        position: relative;
-        width: min(100% - 2rem, 1180px);
-        margin: 0 auto;
-        padding: 1rem 0 4rem;
+      /* Home: one screen, like Obsidian's graph view. A slim header on top,
+         the progress network fills the space, and a panel on the right
+         shows today's step or whatever you click in the network. */
+      html,
+      body {
+        height: 100%;
       }
 
-      .site-header,
-      .tree-page {
-        position: relative;
-        z-index: 1;
+      main.home {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
       }
 
       .site-header {
         display: flex;
+        flex: none;
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        gap: 0.75rem 1.5rem;
-        padding-bottom: 1rem;
+        gap: 0.5rem 1.5rem;
+        padding: 0.7rem 1.25rem;
         border-bottom: 1px solid var(--panel-border);
       }
 
       .brand {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
+        gap: 0.55rem;
         color: var(--text);
-        font-size: 1.35rem;
-        font-weight: 700;
+        font-size: 1.15rem;
+        font-weight: 800;
         text-decoration: none;
       }
 
-      .brand img {
-        width: 2rem;
-        height: 2rem;
+      .brand-sun {
+        display: block;
+        width: 1.25rem;
+        height: 1.25rem;
         border-radius: 50%;
+        background: linear-gradient(#fab387, #f38ba8);
       }
 
-      .main-logo-watermark {
-        position: fixed;
-        z-index: 0;
-        inset: 0;
-        pointer-events: none;
+      .home-app {
+        display: grid;
+        flex: 1;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        min-height: 0;
       }
 
-      .main-logo-watermark::after {
-        position: absolute;
-        z-index: 1;
-        inset: 0;
-        background: url("/background-logo.png") center / min(136vmin, 1000px) no-repeat;
-        /* Faint, so the logo stays as atmosphere behind real content. */
-        opacity: 0.1;
-        content: "";
+      .home-panel {
+        display: grid;
+        /* Rows keep their natural height; the panel scrolls instead of squeezing them. */
+        grid-auto-rows: max-content;
+        align-content: start;
+        gap: 1.1rem;
+        min-width: 0;
+        padding: 1.4rem 1.25rem 2rem;
+        overflow-y: auto;
+        border-left: 1px solid var(--panel-border);
+        background: var(--panel);
       }
 
-      html.is-dark body .main-logo-watermark::after {
-        background-image: url("/arvid-logo.png");
+      /* When a dot in the network is selected, the panel shows only its details. */
+      .home-panel[data-mode="node"] > :not(#tree-node-details):not(#tree-status) {
+        display: none !important;
+      }
+
+      @media (max-width: 820px) {
+        html,
+        body,
+        main.home {
+          height: auto;
+        }
+
+        .home-app {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .net-stage {
+          height: 62vh;
+          min-height: 360px;
+        }
+
+        .home-panel {
+          overflow: visible;
+          border-top: 1px solid var(--panel-border);
+          border-left: 0;
+        }
       }
 
       /* Top navigation: icon plus a visible text label, so people can
@@ -652,18 +684,167 @@
         overflow-wrap: anywhere;
       }
 
-      .tree-page {
-        padding-top: clamp(1.25rem, 4vw, 2.5rem);
-      }
-
-      /* "My progress tree" is a small label; the goal itself is the big heading. */
-      .tree-page h1 {
+      /* "Your network" is a small label; the goal itself is the big heading. */
+      .home-panel h1 {
         margin: 0 0 0.35rem;
         color: var(--muted);
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 400;
         letter-spacing: 0.12em;
         text-transform: uppercase;
+      }
+
+      .net-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+      }
+
+      .net-stat {
+        display: grid;
+        padding: 0.6rem 0.7rem;
+        border-radius: 0.7rem;
+        background: var(--surface);
+      }
+
+      .net-stat b {
+        font-size: 1.35rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .net-stat span {
+        color: var(--muted);
+        font-family: var(--font-body);
+        font-size: 0.75rem;
+      }
+
+      .net-list {
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .net-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        width: 100%;
+        padding: 0.55rem 0.7rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.7rem;
+        background: none;
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .net-item:hover {
+        border-color: var(--accent);
+      }
+
+      .net-item .net-swatch {
+        flex: none;
+        width: 0.6rem;
+        height: 0.6rem;
+        border: 1.5px solid var(--accent);
+        border-radius: 50%;
+      }
+
+      .net-item .net-swatch.is-done {
+        border-color: var(--leaf);
+        background: var(--leaf);
+      }
+
+      .net-item span:nth-child(2) {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .net-item small {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .net-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .net-chip {
+        padding: 0.25rem 0.7rem;
+        border: 0;
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      .net-chip:hover {
+        color: var(--text);
+      }
+
+      .net-back {
+        justify-self: start;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .net-back:hover {
+        color: var(--text);
+      }
+
+      .tree-node-details {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .tree-node-details h2 {
+        margin: 0;
+        color: var(--text);
+        font-size: 1.25rem;
+        line-height: 1.3;
+        text-wrap: balance;
+      }
+
+      .tree-node-details p {
+        margin: 0;
+        color: var(--muted);
+        font-family: var(--font-body);
+        line-height: 1.55;
+      }
+
+      .home-panel .tree-step-card {
+        padding: 1.1rem;
+        background: var(--base);
+        box-shadow: none;
+      }
+
+      .home-panel > #tree-status {
+        min-height: 0;
+        margin: 0;
+        line-height: 1.45;
+      }
+
+      .home-panel > #tree-status:empty {
+        display: none;
+      }
+
+      .home-panel .tree-heading h2 {
+        font-size: 1.35rem;
+      }
+
+      .home-panel .tree-empty-state {
+        margin: 0;
+        padding: 1.5rem 1.25rem;
       }
 
       .debug-panel {
@@ -956,58 +1137,10 @@
         line-height: 1.6;
       }
 
-      /* Two columns on wide screens: the tree on the left, today's step on
-         the right. #tree-details uses "display: contents" so its two
-         children can sit directly in this grid. */
-      .tree-view {
-        display: grid;
-        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
-        align-items: start;
-        gap: 1.5rem 2.5rem;
-        margin-top: 0.5rem;
-      }
-
+      .tree-view,
       #tree-details {
-        display: contents;
-      }
-
-      .tree-column {
-        position: sticky;
-        top: 1rem;
         display: grid;
         gap: 1.1rem;
-        min-width: 0;
-      }
-
-      .tree-step-column {
-        display: grid;
-        gap: 1rem;
-        min-width: 0;
-      }
-
-      /* While the interview is running there is no tree yet, so the chat
-         gets the full width. */
-      .tree-view:has(#tree-details[hidden]) .tree-assistant {
-        grid-column: 1 / -1;
-        max-width: 760px;
-      }
-
-      .tree-view .tree-assistant {
-        grid-column: 2;
-      }
-
-      @media (max-width: 820px) {
-        .tree-view {
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .tree-column {
-          position: static;
-        }
-
-        .tree-view .tree-assistant {
-          grid-column: 1;
-        }
       }
 
       .tree-heading {
@@ -1057,25 +1190,120 @@
          Built by drawProgressNetwork() with the d3 library. Only the goal
          is labeled at rest; names of steps and skills appear on hover,
          on click, or when zoomed in, to keep the picture calm. */
-      .tree-growth.is-network {
-        aspect-ratio: 1;
-        max-width: 420px;
-        border: 1px solid var(--panel-border);
-        border-radius: 1.25rem;
-        background: radial-gradient(circle at 50% 45%, var(--surface), var(--base) 75%);
-        cursor: grab;
-        touch-action: none;
+      .net-stage {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
         overflow: hidden;
+        background: radial-gradient(ellipse at 50% 45%, var(--surface), var(--base) 70%);
       }
 
-      .tree-growth.is-network:active {
+      .net-stage .tree-growth {
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      .net-stage .tree-growth:active {
         cursor: grabbing;
       }
 
-      .net-hint {
-        margin: -0.4rem 0 0;
+      .net-controls {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        max-width: calc(100% - 1.5rem);
+      }
+
+      .net-ctl {
+        padding: 0.45rem 0.9rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        font: inherit;
+        font-family: var(--font-body);
+        font-size: 0.82rem;
+        cursor: pointer;
+      }
+
+      .net-ctl:hover {
+        border-color: var(--accent);
+      }
+
+      .net-ctl[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .net-ctl:disabled {
+        cursor: default;
+        opacity: 0.5;
+      }
+
+      .net-legend {
+        position: absolute;
+        bottom: 0.75rem;
+        left: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 0.9rem;
+        max-width: calc(100% - 1.5rem);
+        padding: 0.45rem 0.75rem;
+        border-radius: 0.6rem;
+        background: var(--panel);
         color: var(--muted);
+        font-family: var(--font-body);
         font-size: 0.75rem;
+      }
+
+      .net-legend span {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .net-legend b {
+        display: inline-block;
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 50%;
+      }
+
+      .net-legend .is-done {
+        background: var(--leaf);
+      }
+
+      .net-legend .is-today {
+        border: 2px solid var(--accent);
+      }
+
+      .net-legend .is-skill {
+        border: 1.5px solid var(--accent);
+      }
+
+      .net-legend .is-locked {
+        border: 1.5px dashed var(--muted);
+      }
+
+      .net-hint {
+        position: absolute;
+        right: 0.75rem;
+        bottom: 0.85rem;
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+
+      @media (max-width: 560px) {
+        .net-hint {
+          display: none;
+        }
       }
 
       .net-link {
@@ -1722,32 +1950,49 @@
       </div>
       <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
-    <main>
-      <div class="main-logo-watermark" aria-hidden="true"></div>
+    <main class="home">
       <header class="site-header">
-        <a class="brand" href="/">
-          <img src="/arvid-logo.png" alt="" width="32" height="32">
-          Osiris
-        </a>
+        <a class="brand" href="/"><i class="brand-sun" aria-hidden="true"></i>Osiris</a>
         <nav class="launcher-actions" id="launcher-actions" aria-label="Main"></nav>
       </header>
-      <!-- The progress tree is the home page. It used to be a popup
-           (dialog) opened from an icon; now it is what you see first. -->
-      <section class="tree-page" id="progress-tree-page" aria-labelledby="progress-tree-title">
-        <p id="tree-status" role="status" aria-live="polite"></p>
-        <section class="tree-empty-state" id="tree-empty-state" hidden>
+      <!-- The home screen: your progress network fills the space and the
+           panel on the right shows today's step or the dot you click. -->
+      <div class="home-app">
+        <section class="net-stage" id="net-stage" aria-label="Your progress network">
+          <svg class="tree-growth" id="tree-growth" role="img" aria-label="Your progress network"></svg>
+          <div class="net-controls" id="net-controls" hidden>
+            <button class="net-ctl" id="net-skills" type="button" aria-pressed="true">Skills</button>
+            <button class="net-ctl" id="net-timelapse" type="button">&#9654; Timelapse</button>
+            <button class="net-ctl" id="net-recenter" type="button">Recenter</button>
+          </div>
+          <div class="net-legend" aria-hidden="true">
+            <span><b class="is-done"></b>Done</span>
+            <span><b class="is-today"></b>Today</span>
+            <span><b class="is-skill"></b>Skill</span>
+            <span><b class="is-locked"></b>Locked</span>
+          </div>
+          <p class="net-hint" id="tree-network-hint">Hover to see names &middot; drag &middot; scroll to zoom</p>
+        </section>
+        <aside class="home-panel" id="progress-tree-page" data-mode="overview" aria-labelledby="progress-tree-title">
+          <p id="tree-status" role="status" aria-live="polite"></p>
+          <section class="tree-empty-state" id="tree-empty-state" hidden>
           <div class="tree-empty-icon" aria-hidden="true">✦</div>
           <h2>What do you want to achieve?</h2>
           <p>Answer 10 quick multiple-choice questions. Your AI coach builds a step-by-step path to your goal and shows you one step at a time.</p>
           <button class="save-button" id="tree-create" type="button">Create My Progress Tree</button>
         </section>
-        <section class="tree-view" id="tree-view" hidden>
-          <div id="tree-details">
-            <div class="tree-column">
+          <section class="tree-node-details" id="tree-node-details" hidden></section>
+          <section class="tree-view" id="tree-view" hidden>
+            <div id="tree-details">
               <div class="tree-heading">
-                <h1 id="progress-tree-title">My progress tree</h1>
+                <h1 id="progress-tree-title">Your network</h1>
                 <h2 id="tree-goal"></h2>
                 <p id="tree-summary"></p>
+              </div>
+              <div class="net-stats">
+                <div class="net-stat"><b id="net-stat-done">0</b><span>steps done</span></div>
+                <div class="net-stat"><b id="net-stat-left">0</b><span>steps left</span></div>
+                <div class="net-stat"><b id="net-stat-skills">0</b><span>skills</span></div>
               </div>
               <div class="tree-progress">
                 <div class="tree-progress-label">
@@ -1758,10 +2003,6 @@
                   <div class="tree-progress-fill" id="tree-progress-fill"></div>
                 </div>
               </div>
-              <svg class="tree-growth" id="tree-growth" role="img" aria-label="Your progress tree"></svg>
-              <p class="net-hint" id="tree-network-hint" hidden>Hover a dot to see its name. Drag dots around, Ctrl + scroll to zoom, double-click to reset.</p>
-            </div>
-            <div class="tree-step-column">
               <article class="tree-step-card" id="tree-current-step" hidden>
                 <div class="tree-step-chips">
                   <span class="tree-step-chip is-today">Today's step</span>
@@ -1785,14 +2026,14 @@
                 <button class="save-button" id="tree-complete" type="button">Complete step</button>
               </article>
               <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
+              <div class="net-list" id="net-top-skills" hidden></div>
               <div class="tree-actions">
                 <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
                 <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
                 <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>Start a new progress tree</button>
               </div>
             </div>
-          </div>
-          <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
+            <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
             <h2 id="tree-assistant-title">Build your personalized skill tree</h2>
             <p id="tree-interview-progress" class="tree-interview-progress" hidden></p>
             <div class="tree-chat" id="tree-chat" aria-live="polite"></div>
@@ -1807,8 +2048,9 @@
             </form>
             <p id="tree-chat-status" role="status" aria-live="polite"></p>
           </section>
-        </section>
-      </section>
+          </section>
+        </aside>
+      </div>
       <dialog class="content-panel" id="content-panel" aria-labelledby="panel-title">
         <button class="close-button" type="button" aria-label="Close panel">&times;</button>
         <h1 id="panel-title">Shared text</h1>
@@ -2139,7 +2381,6 @@
       const treeProgressBar = document.querySelector(".tree-progress-track");
       const treeProgressFill = document.querySelector("#tree-progress-fill");
       const treeGrowth = document.querySelector("#tree-growth");
-      const treeNetworkHint = document.querySelector("#tree-network-hint");
       const treeCurrentStep = document.querySelector("#tree-current-step");
       const treeStepTitle = document.querySelector("#tree-step-title");
       const treeStepNumber = document.querySelector("#tree-step-number");
@@ -2958,33 +3199,62 @@
         });
       };
 
-      // ---- The progress network (Obsidian-style graph) ----
-      // The goal is a sun in the middle. Steps hang off it in a chain:
-      // finished steps glow green, today's step pulses, and future steps
-      // are faint, unnamed "locked" dots. Skills the AI tagged on each
-      // step become their own dots, linking every step that trains them,
-      // so the more you finish, the more the network branches out.
+      // ---- The progress network (the home screen) ----
+      // Works like Obsidian's graph view. The goal is the big dot; steps hang
+      // off it in a chain: finished steps glow green, today's step pulses,
+      // and future steps are faint "locked" dots whose names the server keeps
+      // secret. Skills the AI tagged on each step become their own dots and
+      // link every step that trains them, so the network branches out as you
+      // finish more. Names of steps and skills only show on hover or click.
       // Node objects are kept between redraws (in `network.cache`) so the
-      // layout doesn't jump when a step is completed; only new dots appear.
+      // layout doesn't jump when something changes; only new dots appear.
+      const netStage = document.querySelector("#net-stage");
+      const netControls = document.querySelector("#net-controls");
+      const netSkillsButton = document.querySelector("#net-skills");
+      const netTimelapseButton = document.querySelector("#net-timelapse");
+      const netRecenterButton = document.querySelector("#net-recenter");
+      const netStatDone = document.querySelector("#net-stat-done");
+      const netStatLeft = document.querySelector("#net-stat-left");
+      const netStatSkills = document.querySelector("#net-stat-skills");
+      const netTopSkills = document.querySelector("#net-top-skills");
+      const treeNodeDetails = document.querySelector("#tree-node-details");
+      const homePanel = document.querySelector("#progress-tree-page");
+      // On phones the page scrolls, so wheel/trackpad zoom needs Ctrl there.
+      const narrowLayout = window.matchMedia("(max-width: 820px)");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       const network = {
         cache: new Map(),
         goal: null,
         hasDrawn: false,
         sim: null,
+        zoom: null,
         world: null,
         linkLayer: null,
         nodeLayer: null,
         effectLayer: null,
+        nodes: [],
         links: [],
         hovered: null,
         selected: null,
+        showSkills: true,
+        lastTree: null,
+        playing: false,
+      };
+
+      const fitProgressNetwork = (animate = true) => {
+        if (!network.zoom) return;
+        const box = netStage.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+        const scale = Math.min(1.3, Math.max(0.5, Math.min(box.width, box.height) / 480));
+        const transform = d3.zoomIdentity.translate(box.width / 2, box.height / 2).scale(scale);
+        const svg = d3.select(treeGrowth);
+        (animate ? svg.transition().duration(600) : svg).call(network.zoom.transform, transform);
       };
 
       const setUpProgressNetwork = () => {
         const svg = d3.select(treeGrowth);
         treeGrowth.replaceChildren();
-        treeGrowth.classList.add("is-network");
-        treeGrowth.setAttribute("viewBox", "-160 -160 320 320");
+        treeGrowth.removeAttribute("viewBox");
         const defs = svg.append("defs");
         const glow = defs.append("filter").attr("id", "net-glow")
           .attr("x", "-100%").attr("y", "-100%").attr("width", "300%").attr("height", "300%");
@@ -3001,31 +3271,27 @@
         network.nodeLayer = network.world.append("g");
         network.effectLayer = network.world.append("g");
 
-        // Plain scrolling should still scroll the page, so zooming with the
-        // mouse wheel needs Ctrl (or Cmd). Pinch-zoom works on touch screens.
-        const zoom = d3.zoom()
-          .scaleExtent([0.4, 4])
-          .filter((event) => event.type !== "wheel" || event.ctrlKey || event.metaKey)
+        network.zoom = d3.zoom()
+          .scaleExtent([0.3, 4])
+          .filter((event) => (event.type === "wheel"
+            ? !narrowLayout.matches || event.ctrlKey || event.metaKey
+            : !event.button))
           .on("zoom", (event) => {
             network.world.attr("transform", event.transform);
-            treeGrowth.classList.toggle("is-zoomed", event.transform.k > 1.6);
+            treeGrowth.classList.toggle("is-zoomed", event.transform.k > 1.5);
           });
-        svg.call(zoom).on("dblclick.zoom", () => {
-          svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
-        });
-        svg.on("click", () => {
-          network.selected = null;
-          highlightProgressNetwork();
-        });
+        svg.call(network.zoom).on("dblclick.zoom", null);
+        svg.on("click", () => selectNetworkNode(null));
 
         network.sim = d3.forceSimulation()
           .force("link", d3.forceLink().id((node) => node.id)
             .distance((link) => link.distance)
-            .strength((link) => (link.kind === "skill" ? 0.12 : 0.9)))
-          .force("charge", d3.forceManyBody().strength((node) => node.charge).distanceMax(260))
-          .force("collide", d3.forceCollide((node) => node.r + 5))
-          .force("x", d3.forceX(0).strength(0.08))
-          .force("y", d3.forceY(0).strength(0.08))
+            .strength((link) => (link.kind === "skill" ? 0.08 : 0.9)))
+          .force("charge", d3.forceManyBody().strength((node) => node.charge).distanceMax(420))
+          .force("collide", d3.forceCollide((node) => node.r + 6))
+          .force("x", d3.forceX(0).strength(0.07))
+          .force("y", d3.forceY(0).strength(0.07))
+          .alphaDecay(0.03)
           .on("tick", () => {
             network.linkLayer.selectAll("line")
               .attr("x1", (link) => link.source.x).attr("y1", (link) => link.source.y)
@@ -3033,6 +3299,7 @@
             network.nodeLayer.selectAll("g.net-node")
               .attr("transform", (node) => `translate(${node.x},${node.y})`);
           });
+        new ResizeObserver(() => fitProgressNetwork(false)).observe(netStage);
       };
 
       // Reuses a node object if it already exists, otherwise creates it next
@@ -3056,6 +3323,7 @@
       };
 
       const highlightProgressNetwork = () => {
+        if (!network.nodeLayer) return;
         const focus = network.hovered || network.selected;
         const nodes = network.nodeLayer.selectAll("g.net-node");
         const lines = network.linkLayer.selectAll("line");
@@ -3076,6 +3344,95 @@
         lines.classed("net-dim", (link) => !touches(link)).classed("is-lit", touches);
       };
 
+      // Small helper for building panel content safely: text from the AI is
+      // always set with textContent, never as HTML.
+      const createElement = (tag, className, text) => {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (text !== undefined) element.textContent = text;
+        return element;
+      };
+
+      const networkListItem = (label, meta, swatchClass, targetId) => {
+        const button = createElement("button", "net-item");
+        button.type = "button";
+        button.append(createElement("i", `net-swatch ${swatchClass}`), createElement("span", "", label));
+        if (meta) button.append(createElement("small", "", meta));
+        button.addEventListener("click", () => selectNetworkNode(targetId));
+        return button;
+      };
+
+      // The side panel shows details for the selected dot, or the overview
+      // (goal, stats and today's step) when nothing is selected.
+      const renderNetworkDetails = () => {
+        const node = network.selected && network.nodes.find((item) => item.id === network.selected);
+        if (!node) {
+          network.selected = null;
+          homePanel.dataset.mode = "overview";
+          treeNodeDetails.hidden = true;
+          return;
+        }
+        homePanel.dataset.mode = "node";
+        treeNodeDetails.hidden = false;
+        treeNodeDetails.replaceChildren();
+        const back = createElement("button", "net-back", "← Back to today's step");
+        back.type = "button";
+        back.addEventListener("click", () => selectNetworkNode(null));
+        const heading = createElement("div");
+        treeNodeDetails.append(back, heading);
+        const tree = network.lastTree;
+
+        if (node.kind === "goal") {
+          heading.append(createElement("span", "tree-step-label", tree.finished ? "Goal reached" : "Your goal"), createElement("h2", "", tree.goal));
+          treeNodeDetails.append(createElement("p", "",
+            `${(tree.completed || []).length} of ${tree.total_steps} steps done.${tree.finished ? " This goal is now a permanent star in your network." : ""}`));
+          return;
+        }
+        if (node.kind === "skill") {
+          const steps = node.stepIds.map((id) => network.nodes.find((item) => item.id === id)).filter(Boolean);
+          const done = steps.filter((step) => step.status === "done");
+          heading.append(createElement("span", "tree-step-label", "Skill"), createElement("h2", "", node.label));
+          treeNodeDetails.append(createElement("p", "",
+            `Practiced in ${done.length} finished ${done.length === 1 ? "step" : "steps"}. The dot grows each time a step trains it.`));
+          const list = createElement("div", "net-list");
+          for (const step of steps) {
+            list.append(networkListItem(step.label, step.status === "done" ? "done" : "today",
+              step.status === "done" ? "is-done" : "", step.id));
+          }
+          treeNodeDetails.append(list);
+          return;
+        }
+        // A step that is done or locked (today's step uses the main card).
+        const position = `Step ${node.stepIndex + 1} of ${tree.total_steps}`;
+        if (node.status === "locked") {
+          heading.append(createElement("span", "tree-step-label", position), createElement("h2", "", "Locked step"));
+          treeNodeDetails.append(createElement("p", "", `This step appears when you finish step ${node.stepIndex}.`));
+          return;
+        }
+        heading.append(createElement("span", "tree-step-label", `${position} · done`), createElement("h2", "", node.label));
+        if (node.skills.length) {
+          const chips = createElement("div", "net-chips");
+          for (const skill of node.skills) {
+            const chip = createElement("button", "net-chip", skill);
+            chip.type = "button";
+            chip.addEventListener("click", () => selectNetworkNode(`skill:${skill.trim().toLowerCase()}`));
+            chips.append(chip);
+          }
+          treeNodeDetails.append(createElement("span", "tree-step-label", "Skills it built"), chips);
+        }
+      };
+
+      const selectNetworkNode = (id) => {
+        if (id && id.startsWith("skill:") && !network.showSkills) {
+          network.showSkills = true;
+          netSkillsButton.setAttribute("aria-pressed", "true");
+          drawProgressNetwork(network.lastTree);
+        }
+        network.selected = id;
+        highlightProgressNetwork();
+        renderNetworkDetails();
+      };
+
       const drawProgressNetwork = (tree, sproutIndex = -1) => {
         // A different goal means a brand-new tree, so start a fresh layout.
         if (network.goal !== tree.goal) {
@@ -3084,7 +3441,9 @@
           network.selected = null;
           network.hasDrawn = false;
         }
-        if (!network.sim) setUpProgressNetwork();
+        const firstDraw = !network.sim;
+        if (firstDraw) setUpProgressNetwork();
+        if (!network.playing) network.lastTree = tree;
 
         const completed = Array.isArray(tree.completed) ? tree.completed : [];
         const total = Math.max(Number(tree.total_steps) || 0, completed.length + (tree.current_step ? 1 : 0));
@@ -3093,8 +3452,8 @@
         nodes.push(networkNode("goal", {
           kind: "goal",
           label: tree.goal,
-          r: tree.finished ? 24 : 18,
-          charge: -420,
+          r: tree.finished ? 20 : 15,
+          charge: -350,
         }));
 
         const skillUses = new Map();
@@ -3103,37 +3462,46 @@
           const isDone = index < completed.length;
           const isCurrent = !isDone && index === completed.length && Boolean(tree.current_step);
           const step = isDone ? completed[index] : isCurrent ? tree.current_step : null;
+          const skills = Array.isArray(step?.skills) ? step.skills.map(String) : [];
           const id = `step-${index}`;
           nodes.push(networkNode(id, {
             kind: "step",
+            // Not called "index": d3 uses that name for its own numbering.
+            stepIndex: index,
             status: isDone ? "done" : isCurrent ? "current" : "locked",
-            label: step ? step.title : `Step ${index + 1} unlocks later`,
+            label: step ? step.title : "Locked",
+            skills,
+            // The three most recently finished steps glow brightest.
+            recent: isDone && index >= completed.length - 3,
             r: isCurrent ? 8 : isDone ? 6.5 : 4.5,
-            charge: -110,
+            charge: -120,
           }, previous));
-          links.push({ source: previous, target: id, kind: "chain", grown: isDone || isCurrent, distance: index === 0 ? 48 : 30 });
+          links.push({ source: previous, target: id, kind: "chain", grown: isDone || isCurrent, distance: index === 0 ? 46 : 30 });
           previous = id;
-          const skills = Array.isArray(step?.skills) ? step.skills : [];
           for (const skill of skills) {
-            const key = `skill:${String(skill).trim().toLowerCase()}`;
-            if (!skillUses.has(key)) skillUses.set(key, { label: skill, steps: [], done: 0 });
-            skillUses.get(key).steps.push(id);
+            const key = `skill:${skill.trim().toLowerCase()}`;
+            if (!skillUses.has(key)) skillUses.set(key, { label: skill, stepIds: [], done: 0 });
+            skillUses.get(key).stepIds.push(id);
             if (isDone) skillUses.get(key).done += 1;
           }
         }
-        for (const [key, skill] of skillUses) {
-          nodes.push(networkNode(key, {
-            kind: "skill",
-            label: skill.label,
-            // A skill grows each time a finished step trains it.
-            r: 4 + Math.sqrt(Math.max(skill.done, 1)) * 2.6,
-            charge: -140,
-            done: skill.done,
-          }, skill.steps[0]));
-          for (const stepId of skill.steps) {
-            links.push({ source: stepId, target: key, kind: "skill", distance: 62 });
+        if (network.showSkills) {
+          for (const [key, skill] of skillUses) {
+            nodes.push(networkNode(key, {
+              kind: "skill",
+              label: skill.label,
+              stepIds: skill.stepIds,
+              done: skill.done,
+              // A skill grows each time a finished step trains it.
+              r: 4 + Math.sqrt(Math.max(skill.done, 1)) * 2.6,
+              charge: -160,
+            }, skill.stepIds[0]));
+            for (const stepId of skill.stepIds) {
+              links.push({ source: stepId, target: key, kind: "skill", distance: 70 });
+            }
           }
         }
+        network.nodes = nodes;
         network.links = links;
 
         network.linkLayer.selectAll("line")
@@ -3160,12 +3528,14 @@
               })
               .on("click", (event, node) => {
                 event.stopPropagation();
-                network.selected = network.selected === node.id ? null : node.id;
-                highlightProgressNetwork();
-                // Clicking today's step jumps to its card.
+                if (network.playing) return;
+                // Today's step lives in the main card of the panel.
                 if (node.status === "current") {
-                  treeCurrentStep.scrollIntoView({ behavior: "smooth", block: "start" });
+                  selectNetworkNode(null);
+                  treeCurrentStep.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  return;
                 }
+                selectNetworkNode(network.selected === node.id ? null : node.id);
               })
               .call(d3.drag()
                 .on("start", (event, node) => {
@@ -3200,32 +3570,32 @@
         nodeGroups.select(".net-core")
           .attr("r", (node) => node.r)
           .attr("fill", (node) => {
-            if (node.kind === "goal") return "url(#net-sun)";
-            if (node.kind === "skill" || node.status !== "done") return "var(--base)";
+            if (node.kind === "goal") return tree.finished ? "url(#net-sun)" : "var(--leaf)";
+            if (node.kind === "skill" || node.status === "current") return "var(--base)";
+            if (node.status === "locked") return "var(--surface)";
             return "var(--leaf)";
           })
           .attr("stroke", (node) => {
-            if (node.kind === "skill") return "var(--accent)";
-            if (node.status === "current") return "var(--accent)";
+            if (node.kind === "goal") return "var(--base)";
+            if (node.kind === "skill" || node.status === "current") return "var(--accent)";
             if (node.status === "locked") return "var(--muted)";
             return "none";
           })
-          .attr("stroke-width", (node) => (node.status === "current" ? 3 : 1.8))
+          .attr("stroke-width", (node) => (node.status === "current" ? 3 : node.kind === "goal" ? 2 : 1.8))
           .attr("stroke-dasharray", (node) => (node.status === "locked" ? "2 2" : null))
-          .attr("opacity", (node) => (node.status === "locked" ? 0.6 : 1))
-          .attr("filter", (node) => (node.kind === "goal" || node.status === "done" || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
-        // The goal's full name is already the page heading, so its dot just
-        // says "Your goal" (the full name shows in the hover tooltip).
+          .attr("opacity", (node) => (node.status === "done" && !node.recent ? 0.78 : 1))
+          .attr("filter", (node) => (node.kind === "goal" || node.recent || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
+        // Long names are shortened on the dot; the full name is in the
+        // tooltip and in the side panel.
         nodeGroups.select("text")
-          .text((node) => (node.kind === "goal" ? (tree.finished ? "Goal reached" : "Your goal") : node.label))
-          .attr("x", (node) => (node.kind === "goal" ? 0 : node.r + 5))
-          .attr("y", (node) => (node.kind === "goal" ? node.r + 16 : 4))
-          .attr("text-anchor", (node) => (node.kind === "goal" ? "middle" : "start"));
+          .text((node) => (node.label.length > 32 ? `${node.label.slice(0, 30).trimEnd()}…` : node.label))
+          .attr("x", (node) => node.r + 6)
+          .attr("y", 4);
         nodeGroups.select("title").text((node) => node.label);
 
-        // A burst of light where the step was just completed.
+        // A burst of light where a step was just completed.
         const sprouted = network.cache.get(`step-${sproutIndex}`);
-        if (sprouted && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        if (sprouted && !reducedMotion.matches) {
           network.effectLayer.append("circle")
             .attr("class", "net-spark")
             .attr("cx", sprouted.x).attr("cy", sprouted.y).attr("r", 10)
@@ -3235,12 +3605,77 @@
 
         network.sim.nodes(nodes);
         network.sim.force("link").links(links);
-        network.sim.alpha(0.7).restart();
+        network.sim.alpha(firstDraw ? 1 : 0.6).restart();
         network.hasDrawn = true;
-        highlightProgressNetwork();
+        if (firstDraw) fitProgressNetwork(false);
+
+        // Overview numbers and the strongest skills in the side panel.
+        netControls.hidden = !tree.exists;
+        netStatDone.textContent = String(completed.length);
+        netStatLeft.textContent = String(Math.max(total - completed.length, 0));
+        netStatSkills.textContent = String(skillUses.size);
+        const topSkills = [...skillUses.entries()]
+          .filter(([, skill]) => skill.done > 0)
+          .sort((first, second) => second[1].done - first[1].done)
+          .slice(0, 4);
+        netTopSkills.replaceChildren();
+        netTopSkills.hidden = topSkills.length === 0;
+        if (topSkills.length) {
+          netTopSkills.append(createElement("span", "tree-step-label", "Strongest skills"));
+          for (const [key, skill] of topSkills) {
+            netTopSkills.append(networkListItem(skill.label, `${skill.done} ${skill.done === 1 ? "step" : "steps"}`, "", key));
+          }
+        }
         treeGrowth.setAttribute("aria-label",
           `Your progress network: ${completed.length} of ${total} steps done, ${skillUses.size} skills.`);
+        highlightProgressNetwork();
+        if (!network.playing) renderNetworkDetails();
       };
+
+      // Replays the network growing from the first finished step to now.
+      const playNetworkTimelapse = () => {
+        const tree = network.lastTree;
+        if (!tree?.exists || network.playing) return;
+        const completed = Array.isArray(tree.completed) ? tree.completed : [];
+        const frame = (count) => ({
+          ...tree,
+          completed: completed.slice(0, count),
+          current_step: count < completed.length ? completed[count] : tree.current_step,
+          finished: count === completed.length && tree.finished,
+        });
+        selectNetworkNode(null);
+        network.playing = true;
+        netTimelapseButton.disabled = true;
+        network.cache.clear();
+        network.hasDrawn = false;
+        network.linkLayer.selectAll("*").remove();
+        network.nodeLayer.selectAll("*").remove();
+        drawProgressNetwork(frame(0));
+        fitProgressNetwork(true);
+        let count = 0;
+        const delay = reducedMotion.matches ? 150 : 550;
+        const next = () => {
+          if (count >= completed.length) {
+            network.playing = false;
+            netTimelapseButton.disabled = false;
+            drawProgressNetwork(tree);
+            return;
+          }
+          count += 1;
+          drawProgressNetwork(frame(count), count - 1);
+          window.setTimeout(next, delay);
+        };
+        window.setTimeout(next, 700);
+      };
+
+      netSkillsButton.addEventListener("click", () => {
+        network.showSkills = !network.showSkills;
+        netSkillsButton.setAttribute("aria-pressed", String(network.showSkills));
+        if (!network.showSkills && network.selected?.startsWith("skill:")) network.selected = null;
+        if (network.lastTree) drawProgressNetwork(network.lastTree);
+      });
+      netTimelapseButton.addEventListener("click", playNetworkTimelapse);
+      netRecenterButton.addEventListener("click", () => fitProgressNetwork(true));
 
       // A short burst of leaves from the button when a step is completed.
       const celebrateStep = (origin) => {
@@ -3286,6 +3721,17 @@
         treeStatus.textContent = "";
         if (!tree.exists) {
           treeActions.hidden = true;
+          // Before the first tree exists, the network shows a single seed.
+          if (window.d3) {
+            drawProgressNetwork({
+              exists: false,
+              goal: "Your goal will grow here",
+              completed: [],
+              total_steps: 0,
+              current_step: null,
+              finished: false,
+            });
+          }
           if (hasConversation) {
             treeAssistantOpen = true;
             treeAssistant.hidden = false;
@@ -3306,7 +3752,6 @@
         // the simpler static tree so the page still works.
         if (window.d3) {
           drawProgressNetwork(tree, sproutIndex);
-          treeNetworkHint.hidden = false;
         } else {
           drawProgressTree(tree, sproutIndex);
         }
