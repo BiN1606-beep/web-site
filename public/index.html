@@ -1053,6 +1053,119 @@
         overflow: visible;
       }
 
+      /* ---- Progress network (the Obsidian-style graph) ----
+         Built by drawProgressNetwork() with the d3 library. Only the goal
+         is labeled at rest; names of steps and skills appear on hover,
+         on click, or when zoomed in, to keep the picture calm. */
+      .tree-growth.is-network {
+        aspect-ratio: 1;
+        max-width: 420px;
+        border: 1px solid var(--panel-border);
+        border-radius: 1.25rem;
+        background: radial-gradient(circle at 50% 45%, var(--surface), var(--base) 75%);
+        cursor: grab;
+        touch-action: none;
+        overflow: hidden;
+      }
+
+      .tree-growth.is-network:active {
+        cursor: grabbing;
+      }
+
+      .net-hint {
+        margin: -0.4rem 0 0;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .net-link {
+        stroke: var(--panel-border);
+        stroke-width: 1.3;
+        transition: opacity 200ms ease;
+      }
+
+      .net-link.is-chain {
+        stroke-width: 2.2;
+      }
+
+      .net-link.is-grown {
+        stroke: var(--accent);
+      }
+
+      .net-link.is-skill {
+        stroke-dasharray: 2 4;
+      }
+
+      .net-link.is-lit {
+        stroke: var(--accent);
+        opacity: 1;
+      }
+
+      .net-node {
+        cursor: pointer;
+        transition: opacity 200ms ease;
+      }
+
+      .tree-growth .net-node text {
+        fill: var(--text);
+        font-family: var(--font-body);
+        font-size: 11px;
+        pointer-events: none;
+        paint-order: stroke;
+        stroke: var(--base);
+        stroke-width: 3px;
+        stroke-linejoin: round;
+        opacity: 0;
+        transition: opacity 200ms ease;
+      }
+
+      .tree-growth .net-node.is-goal text {
+        font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+        font-size: 12px;
+        font-weight: 700;
+        opacity: 1;
+      }
+
+      .tree-growth .net-node.is-skill text {
+        fill: var(--muted);
+      }
+
+      .tree-growth.is-zoomed .net-node text,
+      .tree-growth .net-node.is-hovered text,
+      .tree-growth .net-node.is-selected text,
+      .tree-growth .net-node.is-near text {
+        opacity: 1;
+      }
+
+      .net-dim {
+        opacity: 0.15;
+      }
+
+      .net-bloom .net-core {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: tree-sprout 800ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+      }
+
+      .net-spark {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: net-spark 1s ease-out forwards;
+        pointer-events: none;
+      }
+
+      @keyframes net-spark {
+        from {
+          opacity: 0.9;
+          transform: scale(0.3);
+        }
+
+        to {
+          opacity: 0;
+          transform: scale(4);
+        }
+      }
+
       .tree-growth text {
         fill: var(--text);
         font-family: var(--font-body);
@@ -1646,6 +1759,7 @@
                 </div>
               </div>
               <svg class="tree-growth" id="tree-growth" role="img" aria-label="Your progress tree"></svg>
+              <p class="net-hint" id="tree-network-hint" hidden>Hover a dot to see its name. Drag dots around, Ctrl + scroll to zoom, double-click to reset.</p>
             </div>
             <div class="tree-step-column">
               <article class="tree-step-card" id="tree-current-step" hidden>
@@ -1890,6 +2004,10 @@
         <p id="groq-answer" aria-live="polite"></p>
       </dialog>
     </main>
+    <!-- d3 (free, open source) runs the moving network graph: the physics
+         that lets the dots float and settle, plus dragging and zooming.
+         If it fails to load, the page falls back to the static tree. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script>
       const startupScreen = document.querySelector("#startup-screen");
       const startupSkip = document.querySelector("#startup-skip");
@@ -2021,6 +2139,7 @@
       const treeProgressBar = document.querySelector(".tree-progress-track");
       const treeProgressFill = document.querySelector("#tree-progress-fill");
       const treeGrowth = document.querySelector("#tree-growth");
+      const treeNetworkHint = document.querySelector("#tree-network-hint");
       const treeCurrentStep = document.querySelector("#tree-current-step");
       const treeStepTitle = document.querySelector("#tree-step-title");
       const treeStepNumber = document.querySelector("#tree-step-number");
@@ -2839,6 +2958,290 @@
         });
       };
 
+      // ---- The progress network (Obsidian-style graph) ----
+      // The goal is a sun in the middle. Steps hang off it in a chain:
+      // finished steps glow green, today's step pulses, and future steps
+      // are faint, unnamed "locked" dots. Skills the AI tagged on each
+      // step become their own dots, linking every step that trains them,
+      // so the more you finish, the more the network branches out.
+      // Node objects are kept between redraws (in `network.cache`) so the
+      // layout doesn't jump when a step is completed; only new dots appear.
+      const network = {
+        cache: new Map(),
+        goal: null,
+        hasDrawn: false,
+        sim: null,
+        world: null,
+        linkLayer: null,
+        nodeLayer: null,
+        effectLayer: null,
+        links: [],
+        hovered: null,
+        selected: null,
+      };
+
+      const setUpProgressNetwork = () => {
+        const svg = d3.select(treeGrowth);
+        treeGrowth.replaceChildren();
+        treeGrowth.classList.add("is-network");
+        treeGrowth.setAttribute("viewBox", "-160 -160 320 320");
+        const defs = svg.append("defs");
+        const glow = defs.append("filter").attr("id", "net-glow")
+          .attr("x", "-100%").attr("y", "-100%").attr("width", "300%").attr("height", "300%");
+        glow.append("feGaussianBlur").attr("stdDeviation", 4).attr("result", "blur");
+        const merge = glow.append("feMerge");
+        merge.append("feMergeNode").attr("in", "blur");
+        merge.append("feMergeNode").attr("in", "SourceGraphic");
+        const sun = defs.append("radialGradient").attr("id", "net-sun");
+        sun.append("stop").attr("offset", "0%").attr("stop-color", "#fab387");
+        sun.append("stop").attr("offset", "100%").attr("stop-color", "#f38ba8");
+
+        network.world = svg.append("g");
+        network.linkLayer = network.world.append("g");
+        network.nodeLayer = network.world.append("g");
+        network.effectLayer = network.world.append("g");
+
+        // Plain scrolling should still scroll the page, so zooming with the
+        // mouse wheel needs Ctrl (or Cmd). Pinch-zoom works on touch screens.
+        const zoom = d3.zoom()
+          .scaleExtent([0.4, 4])
+          .filter((event) => event.type !== "wheel" || event.ctrlKey || event.metaKey)
+          .on("zoom", (event) => {
+            network.world.attr("transform", event.transform);
+            treeGrowth.classList.toggle("is-zoomed", event.transform.k > 1.6);
+          });
+        svg.call(zoom).on("dblclick.zoom", () => {
+          svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+        });
+        svg.on("click", () => {
+          network.selected = null;
+          highlightProgressNetwork();
+        });
+
+        network.sim = d3.forceSimulation()
+          .force("link", d3.forceLink().id((node) => node.id)
+            .distance((link) => link.distance)
+            .strength((link) => (link.kind === "skill" ? 0.12 : 0.9)))
+          .force("charge", d3.forceManyBody().strength((node) => node.charge).distanceMax(260))
+          .force("collide", d3.forceCollide((node) => node.r + 5))
+          .force("x", d3.forceX(0).strength(0.08))
+          .force("y", d3.forceY(0).strength(0.08))
+          .on("tick", () => {
+            network.linkLayer.selectAll("line")
+              .attr("x1", (link) => link.source.x).attr("y1", (link) => link.source.y)
+              .attr("x2", (link) => link.target.x).attr("y2", (link) => link.target.y);
+            network.nodeLayer.selectAll("g.net-node")
+              .attr("transform", (node) => `translate(${node.x},${node.y})`);
+          });
+      };
+
+      // Reuses a node object if it already exists, otherwise creates it next
+      // to the node it grows out of so it "blooms" from there.
+      const networkNode = (id, properties, growsFrom) => {
+        let node = network.cache.get(id);
+        if (node) {
+          node.isNew = false;
+        } else {
+          const parent = network.cache.get(growsFrom);
+          node = {
+            id,
+            x: (parent?.x ?? 0) + (Math.random() - 0.5) * 20,
+            y: (parent?.y ?? 0) + (Math.random() - 0.5) * 20,
+            // Only dots that appear after the first drawing get the bloom effect.
+            isNew: network.hasDrawn,
+          };
+          network.cache.set(id, node);
+        }
+        return Object.assign(node, properties);
+      };
+
+      const highlightProgressNetwork = () => {
+        const focus = network.hovered || network.selected;
+        const nodes = network.nodeLayer.selectAll("g.net-node");
+        const lines = network.linkLayer.selectAll("line");
+        nodes.classed("is-hovered", (node) => node.id === network.hovered)
+          .classed("is-selected", (node) => node.id === network.selected);
+        if (!focus) {
+          nodes.classed("net-dim", false).classed("is-near", false);
+          lines.classed("net-dim", false).classed("is-lit", false);
+          return;
+        }
+        const near = new Set([focus]);
+        for (const link of network.links) {
+          if (link.source.id === focus) near.add(link.target.id);
+          if (link.target.id === focus) near.add(link.source.id);
+        }
+        const touches = (link) => link.source.id === focus || link.target.id === focus;
+        nodes.classed("net-dim", (node) => !near.has(node.id)).classed("is-near", (node) => near.has(node.id));
+        lines.classed("net-dim", (link) => !touches(link)).classed("is-lit", touches);
+      };
+
+      const drawProgressNetwork = (tree, sproutIndex = -1) => {
+        // A different goal means a brand-new tree, so start a fresh layout.
+        if (network.goal !== tree.goal) {
+          network.cache.clear();
+          network.goal = tree.goal;
+          network.selected = null;
+          network.hasDrawn = false;
+        }
+        if (!network.sim) setUpProgressNetwork();
+
+        const completed = Array.isArray(tree.completed) ? tree.completed : [];
+        const total = Math.max(Number(tree.total_steps) || 0, completed.length + (tree.current_step ? 1 : 0));
+        const nodes = [];
+        const links = [];
+        nodes.push(networkNode("goal", {
+          kind: "goal",
+          label: tree.goal,
+          r: tree.finished ? 24 : 18,
+          charge: -420,
+        }));
+
+        const skillUses = new Map();
+        let previous = "goal";
+        for (let index = 0; index < total; index += 1) {
+          const isDone = index < completed.length;
+          const isCurrent = !isDone && index === completed.length && Boolean(tree.current_step);
+          const step = isDone ? completed[index] : isCurrent ? tree.current_step : null;
+          const id = `step-${index}`;
+          nodes.push(networkNode(id, {
+            kind: "step",
+            status: isDone ? "done" : isCurrent ? "current" : "locked",
+            label: step ? step.title : `Step ${index + 1} unlocks later`,
+            r: isCurrent ? 8 : isDone ? 6.5 : 4.5,
+            charge: -110,
+          }, previous));
+          links.push({ source: previous, target: id, kind: "chain", grown: isDone || isCurrent, distance: index === 0 ? 48 : 30 });
+          previous = id;
+          const skills = Array.isArray(step?.skills) ? step.skills : [];
+          for (const skill of skills) {
+            const key = `skill:${String(skill).trim().toLowerCase()}`;
+            if (!skillUses.has(key)) skillUses.set(key, { label: skill, steps: [], done: 0 });
+            skillUses.get(key).steps.push(id);
+            if (isDone) skillUses.get(key).done += 1;
+          }
+        }
+        for (const [key, skill] of skillUses) {
+          nodes.push(networkNode(key, {
+            kind: "skill",
+            label: skill.label,
+            // A skill grows each time a finished step trains it.
+            r: 4 + Math.sqrt(Math.max(skill.done, 1)) * 2.6,
+            charge: -140,
+            done: skill.done,
+          }, skill.steps[0]));
+          for (const stepId of skill.steps) {
+            links.push({ source: stepId, target: key, kind: "skill", distance: 62 });
+          }
+        }
+        network.links = links;
+
+        network.linkLayer.selectAll("line")
+          .data(links, (link) => `${link.source.id || link.source}>${link.target.id || link.target}`)
+          .join("line")
+          .attr("class", (link) => `net-link is-${link.kind}${link.grown ? " is-grown" : ""}`);
+
+        const nodeGroups = network.nodeLayer.selectAll("g.net-node")
+          .data(nodes, (node) => node.id)
+          .join((enter) => {
+            const group = enter.append("g");
+            group.append("circle").attr("class", "tree-pulse");
+            group.append("circle").attr("class", "net-core");
+            group.append("text");
+            group.append("title");
+            group
+              .on("mouseenter", (event, node) => {
+                network.hovered = node.id;
+                highlightProgressNetwork();
+              })
+              .on("mouseleave", () => {
+                network.hovered = null;
+                highlightProgressNetwork();
+              })
+              .on("click", (event, node) => {
+                event.stopPropagation();
+                network.selected = network.selected === node.id ? null : node.id;
+                highlightProgressNetwork();
+                // Clicking today's step jumps to its card.
+                if (node.status === "current") {
+                  treeCurrentStep.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              })
+              .call(d3.drag()
+                .on("start", (event, node) => {
+                  if (!event.active) network.sim.alphaTarget(0.25).restart();
+                  node.fx = node.x;
+                  node.fy = node.y;
+                })
+                .on("drag", (event, node) => {
+                  node.fx = event.x;
+                  node.fy = event.y;
+                })
+                .on("end", (event, node) => {
+                  if (!event.active) network.sim.alphaTarget(0);
+                  node.fx = null;
+                  node.fy = null;
+                }));
+            return group;
+          });
+
+        nodeGroups.attr("class", (node) => [
+          "net-node",
+          `is-${node.kind}`,
+          node.status ? `is-${node.status}` : "",
+          node.isNew ? "net-bloom" : "",
+        ].join(" "));
+        nodeGroups.select(".tree-pulse")
+          .attr("r", (node) => node.r)
+          .attr("fill", "none")
+          .attr("stroke", (node) => (node.kind === "goal" ? "#fab387" : "var(--accent)"))
+          .attr("stroke-width", 2)
+          .attr("display", (node) => (node.status === "current" || (node.kind === "goal" && tree.finished) ? null : "none"));
+        nodeGroups.select(".net-core")
+          .attr("r", (node) => node.r)
+          .attr("fill", (node) => {
+            if (node.kind === "goal") return "url(#net-sun)";
+            if (node.kind === "skill" || node.status !== "done") return "var(--base)";
+            return "var(--leaf)";
+          })
+          .attr("stroke", (node) => {
+            if (node.kind === "skill") return "var(--accent)";
+            if (node.status === "current") return "var(--accent)";
+            if (node.status === "locked") return "var(--muted)";
+            return "none";
+          })
+          .attr("stroke-width", (node) => (node.status === "current" ? 3 : 1.8))
+          .attr("stroke-dasharray", (node) => (node.status === "locked" ? "2 2" : null))
+          .attr("opacity", (node) => (node.status === "locked" ? 0.6 : 1))
+          .attr("filter", (node) => (node.kind === "goal" || node.status === "done" || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
+        // The goal's full name is already the page heading, so its dot just
+        // says "Your goal" (the full name shows in the hover tooltip).
+        nodeGroups.select("text")
+          .text((node) => (node.kind === "goal" ? (tree.finished ? "Goal reached" : "Your goal") : node.label))
+          .attr("x", (node) => (node.kind === "goal" ? 0 : node.r + 5))
+          .attr("y", (node) => (node.kind === "goal" ? node.r + 16 : 4))
+          .attr("text-anchor", (node) => (node.kind === "goal" ? "middle" : "start"));
+        nodeGroups.select("title").text((node) => node.label);
+
+        // A burst of light where the step was just completed.
+        const sprouted = network.cache.get(`step-${sproutIndex}`);
+        if (sprouted && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          network.effectLayer.append("circle")
+            .attr("class", "net-spark")
+            .attr("cx", sprouted.x).attr("cy", sprouted.y).attr("r", 10)
+            .attr("fill", "none").attr("stroke", "var(--leaf)").attr("stroke-width", 2)
+            .transition().delay(1000).remove();
+        }
+
+        network.sim.nodes(nodes);
+        network.sim.force("link").links(links);
+        network.sim.alpha(0.7).restart();
+        network.hasDrawn = true;
+        highlightProgressNetwork();
+        treeGrowth.setAttribute("aria-label",
+          `Your progress network: ${completed.length} of ${total} steps done, ${skillUses.size} skills.`);
+      };
+
       // A short burst of leaves from the button when a step is completed.
       const celebrateStep = (origin) => {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -2899,7 +3302,14 @@
         treeProgressPercent.textContent = `${tree.progress}%`;
         treeProgressBar.setAttribute("aria-valuenow", String(tree.progress));
         treeProgressFill.style.width = `${tree.progress}%`;
-        drawProgressTree(tree, sproutIndex);
+        // Use the moving network when the d3 library loaded; otherwise keep
+        // the simpler static tree so the page still works.
+        if (window.d3) {
+          drawProgressNetwork(tree, sproutIndex);
+          treeNetworkHint.hidden = false;
+        } else {
+          drawProgressTree(tree, sproutIndex);
+        }
         if (tree.current_step) {
           treeCurrentStep.hidden = false;
           treeStepNumber.textContent = `Step ${tree.completed_count + 1} of ${tree.total_steps}`;

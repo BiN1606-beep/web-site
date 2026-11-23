@@ -470,6 +470,20 @@ local function validate_tree(tree)
         if step.tasks == cjson.null then
             step.tasks = nil
         end
+        -- Optional skill tags (for example "Consistency" or "HTML") connect
+        -- steps in the network view. They are only decoration, so instead of
+        -- rejecting the whole tree for a bad tag we keep the valid ones.
+        if type(step.skills) == "table" then
+            local skills = {}
+            for _, skill in ipairs(step.skills) do
+                if type(skill) == "string" and #skill > 0 and #skill <= 30 and #skills < 3 then
+                    skills[#skills + 1] = skill
+                end
+            end
+            step.skills = #skills > 0 and skills or nil
+        else
+            step.skills = nil
+        end
         if step.tasks ~= nil then
             if type(step.tasks) ~= "table" or #step.tasks > 4 then
                 return false, "step " .. index .. " has an invalid task list"
@@ -516,7 +530,7 @@ local function progress_tree_view(row)
     local steps = tree.steps
     local completed = {}
     for index = 1, math.min(completed_count, #steps) do
-        completed[#completed + 1] = { title = steps[index].title }
+        completed[#completed + 1] = { title = steps[index].title, skills = steps[index].skills }
     end
     local current = steps[completed_count + 1]
     return {
@@ -952,7 +966,7 @@ For action "interview_answer", run a guided interview with exactly 10 selected a
 For action "chat" when a tree already exists, discuss the user's goal and current step without changing the roadmap; set ready=false.
 For action "help", give focused, actionable support for the current step without changing the tree; set ready=false and tree=null.
 For action "adjust", discuss the requested change and return a replacement roadmap only when you and the user agree it is appropriate. The replacement tree.steps must contain only new, not-yet-completed steps; completed steps are preserved by the server. Set ready=true only when returning that revised path.
-Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. When a step has several concrete sub-actions, include 2-4 concise tasks in its tasks array; omit tasks when the step is already one clear action. These listed tasks become a checklist the user must complete before they can mark that step done. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
+Keep a concise durable memory of the user's motivation, experience, preferences, available time, obstacles, and strategies that work. Preserve useful earlier memory. Reply in valid JSON only, with keys reply (string), memory (string), ready (boolean), choices (array of strings for interview questions, otherwise null), and tree (object or null). When ready=true, tree must have goal (1-200 characters), summary (at most 500 characters), and 3-30 complete, ordered steps. Every step must have title (1-100 characters), description (1-500 characters), and why (1-400 characters). Optional tip must be at most 300 characters; optional tasks must contain no more than 4 strings of at most 160 characters each. When a step has several concrete sub-actions, include 2-4 concise tasks in its tasks array; omit tasks when the step is already one clear action. These listed tasks become a checklist the user must complete before they can mark that step done. Every step should also have skills: an array of 1-3 short skill names (1-30 characters each, for example "Consistency", "Meal prep" or "HTML") that the step builds; reuse exactly the same skill name whenever different steps train the same skill, because these names connect the steps in the user's progress network. Use these exact field names and limits. Include all realistic milestones needed to reach the goal, but keep each step concise and sized for the user's circumstances.]]
     local prompt = cjson.encode({
         instructions = instructions,
         action = action,
@@ -1016,7 +1030,7 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
         if not valid_tree then
             ngx.log(ngx.WARN, "Progress-tree AI returned an invalid roadmap: ", validation_error)
             local repair_prompt = cjson.encode({
-                instructions = [[Repair this personalized roadmap and return JSON only in the form {"tree":{"goal":"...","summary":"...","steps":[...]}}. Preserve the user's intended goal and the useful personalized milestones; change only what is needed to satisfy the schema. The tree needs a goal string of 1-200 characters, a summary string of at most 500 characters, and 3-30 ordered steps. Every step must have a title string (1-100 characters), description string (1-500 characters), and why string (1-400 characters). Optional tip must be a string of at most 300 characters. Optional tasks must be an array of at most 4 strings, each 1-160 characters. Do not include markdown or any other keys outside the tree object.]],
+                instructions = [[Repair this personalized roadmap and return JSON only in the form {"tree":{"goal":"...","summary":"...","steps":[...]}}. Preserve the user's intended goal and the useful personalized milestones; change only what is needed to satisfy the schema. The tree needs a goal string of 1-200 characters, a summary string of at most 500 characters, and 3-30 ordered steps. Every step must have a title string (1-100 characters), description string (1-500 characters), and why string (1-400 characters). Optional tip must be a string of at most 300 characters. Optional tasks must be an array of at most 4 strings, each 1-160 characters. Optional skills must be an array of 1-3 short skill names, each 1-30 characters. Do not include markdown or any other keys outside the tree object.]],
                 candidate_tree = ai_result.tree,
             })
             local repaired_response = repair_prompt and request_progress_ai(repair_prompt)

@@ -64,6 +64,14 @@ without subtasks keep the simple completion flow. Existing trees can be
 replaced by starting a new tree; the interface asks for confirmation because
 this resets the current tree's progress.
 
+The progress tree is the home page and is drawn as an interactive network
+(like Obsidian's graph view) using the free d3 library, loaded from cdnjs.
+The goal sits in the middle, finished and current steps link out from it,
+and the AI tags each step with 1-3 skills; steps that train the same skill
+are connected through that skill's node, which grows as more steps use it.
+Trees created before skills were added still work, just without skill nodes.
+If d3 cannot load, the page falls back to a static drawing of the tree.
+
 The Progress Tree debug menu opens with the `ä` key only for the account
 matching an address in the server-side `DEBUG_MENU_EMAIL` setting. Add one or
 more comma-separated sign-in emails to `/etc/mysite/deploy.env`, for example
