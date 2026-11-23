@@ -60,9 +60,25 @@ free. New trees start with a 10-answer, multiple-choice AI interview; the full
 personalized roadmap is stored, while the interface reveals completed steps
 and only the current step. Steps with several subtasks include a checklist;
 all listed tasks must be checked before the step can be completed. Steps
-without subtasks keep the simple completion flow. Existing trees can be
-replaced by starting a new tree; the interface asks for confirmation because
-this resets the current tree's progress.
+without subtasks keep the simple completion flow. Each person can keep up to 8 goals, each with its own roadmap, progress,
+conversation and AI memory (one row per goal in `user_progress_trees`). One
+goal is the "focus": the side panel, the AI coach and "Complete step" work on
+it. "+ Add a new goal" starts a new interview and keeps the earlier goals;
+any goal can be made the focus or removed from the network. The AI places
+every goal in a life area (Health, Learning, Mind, Career, Creativity,
+Relationships, Money or Other), and the network groups goals around one hub
+per area.
+
+The progress tree is the whole home screen: an interactive network (like
+Obsidian's graph view) fills the page, drawn with the free d3 library loaded
+from cdnjs, and a side panel shows today's step or the dot you click. Skills
+can be hidden, the network can be replayed as a timelapse, and Recenter
+resets the view.
+The goal sits in the middle, finished and current steps link out from it,
+and the AI tags each step with 1-3 skills; steps that train the same skill
+are connected through that skill's node, which grows as more steps use it.
+Trees created before skills were added still work, just without skill nodes.
+If d3 cannot load, the page falls back to a static drawing of the tree.
 
 The Progress Tree debug menu opens with the `ä` key only for the account
 matching an address in the server-side `DEBUG_MENU_EMAIL` setting. Add one or
