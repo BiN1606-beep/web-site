@@ -176,3 +176,24 @@ key pair afterwards: every existing reminder subscription would stop working.
 
 Check that it runs with `systemctl status osiris-reminders.timer` and read
 its log with `journalctl -u osiris-reminders.service`.
+
+## Tests
+
+Every pull request runs all tests on GitHub (`.github/workflows/test.yml`);
+a red cross means something broke. To run them yourself you need Docker
+(on Windows, run it from Git Bash):
+
+```sh
+bash tests/run_all.sh
+```
+
+It checks that all JavaScript compiles and the streak math is right, runs
+every migration on a fresh PostgreSQL, starts the real Lua server code in
+OpenResty and calls the API like a browser (`tests/api/api_test.sh`), and
+sends reminders to a fake push service. It takes about a minute.
+`tests/smoke.sh` is a separate quick check against a running site.
+
+To click around the site on your own computer, `bash tests/dev_server.sh`
+starts it at http://localhost:8080 with an empty database (sign up with
+any test email). Stop it with `bash tests/dev_server.sh stop`. The AI
+coach, Google sign-in and reminders aren't connected there.

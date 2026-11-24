@@ -1,0 +1,232 @@
+/* The streak card, check-ins, reminders, rewards, and the wilting network. */
+
+/* ---- Daily streak ---- */
+.streak-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.8rem;
+  background: var(--surface);
+}
+
+.streak-card.is-wilting {
+  border-color: var(--area-career);
+}
+
+.streak-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.streak-head b {
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.streak-head span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.streak-head .streak-best {
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+
+.streak-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.streak-day {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.streak-dot {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--panel-border);
+  border-radius: 50%;
+}
+
+.streak-day.is-done .streak-dot {
+  border-color: var(--leaf);
+  background: var(--leaf);
+}
+
+.streak-day.is-frozen .streak-dot {
+  border-color: var(--moon);
+  background: color-mix(in srgb, var(--moon) 35%, transparent);
+}
+
+.streak-day.is-today .streak-dot {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.streak-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.streak-card.is-wilting .streak-message {
+  color: var(--text);
+}
+
+.checkin-form {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.checkin-form label {
+  font-size: 0.85rem;
+}
+
+.checkin-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checkin-row input {
+  flex: 1;
+  min-width: 0;
+  /* A text box asks for room for about 20 characters by default, which
+     (with the button next to it) made the whole panel wider than the
+     screen. With width 0 it simply takes the space that is left. */
+  width: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.65rem;
+  background: var(--base);
+  color: var(--text);
+  font: inherit;
+}
+
+.checkin-row input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.checkin-row .save-button {
+  flex: none;
+}
+
+.reminder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.reminder-row select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  background: var(--base);
+  color: var(--text);
+  font: inherit;
+}
+
+.reminder-row button {
+  margin-left: auto;
+}
+
+.reminder-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ---- Rewards ---- */
+.reward-card {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.reward-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reward {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.reward-badge {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border: 2px dashed var(--panel-border);
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.reward.is-earned {
+  color: var(--text);
+}
+
+.reward.is-earned .reward-badge {
+  border: 2px solid var(--sun);
+  background: color-mix(in srgb, var(--sun) 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sun) 45%, transparent);
+  font-weight: 600;
+}
+
+.reward.is-new .reward-badge {
+  animation: reward-pop 0.9s ease;
+}
+
+@keyframes reward-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.reward-message {
+  margin: 0;
+  min-height: 0;
+  font-size: 0.85rem;
+}
+
+.reward-message:empty {
+  display: none;
+}
+
+@media (max-width: 380px) {
+  .reward-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The network wilts when check-ins are missed: --wilt goes from 0
+   (healthy) to 1 (five or more days missed). It fades the colors and
+   dims the picture; one check-in brings it back. */
+.net-stage .tree-growth {
+  filter: saturate(calc(1 - var(--wilt, 0) * 0.85)) brightness(calc(1 - var(--wilt, 0) * 0.35));
+  transition: filter 1.2s ease;
+}

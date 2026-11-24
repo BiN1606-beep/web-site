@@ -1,0 +1,360 @@
+/* The progress network (the Obsidian-style graph) drawn with d3. */
+
+/* ---- Progress network (the Obsidian-style graph) ----
+   Built by drawProgressNetwork() with the d3 library. Only the goal
+   is labeled at rest; names of steps and skills appear on hover,
+   on click, or when zoomed in, to keep the picture calm. */
+.net-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 45%, var(--surface), var(--base) 70%);
+}
+
+.net-stage .tree-growth {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.net-stage .tree-growth:active {
+  cursor: grabbing;
+}
+
+.net-controls {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: calc(100% - 1.5rem);
+}
+
+.net-ctl {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.net-ctl:hover {
+  border-color: var(--accent);
+}
+
+.net-ctl[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.net-ctl:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.net-legend {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.6rem;
+  background: var(--panel);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+}
+
+.net-legend span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.net-legend b {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.net-legend .is-done {
+  background: var(--leaf);
+}
+
+.net-legend .is-today {
+  border: 2px solid var(--accent);
+}
+
+.net-legend .is-skill {
+  border: 1.5px solid var(--accent);
+}
+
+.net-legend .is-locked {
+  border: 1.5px dashed var(--muted);
+}
+
+.net-hint {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.85rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 560px) {
+  .net-hint {
+    display: none;
+  }
+}
+
+.net-link {
+  stroke: var(--panel-border);
+  stroke-width: 1.3;
+  transition: opacity 200ms ease;
+}
+
+.net-link.is-chain {
+  stroke-width: 2.2;
+}
+
+.net-link.is-grown {
+  stroke: var(--accent);
+}
+
+.net-link.is-skill {
+  stroke-dasharray: 2 4;
+}
+
+.net-link.is-lit {
+  stroke: var(--accent);
+  opacity: 1;
+}
+
+.net-node {
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+
+.tree-growth .net-node text {
+  fill: var(--text);
+  font-family: var(--font-body);
+  font-size: 11px;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--base);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.tree-growth .net-node.is-goal text {
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.tree-growth .net-node.is-area text {
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 1;
+}
+
+.tree-growth .net-node.is-seed text {
+  fill: var(--muted);
+  opacity: 1;
+}
+
+.tree-growth .net-node.is-skill text {
+  fill: var(--muted);
+}
+
+.tree-growth.is-zoomed .net-node text,
+.tree-growth .net-node.is-hovered text,
+.tree-growth .net-node.is-selected text,
+.tree-growth .net-node.is-near text {
+  opacity: 1;
+}
+
+.net-dim {
+  opacity: 0.15;
+}
+
+.net-bloom .net-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tree-sprout 800ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.net-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: net-spark 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes net-spark {
+  from {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(4);
+  }
+}
+
+.tree-growth text {
+  fill: var(--text);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+}
+
+.tree-growth .tree-node-tag {
+  fill: var(--muted);
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.tree-growth .is-locked text {
+  fill: var(--muted);
+}
+
+.tree-growth .is-current .tree-node-title {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+.tree-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tree-pulse 2.2s ease-out infinite;
+}
+
+.tree-sprout {
+  transform-box: fill-box;
+  transform-origin: right bottom;
+  animation: tree-sprout 900ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes tree-pulse {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes tree-sprout {
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+/* ---- Phones: bigger tap targets and full screen ---- */
+
+/* The invisible circle around each dot only catches taps on touch screens,
+   so mouse hovering stays exact on computers. */
+.tree-growth .net-hit {
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .tree-growth .net-hit {
+    pointer-events: all;
+  }
+}
+
+/* The full-screen button is only useful when the network is part of a
+   longer page (phones and narrow windows). */
+.net-ctl.net-fullscreen {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .net-ctl.net-fullscreen {
+    display: inline-block;
+  }
+}
+
+@media (max-width: 560px) {
+  /* One row of controls that scrolls sideways instead of two rows. */
+  .net-controls {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .net-controls::-webkit-scrollbar {
+    display: none;
+  }
+
+  .net-ctl {
+    flex: none;
+  }
+}
+
+/* Full screen: the network covers the whole screen... */
+html.net-fullscreen-open,
+html.net-fullscreen-open body {
+  overflow: hidden;
+}
+
+.home-app.is-net-fullscreen .net-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.home-app.is-net-fullscreen .net-ctl.net-fullscreen {
+  display: inline-block;
+}
+
+/* ...and the panel only appears, as a sheet over the bottom of the
+   screen, when a dot is selected. */
+.home-app.is-net-fullscreen .home-panel {
+  display: none;
+}
+
+.home-app.is-net-fullscreen .home-panel[data-mode="node"] {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 41;
+  display: grid;
+  max-height: 55dvh;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -0.75rem 2rem var(--shadow);
+}

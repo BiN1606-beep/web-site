@@ -1,0 +1,19 @@
+name: Tests
+
+# Runs every test for each pull request, and for pushes to branches other
+# than main (main deploys; see deploy.yml). A red cross on a pull request
+# means "don't merge yet". The tests only use free public Docker images.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run all tests
+        run: bash tests/run_all.sh
