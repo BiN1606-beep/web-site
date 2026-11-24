@@ -516,7 +516,45 @@ local function validate_tree(tree)
     return true
 end
 
-local function progress_tree_view(row)
+-- When each of a user's steps was completed, as
+-- dates[goal_id][step_index] = "2026-11-24T18:05:00Z" (UTC, ISO 8601, so the
+-- browser can read it with new Date()). Steps finished before migration 008
+-- have no entry: their date was never saved.
+local function load_step_completions(user_id)
+    local rows = database_query([[
+        SELECT goal_id, step_index,
+            to_char(completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS completed_at
+        FROM public.step_completions
+        WHERE user_id = $1
+    ]], user_id)
+    if not rows then
+        return nil
+    end
+    local dates = {}
+    for _, completion in ipairs(rows) do
+        local goal_id = tonumber(completion.goal_id)
+        dates[goal_id] = dates[goal_id] or {}
+        dates[goal_id][tonumber(completion.step_index)] = completion.completed_at
+    end
+    return dates
+end
+
+-- The finished steps of a goal, each with its completion date when known.
+-- goal_dates is one goal's entry from load_step_completions, or nil.
+local function completed_steps(steps, completed_count, goal_dates)
+    local completed = {}
+    for index = 1, math.min(completed_count, #steps) do
+        completed[#completed + 1] = {
+            title = steps[index].title,
+            skills = steps[index].skills,
+            -- step_index in the database is 0-based, Lua tables are 1-based.
+            completed_at = goal_dates and goal_dates[index - 1] or nil,
+        }
+    end
+    return completed
+end
+
+local function progress_tree_view(row, dates)
     local tree = decode_json_value(row.tree_data, nil)
     local conversation = decode_json_value(row.conversation, {})
     if type(conversation) ~= "table" then
@@ -546,10 +584,7 @@ local function progress_tree_view(row)
 
     local completed_count = tonumber(row.completed_count) or 0
     local steps = tree.steps
-    local completed = {}
-    for index = 1, math.min(completed_count, #steps) do
-        completed[#completed + 1] = { title = steps[index].title, skills = steps[index].skills }
-    end
+    local completed = completed_steps(steps, completed_count, dates and dates[tonumber(row.id)])
     local current = steps[completed_count + 1]
     return {
         exists = true,
@@ -594,7 +629,7 @@ end
 -- A short summary of every goal that has a roadmap, for drawing the whole
 -- network. Like the main view, it only reveals finished steps and the
 -- current step; later steps stay hidden.
-local function load_goal_summaries(user_id)
+local function load_goal_summaries(user_id, dates)
     local rows = database_query([[
         SELECT id, is_active, tree_data, completed_count
         FROM public.user_progress_trees
@@ -609,10 +644,7 @@ local function load_goal_summaries(user_id)
         local tree = decode_json_value(row.tree_data, nil)
         if type(tree) == "table" and type(tree.steps) == "table" and #tree.steps > 0 then
             local completed_count = tonumber(row.completed_count) or 0
-            local completed = {}
-            for index = 1, math.min(completed_count, #tree.steps) do
-                completed[#completed + 1] = { title = tree.steps[index].title, skills = tree.steps[index].skills }
-            end
+            local completed = completed_steps(tree.steps, completed_count, dates and dates[tonumber(row.id)])
             local current = tree.steps[completed_count + 1]
             goals[#goals + 1] = {
                 id = tonumber(row.id),
@@ -632,8 +664,10 @@ end
 
 -- The active goal's full view plus the summary of all goals.
 local function progress_tree_payload(row, user_id)
-    local view = row and progress_tree_view(row) or { exists = false, conversation = {} }
-    view.goals = load_goal_summaries(user_id) or {}
+    -- If the dates cannot be loaded the network still works, just without them.
+    local dates = load_step_completions(user_id)
+    local view = row and progress_tree_view(row, dates) or { exists = false, conversation = {} }
+    view.goals = load_goal_summaries(user_id, dates) or {}
     view.max_goals = MAX_GOALS
     return view
 end
@@ -964,17 +998,35 @@ local function handle_progress_tree()
         if not count or count < 1 or count > 20 or count % 1 ~= 0 then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose a whole number of steps between 1 and 20." })
         end
+        -- "before" reads the count from before the UPDATE (every part of one
+        -- statement sees the same snapshot), so only the skipped steps get a
+        -- completion date.
         local skipped = database_query([[
-            UPDATE public.user_progress_trees
-            SET completed_count = LEAST(
-                    completed_count + $2::integer,
-                    jsonb_array_length(tree_data->'steps')
-                ),
-                updated_at = now()
-            WHERE user_id = $1 AND is_active
-              AND tree_data IS NOT NULL
-              AND jsonb_typeof(tree_data->'steps') = 'array'
-            RETURNING id, tree_data, completed_count, conversation, ai_memory
+            WITH before AS (
+                SELECT id, completed_count FROM public.user_progress_trees
+                WHERE user_id = $1 AND is_active
+            ),
+            changed AS (
+                UPDATE public.user_progress_trees
+                SET completed_count = LEAST(
+                        completed_count + $2::integer,
+                        jsonb_array_length(tree_data->'steps')
+                    ),
+                    updated_at = now()
+                WHERE user_id = $1 AND is_active
+                  AND tree_data IS NOT NULL
+                  AND jsonb_typeof(tree_data->'steps') = 'array'
+                RETURNING id, user_id, tree_data, completed_count, conversation, ai_memory
+            ),
+            recorded AS (
+                INSERT INTO public.step_completions (goal_id, user_id, step_index)
+                SELECT changed.id, changed.user_id, step_index
+                FROM changed
+                JOIN before ON before.id = changed.id
+                CROSS JOIN generate_series(before.completed_count, changed.completed_count - 1) AS step_index
+                ON CONFLICT (goal_id, step_index) DO NOTHING
+            )
+            SELECT id, tree_data, completed_count, conversation, ai_memory FROM changed
         ]], user.id, count)
         if not skipped then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not skip progress-tree steps." })
@@ -1014,6 +1066,14 @@ local function handle_progress_tree()
                   AND completed_count = $2
                   AND completed_count < jsonb_array_length(tree_data->'steps')
                 RETURNING id, user_id, tree_data, completed_count, conversation, ai_memory
+            ),
+            -- Remember when the step was done. completed_count is already
+            -- the new count here, so the finished step's 0-based index is
+            -- one less.
+            recorded AS (
+                INSERT INTO public.step_completions (goal_id, user_id, step_index)
+                SELECT id, user_id, completed_count - 1 FROM changed
+                ON CONFLICT (goal_id, step_index) DO NOTHING
             ),
             activity AS (
                 INSERT INTO public.community_activities (actor_id, activity_type, details)

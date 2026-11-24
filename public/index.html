@@ -3283,6 +3283,30 @@
         confirmingDelete: null,
       };
 
+      // When a finished step was completed, in milliseconds, or null. Steps
+      // finished before the site started saving dates have none.
+      const completedTime = (step) => {
+        const time = step?.completed_at ? Date.parse(step.completed_at) : NaN;
+        return Number.isFinite(time) ? time : null;
+      };
+
+      // Steps finished within this many days glow brightest in the network.
+      const RECENT_DAYS = 7;
+
+      // Is a goal's finished step (by its 0-based index) recent? With a date:
+      // finished in the last RECENT_DAYS days. Goals from before dates were
+      // saved fall back to the old rule: their last three steps glow.
+      const isRecentStep = (goal, index) => {
+        const time = completedTime(goal.completed[index]);
+        if (time !== null) return Date.now() - time < RECENT_DAYS * 24 * 60 * 60 * 1000;
+        const goalHasDates = goal.completed.some((step) => completedTime(step) !== null);
+        return !goalHasDates && index >= goal.completed.length - 3;
+      };
+
+      const formatCompletedDate = (time) => new Date(time).toLocaleDateString(undefined, {
+        day: "numeric", month: "short", year: "numeric",
+      });
+
       // Turns the server's answer into a list of goals. Older servers only
       // send the active tree, so that becomes a one-goal list.
       const goalsFromTree = (tree) => {
@@ -3555,6 +3579,9 @@
         }
         heading.append(createElement("span", "tree-step-label", `${position} · done`), createElement("h2", "", node.label));
         treeNodeDetails.append(goalChip);
+        if (node.completedAt !== null) {
+          treeNodeDetails.append(createElement("p", "", `Completed on ${formatCompletedDate(node.completedAt)}.`));
+        }
         if (node.skills.length) {
           const chips = createElement("div", "net-chips");
           for (const skill of node.skills) {
@@ -3628,8 +3655,8 @@
               label: step ? step.title : "Locked",
               color,
               skills,
-              // The three most recently finished steps of a goal glow brightest.
-              recent: isDone && index >= goal.completed.length - 3,
+              completedAt: isDone ? completedTime(step) : null,
+              recent: isDone && isRecentStep(goal, index),
               r: isCurrent ? 8 : isDone ? 6.5 : 4.5,
               charge: -120,
             }, previous));
@@ -3848,7 +3875,13 @@
       const playNetworkTimelapse = () => {
         const goals = network.goals;
         if (!goals.length || network.playing) return;
-        const order = goals.flatMap((goal, goalIndex) => goal.completed.map((_, stepIndex) => [goalIndex, stepIndex]));
+        // Replay steps in the order they really happened. Steps without a
+        // date (finished before dates were saved) come first, goal by goal;
+        // the sort is stable, so their original order is kept.
+        const order = goals
+          .flatMap((goal, goalIndex) => goal.completed.map((step, stepIndex) =>
+            [goalIndex, stepIndex, completedTime(step) ?? -Infinity]))
+          .sort((a, b) => a[2] - b[2]);
         const frame = (count) => {
           const doneByGoal = goals.map(() => 0);
           for (const [goalIndex] of order.slice(0, count)) doneByGoal[goalIndex] += 1;
