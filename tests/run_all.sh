@@ -32,7 +32,7 @@ WEB="$RUN_ID-web"
 PG_ENV=(-e PGHOST="$DB" -e PGPORT=5432 -e PGUSER=postgres -e PGPASSWORD=test -e PGDATABASE=osiris)
 
 cleanup() {
-    docker rm -f "$DB" "$WEB" >/dev/null 2>&1 || true
+    docker rm -f -v "$DB" "$WEB" >/dev/null 2>&1 || true
     docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT

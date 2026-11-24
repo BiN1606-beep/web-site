@@ -1859,15 +1859,20 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
     })
 end
 
+-- A user (or activity) ID from the browser, as a number, or nil.
+-- It must be a number, not text: newer pgmoon versions send Lua strings to
+-- PostgreSQL typed as text, and "id = $1" with a text $1 then fails with
+-- "operator does not exist: bigint = text". 15 digits keeps it exact in a
+-- Lua number.
 local function valid_social_user_id(value)
     if type(value) ~= "string" and type(value) ~= "number" then
         return nil
     end
     local id = tostring(value)
-    if #id > 18 or not id:match("^[1-9]%d*$") then
+    if #id > 15 or not id:match("^[1-9]%d*$") then
         return nil
     end
-    return id
+    return tonumber(id)
 end
 
 local function ensure_social_settings(user_id)
@@ -2288,7 +2293,7 @@ local function handle_community()
         end
         return respond(ngx.HTTP_OK, { ok = true })
     elseif action == "request" then
-        if not target_id or target_id == tostring(user.id) then
+        if not target_id or target_id == tonumber(user.id) then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose another community member." })
         end
         local rows = database_query([[
@@ -2379,7 +2384,7 @@ local function handle_community()
         end
         return respond(ngx.HTTP_OK, { ok = true })
     elseif action == "follow" or action == "unfollow" then
-        if not target_id or target_id == tostring(user.id) then
+        if not target_id or target_id == tonumber(user.id) then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose another community member." })
         end
         if action == "follow" then
@@ -2422,7 +2427,7 @@ local function handle_community()
         end
         return respond(ngx.HTTP_OK, { ok = true, following = action == "follow" })
     elseif action == "block" or action == "unblock" then
-        if not target_id or target_id == tostring(user.id) then
+        if not target_id or target_id == tonumber(user.id) then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose another community member." })
         end
         local rows
@@ -2462,7 +2467,7 @@ local function handle_community()
         end
         return respond(ngx.HTTP_OK, { ok = true })
     elseif action == "report" then
-        if not target_id or target_id == tostring(user.id)
+        if not target_id or target_id == tonumber(user.id)
             or type(body.reason) ~= "string" or #body.reason < 1 or #body.reason > 1000 then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose a member and provide a short report reason." })
         end

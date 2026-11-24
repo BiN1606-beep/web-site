@@ -10,9 +10,17 @@ post() { curl -sS -b $J -c $J -H 'Content-Type: application/json' -o /tmp/out -w
 code=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' $B/); echo "GET / signed out: $code"; case "$code" in "302 "*/welcome) ;; *) fail "home redirect";; esac
 code=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' $B/other.html); case "$code" in "302 "*/login) ;; *) fail "other redirect $code";; esac
 [ "$(curl -sS -o /dev/null -w '%{http_code}' $B/welcome)" = 200 ] || fail welcome
+[ "$(curl -sS -o /dev/null -w "%{http_code}" $B/login)" = 200 ] || fail login
 [ "$(curl -sS -o /dev/null -w '%{http_code}' $B/sw.js)" = 200 ] || fail sw
 [ "$(curl -sS -o /dev/null -w '%{http_code}' $B/icons/icon-192.png)" = 200 ] || fail icon
+[ "$(curl -sS -o /dev/null -w "%{http_code}" $B/js/main.js)" = 200 ] || fail "scripts"
+[ "$(curl -sS -o /dev/null -w "%{http_code}" $B/css/base.css)" = 200 ] || fail "styles"
 curl -sS -I $B/manifest.webmanifest | grep -qi 'content-type: application/manifest+json' || fail manifest
+# Browsers refuse styles and service workers sent with the wrong type.
+for check in "/css/base.css text/css" "/js/main.js application/javascript" "/sw.js application/javascript" "/icons/icon-192.png image/png" "/welcome text/html"; do
+    set -- $check
+    curl -sS -I "$B$1" | grep -qi "^content-type: $2" || fail "content type of $1 should be $2"
+done
 echo "public pages ok"
 
 code=$(curl -sS -c $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"t@test.se","password":"averylongpassword1"}')
@@ -58,5 +66,35 @@ EVIL='{"endpoint":"https://evil.example.com/fcm.googleapis.com/","keys":{"p256dh
 [ "$(post '{"action":"reminder_unsubscribe","endpoint":"https://fcm.googleapis.com/fcm/send/abc"}')" = 200 ] || fail unsubscribe
 [ "$(psql -tAc 'SELECT count(*) FROM push_subscriptions')" = 0 ] || fail "unsub row"
 echo "reminders ok"
+
+# ---- Community: two users, privacy, friends, follows, feed, reactions ----
+J2=/tmp/jar2
+cpost() { curl -sS -b "$1" -c "$1" -H 'Content-Type: application/json' -o /tmp/out -w '%{http_code}' -X POST "$B/api/community" -d "$2"; }
+cget() { curl -sS -b "$1" -o /tmp/out -w '%{http_code}' "$B/api/community?$2"; }
+code=$(curl -sS -c $J2 -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"friend@test.se","password":"averylongpassword2"}')
+[ "$code" = 201 ] || { cat /tmp/out; fail "second signup $code"; }
+A_ID=$(psql -tAc "SELECT id FROM auth_users WHERE email='t@test.se'")
+B_ID=$(psql -tAc "SELECT id FROM auth_users WHERE email='friend@test.se'")
+
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 403 ] || { cat /tmp/out; fail "private profile visible"; }
+[ "$(cpost $J '{"action":"privacy","settings":{"profile_visibility":"public","show_goals":true,"show_progress":true,"show_activity":true,"allow_friend_requests":true,"show_in_search":true}}')" = 200 ] || { cat /tmp/out; fail privacy; }
+[ "$(cpost $J2 "{\"action\":\"request\",\"userId\":\"$A_ID\"}")" = 200 ] || { cat /tmp/out; fail "friend request"; }
+[ "$(cpost $J "{\"action\":\"accept\",\"userId\":\"$B_ID\"}")" = 200 ] || { cat /tmp/out; fail "accept"; }
+[ "$(cpost $J2 "{\"action\":\"follow\",\"userId\":\"$A_ID\"}")" = 200 ] || { cat /tmp/out; fail "follow"; }
+echo "privacy, friend request, accept, follow ok"
+
+[ "$(post "{\"action\":\"complete\",\"expectedStep\":0,\"day\":\"$TODAY\"}")" = 200 ] || { cat /tmp/out; fail "complete for feed"; }
+[ "$(cget $J2 action=feed)" = 200 ] || { cat /tmp/out; fail feed; }
+ACTIVITY=$(jq -r '[.activities[] | select(.activity_type == "milestone_completed")][0].id' /tmp/out)
+[ -n "$ACTIVITY" ] && [ "$ACTIVITY" != null ] || { cat /tmp/out; fail "milestone in feed"; }
+[ "$(cget $J2 action=notifications)" = 200 ] || fail notifications
+jq -e '[.notifications[].notification_type] | index("milestone_completed") != null and index("friend_accepted") != null' /tmp/out >/dev/null || { cat /tmp/out; fail "B notifications"; }
+[ "$(cpost $J2 "{\"action\":\"react\",\"activityId\":\"$ACTIVITY\",\"reaction\":\"celebrate\"}")" = 200 ] || { cat /tmp/out; fail react; }
+[ "$(cget $J action=notifications)" = 200 ] || fail "A notifications"
+jq -e '[.notifications[].notification_type] | index("reaction") != null' /tmp/out >/dev/null || { cat /tmp/out; fail "reaction notification"; }
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || { cat /tmp/out; fail "public profile"; }
+jq -e '.profile.progress.completed_count == 1' /tmp/out >/dev/null || { cat /tmp/out; fail "profile progress"; }
+echo "feed, notifications, reactions, profile ok"
+
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"
 echo "ALL_API_TESTS_OK"
