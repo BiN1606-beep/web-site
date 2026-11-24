@@ -29,4 +29,16 @@ test "$progress_tree_debug_status" = "401"
 community_status="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/api/community")"
 test "$community_status" = "401"
 
+
+# Signed-out visitors who open the home page are sent to the landing page.
+homepage_location="$(curl -sS -o /dev/null -w '%{redirect_url}' "$base_url/")"
+case "$homepage_location" in
+    */welcome) ;;
+    *) echo "Expected / to redirect to /welcome, got: $homepage_location" >&2; exit 1 ;;
+esac
+
+welcome_page="$(curl -fsS "$base_url/welcome")"
+printf '%s' "$welcome_page" | grep -q '<title>Osiris | Grow toward your goals</title>'
+printf '%s' "$welcome_page" | grep -q 'href="/login"'
+
 printf 'Authentication smoke tests passed.\n'

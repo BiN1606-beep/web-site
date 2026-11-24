@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Osiris turns a goal into a step-by-step path, keeps you showing up every day, and grows your progress into a living network.">
+    <title>Osiris | Grow toward your goals</title>
+    <!-- This page is shown to visitors who are not signed in, so it has to
+         be self-contained: everything else on the site needs a session. -->
+    <style>
+      :root {
+        color-scheme: light;
+        --base: #eff1f5;
+        --surface: #e6e9ef;
+        --border: #ccd0da;
+        --text: #4c4f69;
+        --muted: #6c6f85;
+        --accent: #8839ef;
+        --accent-soft: rgba(136, 57, 239, 0.12);
+        --button-text: #eff1f5;
+        --leaf: #40a02b;
+        --sun: #df8e1d;
+        --learning: #1e66f5;
+        --mind: #ea76cb;
+        --font: "Instrument Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --base: #100f19;
+          --surface: #1d1b2c;
+          --border: #34314c;
+          --text: #ecebf6;
+          --muted: #a6a2c4;
+          --accent: #c6a6ff;
+          --accent-soft: rgba(203, 166, 247, 0.16);
+          --button-text: #1e1e2e;
+          --leaf: #a6e3a1;
+          --sun: #f9e2af;
+          --learning: #89b4fa;
+          --mind: #f5c2e7;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--base);
+        color: var(--text);
+        font-family: var(--font);
+        line-height: 1.6;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .wrap {
+        width: min(100% - 2rem, 64rem);
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 0;
+      }
+
+      .brand {
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+      }
+
+      .brand span {
+        color: var(--accent);
+      }
+
+      .sign-in {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 2rem;
+        align-items: center;
+        padding: 2rem 0 3rem;
+      }
+
+      h1 {
+        margin: 0 0 1rem;
+        font-size: clamp(2.1rem, 5vw, 3.3rem);
+        line-height: 1.1;
+      }
+
+      .lead {
+        margin: 0 0 1.75rem;
+        color: var(--muted);
+        font-size: 1.1rem;
+      }
+
+      .cta {
+        display: inline-block;
+        padding: 0.85rem 1.5rem;
+        border-radius: 0.8rem;
+        background: var(--accent);
+        color: var(--button-text);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .cta:hover {
+        filter: brightness(1.08);
+      }
+
+      .cta:focus-visible,
+      .sign-in:focus-visible,
+      .brand:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .free {
+        margin: 0.75rem 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .demo {
+        position: relative;
+        aspect-ratio: 1;
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        background: radial-gradient(ellipse at 50% 45%, var(--surface), var(--base) 75%);
+        overflow: hidden;
+      }
+
+      .demo svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .demo-caption {
+        position: absolute;
+        right: 0.9rem;
+        bottom: 0.7rem;
+        left: 0.9rem;
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+        text-align: center;
+      }
+
+      .node {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: grow 0.6s ease both;
+      }
+
+      .link {
+        stroke: var(--border);
+        stroke-width: 1.5;
+        animation: fade 0.6s ease both;
+      }
+
+      @keyframes grow {
+        from { transform: scale(0); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes fade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      h2 {
+        margin: 0 0 1.25rem;
+        font-size: 1.6rem;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .feature {
+        padding: 1.2rem 1.3rem;
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        background: var(--surface);
+      }
+
+      .feature b {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-size: 1.05rem;
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .feature .dot {
+        display: inline-block;
+        width: 0.7rem;
+        height: 0.7rem;
+        margin-right: 0.5rem;
+        border-radius: 50%;
+        vertical-align: 0.05rem;
+      }
+
+      .closing {
+        padding: 3.5rem 0 4rem;
+        text-align: center;
+      }
+
+      .closing p {
+        margin: 0 0 1.5rem;
+        color: var(--muted);
+      }
+
+      footer {
+        padding: 1.5rem 0 2rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 760px) {
+        .hero {
+          grid-template-columns: minmax(0, 1fr);
+          padding-top: 0.5rem;
+        }
+
+        .features {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .node,
+        .link {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="/welcome"><span>&#10022;</span> Osiris</a>
+        <a class="sign-in" href="/login">Sign in</a>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <h1>Pick a goal. Show up every day. Watch yourself grow.</h1>
+            <p class="lead">Osiris turns what you want to achieve into a clear path of small steps, keeps you coming back with a daily streak, and grows your progress into a living network.</p>
+            <a class="cta" href="/login">Start for free</a>
+            <p class="free">Free to use. No credit card, no ads.</p>
+          </div>
+          <div class="demo">
+            <svg id="demo" viewBox="0 0 400 400" role="img" aria-label="An example progress network growing: goals with their steps and the skills they build"></svg>
+            <p class="demo-caption">An example network. Yours grows with every step you finish.</p>
+          </div>
+        </section>
+
+        <section aria-labelledby="how-title">
+          <h2 id="how-title">How it works</h2>
+          <ul class="features">
+            <li class="feature">
+              <b><span class="dot" style="background: var(--accent)"></span>A path made for you</b>
+              <p>Answer 10 quick questions. An AI coach builds a step-by-step path to your goal, sized to your time and level, and can explain any step.</p>
+            </li>
+            <li class="feature">
+              <b><span class="dot" style="background: var(--leaf)"></span>A reason to show up</b>
+              <p>Check in once a day with one line about what you did. Keep the streak alive; skip days and your network starts to wilt.</p>
+            </li>
+            <li class="feature">
+              <b><span class="dot" style="background: var(--learning)"></span>Progress you can see</b>
+              <p>Every finished step grows your network. Goals, steps and skills connect, so you see how everything you work on adds up.</p>
+            </li>
+            <li class="feature">
+              <b><span class="dot" style="background: var(--sun)"></span>Rewards and friends</b>
+              <p>Earn milestone rings at 10, 50 and 100 steps and for long streaks. Share progress with friends, only if you want to.</p>
+            </li>
+          </ul>
+        </section>
+
+        <section class="closing">
+          <h2>Your first step can be today.</h2>
+          <p>It takes about two minutes to set up your first goal.</p>
+          <a class="cta" href="/login">Start for free</a>
+        </section>
+      </main>
+
+      <footer>Osiris &middot; osiris-ai.se</footer>
+    </div>
+
+    <script>
+      // A small hand-placed network that grows step by step, like the real
+      // one does. The real site uses the d3 library; this page stays light.
+      (() => {
+        const svg = document.querySelector("#demo");
+        const ns = "http://www.w3.org/2000/svg";
+        const css = (name) => `var(--${name})`;
+        // [id, x, y, radius, color, grows from]
+        const nodes = [
+          ["g1", 150, 170, 16, "leaf", null],
+          ["a1", 120, 120, 6, "leaf", "g1"],
+          ["a2", 95, 160, 6, "leaf", "a1"],
+          ["a3", 92, 205, 6, "leaf", "a2"],
+          ["a4", 118, 240, 6, "leaf", "a3"],
+          ["s1", 60, 110, 5, "accent", "a2"],
+          ["g2", 265, 245, 16, "learning", null],
+          ["b1", 300, 205, 6, "learning", "g2"],
+          ["b2", 320, 250, 6, "learning", "b1"],
+          ["b3", 305, 292, 6, "learning", "b2"],
+          ["s2", 215, 300, 5, "accent", "b3"],
+          ["a5", 160, 270, 6, "leaf", "a4"],
+          ["g3", 270, 110, 14, "mind", null],
+          ["c1", 235, 75, 6, "mind", "g3"],
+          ["c2", 310, 80, 6, "mind", "g3"],
+          ["s3", 200, 205, 5, "accent", "a5"],
+        ];
+        const byId = Object.fromEntries(nodes.map((node) => [node[0], node]));
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const links = document.createElementNS(ns, "g");
+        const dots = document.createElementNS(ns, "g");
+        svg.append(links, dots);
+
+        // Adds one dot (and the line it grows from). Only the new dot
+        // animates; the ones already there stay put.
+        const addNode = ([id, x, y, r, color, from]) => {
+            if (from) {
+              const parent = byId[from];
+              const line = document.createElementNS(ns, "line");
+              line.setAttribute("class", "link");
+              line.setAttribute("x1", parent[1]);
+              line.setAttribute("y1", parent[2]);
+              line.setAttribute("x2", x);
+              line.setAttribute("y2", y);
+              links.append(line);
+            }
+            const circle = document.createElementNS(ns, "circle");
+            circle.setAttribute("class", "node");
+            circle.setAttribute("cx", x);
+            circle.setAttribute("cy", y);
+            circle.setAttribute("r", r);
+            circle.style.fill = id.startsWith("s") ? css("base") : css(color);
+            circle.style.stroke = id.startsWith("s") ? css("accent") : "none";
+            circle.style.strokeWidth = "2";
+            dots.append(circle);
+        };
+
+        // Once everything has grown, the skills link to more steps.
+        const addSkillLinks = () => {
+            for (const [skill, step] of [["s1", "c1"], ["s3", "b1"], ["s2", "a5"]]) {
+              const line = document.createElementNS(ns, "line");
+              line.setAttribute("class", "link");
+              line.setAttribute("stroke-dasharray", "3 4");
+              line.setAttribute("x1", byId[skill][1]);
+              line.setAttribute("y1", byId[skill][2]);
+              line.setAttribute("x2", byId[step][1]);
+              line.setAttribute("y2", byId[step][2]);
+              links.prepend(line);
+            }
+        };
+
+        if (reduced) {
+          nodes.forEach(addNode);
+          addSkillLinks();
+          return;
+        }
+        // Grow one dot at a time, pause on the full network, then start over.
+        const PAUSE_TICKS = 6;
+        let tickCount = 0;
+        const tick = () => {
+          if (tickCount < nodes.length) {
+            addNode(nodes[tickCount]);
+            if (tickCount === nodes.length - 1) addSkillLinks();
+          } else if (tickCount >= nodes.length + PAUSE_TICKS) {
+            links.replaceChildren();
+            dots.replaceChildren();
+            tickCount = -1;
+          }
+          tickCount += 1;
+        };
+        setInterval(tick, 650);
+        tick();
+      })();
+    </script>
+  </body>
+</html>

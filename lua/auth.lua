@@ -121,7 +121,14 @@ function M.require_page_session()
         return ngx.exit(ngx.HTTP_SERVICE_UNAVAILABLE)
     end
     if not user then
-        ngx.redirect("/login", ngx.HTTP_MOVED_TEMPORARILY)
+        -- Visitors who open the home page see what Osiris is first; other
+        -- pages go straight to sign-in.
+        local uri = ngx.var.uri
+        if uri == "/" or uri == "/index.html" then
+            ngx.redirect("/welcome", ngx.HTTP_MOVED_TEMPORARILY)
+        else
+            ngx.redirect("/login", ngx.HTTP_MOVED_TEMPORARILY)
+        end
         return false
     end
     ngx.ctx.auth_user = user
