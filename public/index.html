@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Osiris</title>
+    <!-- Makes Osiris installable as an app (needed for reminders on iPhone). -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#100f19">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
@@ -853,6 +858,33 @@
 
       .checkin-row .save-button {
         flex: none;
+      }
+
+      .reminder-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+      }
+
+      .reminder-row select {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.5rem;
+        background: var(--base);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .reminder-row button {
+        margin-left: auto;
+      }
+
+      .reminder-hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.8rem;
       }
 
       /* ---- Rewards ---- */
@@ -2243,6 +2275,14 @@
                     <button class="save-button" id="checkin-button" type="submit">Check in</button>
                   </div>
                 </form>
+                <!-- Daily reminder on this device. Hidden when the browser or
+                     the server can't do push notifications. -->
+                <div class="reminder-row" id="reminder-row" hidden>
+                  <label for="reminder-hour">Remind me at</label>
+                  <select id="reminder-hour"></select>
+                  <button class="profile-secondary-button" id="reminder-toggle" type="button">Turn on</button>
+                </div>
+                <p class="reminder-hint" id="reminder-hint" hidden></p>
               </section>
               <!-- Rewards: milestones for steps done and for the best streak.
                    Each one earned adds a gold ring around your goals. -->
@@ -4525,6 +4565,7 @@
             const result = await readApiResponse(response, "Progress tree");
             if (!response.ok) throw new Error(result.error || "Could not load your progress tree.");
             renderProgressTree(result.tree);
+            setupReminders(result.reminders_key);
           } catch (error) {
             treeStatus.textContent = error.message;
             treeEmptyState.hidden = false;
@@ -5035,6 +5076,158 @@
         } finally {
           completingTreeStep = false;
           updateTreeChecklist();
+        }
+      });
+
+      // ---- Daily reminders (web push) ----
+      // The browser subscribes to push messages with the server's public
+      // key and gives us an address to send them to. A script on the server
+      // (reminders/send_reminders.py) sends one in the evening on days you
+      // haven't checked in. This device's choice of hour is remembered in
+      // localStorage only to show it again; the server has its own copy.
+      const reminderRow = document.querySelector("#reminder-row");
+      const reminderHour = document.querySelector("#reminder-hour");
+      const reminderToggle = document.querySelector("#reminder-toggle");
+      const reminderHint = document.querySelector("#reminder-hint");
+      const REMINDER_HOUR_STORAGE = "osiris-reminder-hour";
+      let reminderKey = null;
+      let reminderSubscription = null;
+
+      const pushSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isInstalledApp = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+      // The service worker shows the reminders. Registering it also makes the
+      // site installable as an app.
+      const serviceWorkerReady = "serviceWorker" in navigator
+        ? navigator.serviceWorker.register("/sw.js").then(() => navigator.serviceWorker.ready).catch((error) => {
+          console.warn("Could not register the service worker:", error);
+          return null;
+        })
+        : Promise.resolve(null);
+
+      for (let hour = 6; hour <= 23; hour += 1) {
+        const option = document.createElement("option");
+        option.value = String(hour);
+        option.textContent = new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        reminderHour.append(option);
+      }
+      try {
+        reminderHour.value = localStorage.getItem(REMINDER_HOUR_STORAGE) || "20";
+      } catch {
+        reminderHour.value = "20";
+      }
+
+      // The public key arrives as base64url text; the browser wants bytes.
+      const base64UrlToBytes = (text) => {
+        const base64 = (text + "=".repeat((4 - (text.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+        return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      };
+
+      const postReminder = async (body) => {
+        const response = await fetch("/api/progress-tree", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const result = await readApiResponse(response, "Progress tree");
+        if (!response.ok) throw new Error(result.error || "Could not update your reminder.");
+        return result;
+      };
+
+      const showReminderHint = (text) => {
+        reminderHint.textContent = text;
+        reminderHint.hidden = !text;
+      };
+
+      const updateReminderUi = () => {
+        reminderToggle.textContent = reminderSubscription ? "Turn off" : "Turn on";
+        showReminderHint(reminderSubscription
+          ? `On for this device: a reminder at ${reminderHour.selectedOptions[0]?.textContent} on days you haven't checked in.`
+          : "");
+      };
+
+      const setupReminders = async (key) => {
+        reminderKey = key || null;
+        reminderRow.hidden = true;
+        showReminderHint("");
+        if (!reminderKey) return;
+        if (!pushSupported) {
+          if (isAppleMobile && !isInstalledApp) {
+            showReminderHint("Want a daily reminder? On iPhone, first add Osiris to your Home Screen: tap Share, then \"Add to Home Screen\", and open it from there.");
+          }
+          return;
+        }
+        reminderRow.hidden = false;
+        const registration = await serviceWorkerReady;
+        reminderSubscription = registration ? await registration.pushManager.getSubscription() : null;
+        updateReminderUi();
+        if (!reminderSubscription && Notification.permission === "denied") {
+          showReminderHint("Notifications are blocked for Osiris. Allow them in your browser's site settings to get reminders.");
+        }
+      };
+
+      const saveReminder = (subscription) => postReminder({
+        action: "reminder_subscribe",
+        subscription: subscription.toJSON(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        hour: Number(reminderHour.value),
+      });
+
+      reminderToggle.addEventListener("click", async () => {
+        reminderToggle.disabled = true;
+        try {
+          if (reminderSubscription) {
+            const endpoint = reminderSubscription.endpoint;
+            await reminderSubscription.unsubscribe();
+            reminderSubscription = null;
+            await postReminder({ action: "reminder_unsubscribe", endpoint });
+            updateReminderUi();
+            showReminderHint("Reminders are off for this device.");
+            return;
+          }
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") {
+            showReminderHint("Osiris needs permission to show notifications. Allow it to get reminders.");
+            return;
+          }
+          const registration = await serviceWorkerReady;
+          if (!registration) throw new Error("This browser could not set up reminders.");
+          const options = { userVisibleOnly: true, applicationServerKey: base64UrlToBytes(reminderKey) };
+          let subscription;
+          try {
+            subscription = await registration.pushManager.subscribe(options);
+          } catch (error) {
+            // An old subscription made with a different server key blocks a
+            // new one; remove it and try once more.
+            const old = await registration.pushManager.getSubscription();
+            if (!old) throw error;
+            await old.unsubscribe();
+            subscription = await registration.pushManager.subscribe(options);
+          }
+          await saveReminder(subscription);
+          reminderSubscription = subscription;
+          updateReminderUi();
+        } catch (error) {
+          showReminderHint(error.message || "Could not change your reminder.");
+        } finally {
+          reminderToggle.disabled = false;
+        }
+      });
+
+      reminderHour.addEventListener("change", async () => {
+        try {
+          localStorage.setItem(REMINDER_HOUR_STORAGE, reminderHour.value);
+        } catch {
+          // Private windows may block storage; the server still has the hour.
+        }
+        if (!reminderSubscription) return;
+        try {
+          await saveReminder(reminderSubscription);
+          updateReminderUi();
+        } catch (error) {
+          showReminderHint(error.message);
         }
       });
 
