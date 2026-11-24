@@ -57,6 +57,15 @@ else
     rm -f "$debug_email_file"
 fi
 
+# The public key for daily reminders (made once by reminders/setup.sh). The
+# site only offers reminders when this file exists.
+vapid_public_file="$REPO/lua/vapid_public_key.txt"
+if [[ -r /etc/mysite/vapid_public.txt ]]; then
+    install -m 644 /etc/mysite/vapid_public.txt "$vapid_public_file"
+else
+    rm -f "$vapid_public_file"
+fi
+
 # Apply pending database migrations before switching the running configuration.
 echo "Running database migrations..."
 "$REPO/db/migrate.sh"

@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Osiris</title>
+    <!-- Makes Osiris installable as an app (needed for reminders on iPhone). -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#100f19">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
@@ -800,6 +805,11 @@
         background: var(--leaf);
       }
 
+      .streak-day.is-frozen .streak-dot {
+        border-color: var(--moon);
+        background: color-mix(in srgb, var(--moon) 35%, transparent);
+      }
+
       .streak-day.is-today .streak-dot {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
@@ -848,6 +858,105 @@
 
       .checkin-row .save-button {
         flex: none;
+      }
+
+      .reminder-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+      }
+
+      .reminder-row select {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 0.5rem;
+        background: var(--base);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .reminder-row button {
+        margin-left: auto;
+      }
+
+      .reminder-hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      /* ---- Rewards ---- */
+      .reward-card {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .reward-strip {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 0.35rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .reward {
+        display: grid;
+        justify-items: center;
+        gap: 0.2rem;
+        color: var(--muted);
+        font-size: 0.68rem;
+        text-align: center;
+      }
+
+      .reward-badge {
+        display: grid;
+        place-items: center;
+        width: 2.3rem;
+        height: 2.3rem;
+        border: 2px dashed var(--panel-border);
+        border-radius: 50%;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .reward.is-earned {
+        color: var(--text);
+      }
+
+      .reward.is-earned .reward-badge {
+        border: 2px solid var(--sun);
+        background: color-mix(in srgb, var(--sun) 22%, transparent);
+        box-shadow: 0 0 10px color-mix(in srgb, var(--sun) 45%, transparent);
+        font-weight: 600;
+      }
+
+      .reward.is-new .reward-badge {
+        animation: reward-pop 0.9s ease;
+      }
+
+      @keyframes reward-pop {
+        0% { transform: scale(0.4); }
+        60% { transform: scale(1.25); }
+        100% { transform: scale(1); }
+      }
+
+      .reward-message {
+        margin: 0;
+        min-height: 0;
+        font-size: 0.85rem;
+      }
+
+      .reward-message:empty {
+        display: none;
+      }
+
+      @media (max-width: 380px) {
+        .reward-strip {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
       }
 
       /* The network wilts when check-ins are missed: --wilt goes from 0
@@ -1648,6 +1757,14 @@
         font-size: 0.8rem;
       }
 
+      .tree-step-how {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0;
+        padding-left: 1.3rem;
+        line-height: 1.5;
+      }
+
       .tree-step-chip.is-today {
         background: var(--accent-soft);
         color: var(--accent);
@@ -2158,6 +2275,21 @@
                     <button class="save-button" id="checkin-button" type="submit">Check in</button>
                   </div>
                 </form>
+                <!-- Daily reminder on this device. Hidden when the browser or
+                     the server can't do push notifications. -->
+                <div class="reminder-row" id="reminder-row" hidden>
+                  <label for="reminder-hour">Remind me at</label>
+                  <select id="reminder-hour"></select>
+                  <button class="profile-secondary-button" id="reminder-toggle" type="button">Turn on</button>
+                </div>
+                <p class="reminder-hint" id="reminder-hint" hidden></p>
+              </section>
+              <!-- Rewards: milestones for steps done and for the best streak.
+                   Each one earned adds a gold ring around your goals. -->
+              <section class="reward-card" aria-labelledby="reward-title">
+                <span class="tree-step-label" id="reward-title">Rewards</span>
+                <ol class="reward-strip" id="reward-strip"></ol>
+                <p class="reward-message" id="reward-message" role="status" aria-live="polite"></p>
               </section>
               <div class="tree-progress">
                 <div class="tree-progress-label">
@@ -2172,6 +2304,7 @@
                 <div class="tree-step-chips">
                   <span class="tree-step-chip is-today">Today's step</span>
                   <span class="tree-step-chip" id="tree-step-number"></span>
+                  <span class="tree-step-chip" id="tree-step-time" hidden></span>
                 </div>
                 <h3 id="tree-step-title"></h3>
                 <p id="tree-step-description"></p>
@@ -2183,6 +2316,11 @@
                   <span class="tree-step-label">A helpful tip</span>
                   <p id="tree-step-tip"></p>
                 </div>
+                <div id="tree-step-how-container" hidden>
+                  <span class="tree-step-label">How to do it</span>
+                  <ol class="tree-step-how" id="tree-step-how"></ol>
+                </div>
+                <button class="profile-secondary-button" id="tree-step-guide" type="button">How do I do this?</button>
                 <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
                   <legend>Checklist</legend>
                   <ul id="tree-step-tasks"></ul>
@@ -2196,6 +2334,7 @@
               <div class="tree-actions">
                 <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
                 <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
+                <button class="profile-secondary-button" id="tree-undo" type="button" hidden>Undo last step</button>
                 <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>+ Add a new goal</button>
               </div>
             </div>
@@ -2591,6 +2730,15 @@
       const checkinLabel = document.querySelector("#checkin-label");
       const checkinInput = document.querySelector("#checkin-input");
       const checkinButton = document.querySelector("#checkin-button");
+      const treeUndoButton = document.querySelector("#tree-undo");
+      const treeStepTime = document.querySelector("#tree-step-time");
+      const treeStepHowContainer = document.querySelector("#tree-step-how-container");
+      const treeStepHow = document.querySelector("#tree-step-how");
+      const treeStepGuideButton = document.querySelector("#tree-step-guide");
+      const rewardStrip = document.querySelector("#reward-strip");
+      const rewardMessage = document.querySelector("#reward-message");
+      // Undo takes two clicks, like removing a goal.
+      let confirmingUndo = false;
       let progressTreeRequest = null;
       let completingTreeStep = false;
       let treeAssistantOpen = false;
@@ -3850,6 +3998,7 @@
           .data(nodes, (node) => node.id)
           .join((enter) => {
             const group = enter.append("g");
+            group.append("g").attr("class", "net-reward-rings");
             group.append("circle").attr("class", "tree-pulse");
             group.append("circle").attr("class", "net-core");
             group.append("circle").attr("class", "net-focus-ring");
@@ -3926,6 +4075,19 @@
           .attr("stroke-dasharray", (node) => (node.status === "locked" || node.kind === "seed" ? "2 2" : null))
           .attr("opacity", (node) => (node.status === "done" && !node.recent ? 0.78 : 1))
           .attr("filter", (node) => (node.kind === "goal" || node.recent || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
+        // Rewards: one thin gold ring per reward earned, around every goal.
+        nodeGroups.select(".net-reward-rings")
+          .selectAll("circle")
+          .data((node) => (node.kind === "goal" ? d3.range(network.rewardRings || 0) : []))
+          .join("circle")
+          .attr("r", (ring, index, rings) => {
+            const node = d3.select(rings[index].parentNode).datum();
+            return node.r + 9 + ring * 4;
+          })
+          .attr("fill", "none")
+          .attr("stroke", "var(--sun)")
+          .attr("stroke-width", 1)
+          .attr("opacity", (ring) => 0.7 - ring * 0.08);
         // A thin ring marks the focus goal.
         nodeGroups.select(".net-focus-ring")
           .attr("r", (node) => node.r + 5)
@@ -4133,37 +4295,78 @@
       // How many missed days make the network fully wilted.
       const FULL_WILT_DAYS = 5;
 
-      // Works out the streak from the list of check-in days.
-      //  current: days in a row up to today, or up to yesterday while today
-      //           is still open (the streak only breaks once a day passes).
-      //  missed:  whole days missed since the last check-in.
+      // Streak freezes: every FREEZE_EVERY days in a row earns one, and you
+      // can hold up to MAX_FREEZES. A missed day uses one up automatically,
+      // so the streak survives (it doesn't grow that day) and the network
+      // doesn't wilt. One sick day shouldn't wipe out a 40-day streak.
+      const FREEZE_EVERY = 7;
+      const MAX_FREEZES = 2;
+
+      // Works out the streak by replaying every day from the first check-in
+      // to today. Nothing about freezes is stored: the same check-in days
+      // always give the same result, so there's nothing to get out of sync.
+      //  current: the streak now. Today counts once you've checked in, and a
+      //           missing today doesn't break anything until the day is over.
+      //  best:    the longest streak ever.
+      //  missed:  missed days in a row that no freeze covered (for wilting).
+      //  freezes: freezes you hold now.
+      //  frozenDays: the days a freeze was used on.
       const computeStreak = (checkins, today = localDay()) => {
         const days = new Set(checkins.map((checkin) => checkin.day).filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)));
+        const first = [...days].filter((day) => day <= today).sort()[0];
+        const frozenDays = new Set();
         let current = 0;
-        let cursor = days.has(today) ? today : shiftDay(today, -1);
-        while (days.has(cursor)) {
-          current += 1;
-          cursor = shiftDay(cursor, -1);
-        }
         let best = 0;
-        let run = 0;
-        let previous = null;
-        for (const day of [...days].sort()) {
-          run = previous && daysBetween(previous, day) === 1 ? run + 1 : 1;
-          best = Math.max(best, run);
-          previous = day;
+        let freezes = 0;
+        let missed = 0;
+        if (first) {
+          for (let day = first; day <= today; day = shiftDay(day, 1)) {
+            if (days.has(day)) {
+              current += 1;
+              missed = 0;
+              if (current % FREEZE_EVERY === 0) freezes = Math.min(MAX_FREEZES, freezes + 1);
+            } else if (day === today) {
+              // Today is still open.
+            } else if (freezes > 0) {
+              freezes -= 1;
+              frozenDays.add(day);
+            } else {
+              current = 0;
+              missed += 1;
+            }
+            best = Math.max(best, current);
+          }
         }
-        const last = [...days].filter((day) => day <= today).sort().pop() || null;
-        const missed = last ? Math.max(0, daysBetween(last, today) - 1) : 0;
         return {
           current,
           best,
           missed,
+          freezes,
+          frozenDays,
           checkedInToday: days.has(today),
           days,
           todayNote: checkins.find((checkin) => checkin.day === today)?.note || "",
         };
       };
+
+      // ---- Rewards ----
+      // Milestones for steps done (across all goals) and for the best streak
+      // ever. They're worked out from data the server already sends, so a
+      // reward can't be lost: undoing a step only takes back a steps reward
+      // if the total really drops below it.
+      const REWARDS = [
+        { id: "steps-10", kind: "steps", target: 10, label: "10 steps" },
+        { id: "steps-50", kind: "steps", target: 50, label: "50 steps" },
+        { id: "steps-100", kind: "steps", target: 100, label: "100 steps" },
+        { id: "streak-7", kind: "streak", target: 7, label: "7-day streak" },
+        { id: "streak-30", kind: "streak", target: 30, label: "30-day streak" },
+        { id: "streak-100", kind: "streak", target: 100, label: "100-day streak" },
+      ];
+
+      const computeRewards = (totalSteps, bestStreak) => REWARDS.map((reward) => {
+        const value = reward.kind === "steps" ? totalSteps : bestStreak;
+        return { ...reward, value: Math.min(value, reward.target), earned: value >= reward.target };
+      });
 
       const renderStreak = (tree) => {
         const checkins = Array.isArray(tree?.checkins) ? tree.checkins : [];
@@ -4174,8 +4377,12 @@
         streakCard.classList.toggle("is-wilting", streak.missed > 0);
 
         streakCount.textContent = String(streak.current);
-        streakCountLabel.textContent = streak.current === 1 ? "day streak" : "days streak";
-        streakBest.textContent = streak.best > streak.current ? `Best: ${streak.best}` : "";
+        streakCountLabel.textContent = "day streak";
+        streakBest.textContent = [
+          streak.freezes ? `${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
+          streak.best > streak.current ? `Best: ${streak.best}` : "",
+        ].filter(Boolean).join(" · ");
+        streakBest.title = `Every ${FREEZE_EVERY} days in a row earns a freeze (you can hold ${MAX_FREEZES}). A freeze covers one missed day.`;
 
         streakWeek.replaceChildren();
         for (let offset = -6; offset <= 0; offset += 1) {
@@ -4183,9 +4390,11 @@
           const item = document.createElement("li");
           item.className = "streak-day";
           item.classList.toggle("is-done", streak.days.has(day));
+          item.classList.toggle("is-frozen", streak.frozenDays.has(day));
           item.classList.toggle("is-today", offset === 0);
           const weekday = new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "narrow" });
-          item.setAttribute("aria-label", `${new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "long" })}: ${streak.days.has(day) ? "checked in" : "no check-in"}`);
+          const dayState = streak.days.has(day) ? "checked in" : streak.frozenDays.has(day) ? "covered by a freeze" : "no check-in";
+          item.setAttribute("aria-label", `${new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "long" })}: ${dayState}`);
           const dot = document.createElement("span");
           dot.className = "streak-dot";
           item.append(dot, document.createTextNode(weekday));
@@ -4195,10 +4404,12 @@
         const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
         if (streak.missed > 0) {
           streakMessage.textContent = `Your network is wilting: ${plural(streak.missed, "day")} missed. Check in today to bring it back to life.`;
+        } else if (!streak.checkedInToday && streak.frozenDays.has(shiftDay(today, -1))) {
+          streakMessage.textContent = `A freeze saved your ${streak.current}-day streak yesterday. Check in today so you don't need another.`;
         } else if (streak.checkedInToday) {
           streakMessage.textContent = "You showed up today. Come back tomorrow to keep the streak going.";
         } else if (streak.current > 0) {
-          streakMessage.textContent = `Check in before midnight to keep your ${plural(streak.current, "day")} streak.`;
+          streakMessage.textContent = `Check in before midnight to keep your ${streak.current}-day streak.`;
         } else {
           streakMessage.textContent = "Check in every day to build a streak. Miss a day and your network starts to wilt.";
         }
@@ -4207,6 +4418,43 @@
         if (document.activeElement !== checkinInput) checkinInput.value = streak.todayNote;
         checkinLabel.textContent = streak.checkedInToday ? "Today's check-in" : "What did you do on your step today?";
         checkinButton.textContent = streak.checkedInToday ? "Update" : "Check in";
+        return streak;
+      };
+
+      // The rewards earned when the page last drew them; null before the
+      // first draw, so rewards you already had don't celebrate on page load.
+      let earnedRewardIds = null;
+
+      const renderRewards = (tree, streak) => {
+        const totalSteps = goalsFromTree(tree).reduce((sum, goal) => sum + goal.completed.length, 0);
+        const rewards = computeRewards(totalSteps, streak.best);
+        const earned = new Set(rewards.filter((reward) => reward.earned).map((reward) => reward.id));
+        const fresh = earnedRewardIds ? rewards.filter((reward) => reward.earned && !earnedRewardIds.has(reward.id)) : [];
+        earnedRewardIds = earned;
+        // Each reward earned draws one gold ring around every goal.
+        network.rewardRings = earned.size;
+
+        rewardStrip.replaceChildren();
+        for (const reward of rewards) {
+          const item = document.createElement("li");
+          item.className = "reward";
+          item.classList.toggle("is-earned", reward.earned);
+          item.classList.toggle("is-new", fresh.includes(reward));
+          item.setAttribute("aria-label", reward.earned
+            ? `${reward.label}: earned`
+            : `${reward.label}: ${reward.value} of ${reward.target}`);
+          const badge = document.createElement("span");
+          badge.className = "reward-badge";
+          badge.textContent = reward.earned ? String(reward.target) : `${reward.value}/${reward.target}`;
+          const label = document.createElement("span");
+          label.textContent = reward.kind === "steps" ? "steps" : "day streak";
+          item.append(badge, label);
+          rewardStrip.append(item);
+          if (fresh.includes(reward)) celebrateStep(badge);
+        }
+        rewardMessage.textContent = fresh.length
+          ? `Reward unlocked: ${fresh.map((reward) => reward.label).join(" and ")}! A new gold ring now circles your goals.`
+          : "";
       };
 
       const renderProgressTree = (tree) => {
@@ -4244,7 +4492,7 @@
         }
 
         treeActions.hidden = false;
-        renderStreak(tree);
+        renderRewards(tree, renderStreak(tree));
         treeGoal.textContent = tree.goal;
         treeSummary.textContent = tree.summary;
         treeProgressCount.textContent = tree.finished
@@ -4268,6 +4516,14 @@
           treeStepWhy.textContent = tree.current_step.why;
           treeStepTip.textContent = tree.current_step.tip || "";
           treeStepTipContainer.hidden = !tree.current_step.tip;
+          treeStepTime.textContent = tree.current_step.time ? `⏱ ${tree.current_step.time}` : "";
+          treeStepTime.hidden = !tree.current_step.time;
+          const how = Array.isArray(tree.current_step.how) ? tree.current_step.how : [];
+          treeStepHow.replaceChildren(...how.map((item) => createElement("li", "", item)));
+          treeStepHowContainer.hidden = how.length === 0;
+          treeStepGuideButton.hidden = how.length > 0;
+          treeStepGuideButton.disabled = false;
+          treeStepGuideButton.textContent = "How do I do this?";
           treeStepTasks.replaceChildren();
           const tasks = Array.isArray(tree.current_step.tasks) ? tree.current_step.tasks : [];
           for (const [index, task] of tasks.entries()) {
@@ -4294,6 +4550,9 @@
         treeAskHelpButton.hidden = tree.finished;
         treeAdjustButton.hidden = false;
         treeStartNewButton.hidden = false;
+        confirmingUndo = false;
+        treeUndoButton.textContent = "Undo last step";
+        treeUndoButton.hidden = !(tree.completed_count > 0);
       };
 
       const loadProgressTree = async () => {
@@ -4306,6 +4565,7 @@
             const result = await readApiResponse(response, "Progress tree");
             if (!response.ok) throw new Error(result.error || "Could not load your progress tree.");
             renderProgressTree(result.tree);
+            setupReminders(result.reminders_key);
           } catch (error) {
             treeStatus.textContent = error.message;
             treeEmptyState.hidden = false;
@@ -4816,6 +5076,192 @@
         } finally {
           completingTreeStep = false;
           updateTreeChecklist();
+        }
+      });
+
+      // ---- Daily reminders (web push) ----
+      // The browser subscribes to push messages with the server's public
+      // key and gives us an address to send them to. A script on the server
+      // (reminders/send_reminders.py) sends one in the evening on days you
+      // haven't checked in. This device's choice of hour is remembered in
+      // localStorage only to show it again; the server has its own copy.
+      const reminderRow = document.querySelector("#reminder-row");
+      const reminderHour = document.querySelector("#reminder-hour");
+      const reminderToggle = document.querySelector("#reminder-toggle");
+      const reminderHint = document.querySelector("#reminder-hint");
+      const REMINDER_HOUR_STORAGE = "osiris-reminder-hour";
+      let reminderKey = null;
+      let reminderSubscription = null;
+
+      const pushSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isInstalledApp = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+      // The service worker shows the reminders. Registering it also makes the
+      // site installable as an app.
+      const serviceWorkerReady = "serviceWorker" in navigator
+        ? navigator.serviceWorker.register("/sw.js").then(() => navigator.serviceWorker.ready).catch((error) => {
+          console.warn("Could not register the service worker:", error);
+          return null;
+        })
+        : Promise.resolve(null);
+
+      for (let hour = 6; hour <= 23; hour += 1) {
+        const option = document.createElement("option");
+        option.value = String(hour);
+        option.textContent = new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        reminderHour.append(option);
+      }
+      try {
+        reminderHour.value = localStorage.getItem(REMINDER_HOUR_STORAGE) || "20";
+      } catch {
+        reminderHour.value = "20";
+      }
+
+      // The public key arrives as base64url text; the browser wants bytes.
+      const base64UrlToBytes = (text) => {
+        const base64 = (text + "=".repeat((4 - (text.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+        return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      };
+
+      const postReminder = async (body) => {
+        const response = await fetch("/api/progress-tree", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const result = await readApiResponse(response, "Progress tree");
+        if (!response.ok) throw new Error(result.error || "Could not update your reminder.");
+        return result;
+      };
+
+      const showReminderHint = (text) => {
+        reminderHint.textContent = text;
+        reminderHint.hidden = !text;
+      };
+
+      const updateReminderUi = () => {
+        reminderToggle.textContent = reminderSubscription ? "Turn off" : "Turn on";
+        showReminderHint(reminderSubscription
+          ? `On for this device: a reminder at ${reminderHour.selectedOptions[0]?.textContent} on days you haven't checked in.`
+          : "");
+      };
+
+      const setupReminders = async (key) => {
+        reminderKey = key || null;
+        reminderRow.hidden = true;
+        showReminderHint("");
+        if (!reminderKey) return;
+        if (!pushSupported) {
+          if (isAppleMobile && !isInstalledApp) {
+            showReminderHint("Want a daily reminder? On iPhone, first add Osiris to your Home Screen: tap Share, then \"Add to Home Screen\", and open it from there.");
+          }
+          return;
+        }
+        reminderRow.hidden = false;
+        const registration = await serviceWorkerReady;
+        reminderSubscription = registration ? await registration.pushManager.getSubscription() : null;
+        updateReminderUi();
+        if (!reminderSubscription && Notification.permission === "denied") {
+          showReminderHint("Notifications are blocked for Osiris. Allow them in your browser's site settings to get reminders.");
+        }
+      };
+
+      const saveReminder = (subscription) => postReminder({
+        action: "reminder_subscribe",
+        subscription: subscription.toJSON(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        hour: Number(reminderHour.value),
+      });
+
+      reminderToggle.addEventListener("click", async () => {
+        reminderToggle.disabled = true;
+        try {
+          if (reminderSubscription) {
+            const endpoint = reminderSubscription.endpoint;
+            await reminderSubscription.unsubscribe();
+            reminderSubscription = null;
+            await postReminder({ action: "reminder_unsubscribe", endpoint });
+            updateReminderUi();
+            showReminderHint("Reminders are off for this device.");
+            return;
+          }
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") {
+            showReminderHint("Osiris needs permission to show notifications. Allow it to get reminders.");
+            return;
+          }
+          const registration = await serviceWorkerReady;
+          if (!registration) throw new Error("This browser could not set up reminders.");
+          const options = { userVisibleOnly: true, applicationServerKey: base64UrlToBytes(reminderKey) };
+          let subscription;
+          try {
+            subscription = await registration.pushManager.subscribe(options);
+          } catch (error) {
+            // An old subscription made with a different server key blocks a
+            // new one; remove it and try once more.
+            const old = await registration.pushManager.getSubscription();
+            if (!old) throw error;
+            await old.unsubscribe();
+            subscription = await registration.pushManager.subscribe(options);
+          }
+          await saveReminder(subscription);
+          reminderSubscription = subscription;
+          updateReminderUi();
+        } catch (error) {
+          showReminderHint(error.message || "Could not change your reminder.");
+        } finally {
+          reminderToggle.disabled = false;
+        }
+      });
+
+      reminderHour.addEventListener("change", async () => {
+        try {
+          localStorage.setItem(REMINDER_HOUR_STORAGE, reminderHour.value);
+        } catch {
+          // Private windows may block storage; the server still has the hour.
+        }
+        if (!reminderSubscription) return;
+        try {
+          await saveReminder(reminderSubscription);
+          updateReminderUi();
+        } catch (error) {
+          showReminderHint(error.message);
+        }
+      });
+
+      treeStepGuideButton.addEventListener("click", async () => {
+        if (!progressTreeState?.current_step) return;
+        treeStepGuideButton.disabled = true;
+        treeStepGuideButton.textContent = "Asking your AI coach...";
+        try {
+          await postProgressTree({ action: "step_guide", expectedStep: progressTreeState.completed_count });
+        } catch (error) {
+          treeStatus.textContent = error.message;
+          treeStepGuideButton.disabled = false;
+          treeStepGuideButton.textContent = "How do I do this?";
+        }
+      });
+
+      treeUndoButton.addEventListener("click", async () => {
+        const tree = progressTreeState;
+        if (!tree?.exists || !(tree.completed_count > 0)) return;
+        const lastStep = tree.completed?.[tree.completed_count - 1];
+        if (!confirmingUndo) {
+          confirmingUndo = true;
+          treeUndoButton.textContent = `Click again to undo "${lastStep?.title || "the last step"}"`;
+          return;
+        }
+        treeUndoButton.disabled = true;
+        treeStatus.textContent = "Undoing the step...";
+        try {
+          await postProgressTree({ action: "undo_step", expectedStep: tree.completed_count, day: localDay() });
+          treeStatus.textContent = "Step undone. It's your current step again.";
+        } catch (error) {
+          treeStatus.textContent = error.message;
+        } finally {
+          treeUndoButton.disabled = false;
         }
       });
 

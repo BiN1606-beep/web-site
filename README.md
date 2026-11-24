@@ -139,3 +139,40 @@ automatically by the migration runner during deployment.
 Set the limit no higher than the account's verified free quota. If the quota
 cannot be confirmed, leave `GROQ_FREE_QUOTA_CONFIRMED` unset; the endpoint
 remains disabled.
+
+## Daily reminders
+
+Users can turn on a daily reminder in the streak card. On days they haven't
+checked in, their phone or computer gets a notification at the hour they
+chose. It uses the browsers' free web push services; nothing is paid.
+
+How it fits together:
+
+- `public/sw.js` (service worker) shows the notification. `public/manifest.webmanifest`
+  and `public/icons/` make Osiris installable as an app, which iPhones need
+  before they allow notifications.
+- The browser's push subscription is saved in `push_subscriptions`
+  (migration 010) through the `reminder_subscribe` action of `/api/progress-tree`.
+  Only addresses at the real push services (Google, Mozilla, Apple,
+  Microsoft) are accepted.
+- `reminders/send_reminders.py` runs every 15 minutes from a systemd timer
+  and sends the reminders that are due. It's Python because push messages
+  must be encrypted and signed, and `pywebpush` does that in one call.
+
+### One-time server setup
+
+Reminders stay hidden on the site until this is done. On the server, as the
+deploy user:
+
+```sh
+sudo bash /opt/mysite/reminders/setup.sh
+```
+
+It installs a Python environment in `/opt/mysite-reminders`, makes the key
+pair that signs push messages (`/etc/mysite/vapid_private.pem`, kept secret,
+and `/etc/mysite/vapid_public.txt`) and starts the `osiris-reminders.timer`.
+Then deploy once more so the site picks up the public key. Never make a new
+key pair afterwards: every existing reminder subscription would stop working.
+
+Check that it runs with `systemctl status osiris-reminders.timer` and read
+its log with `journalctl -u osiris-reminders.service`.
