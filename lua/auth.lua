@@ -1190,6 +1190,77 @@ local function handle_progress_tree()
         return respond(ngx.HTTP_OK, { tree = progress_tree_payload(updated[1], user.id), completed = true })
     end
 
+    -- Undo the last completed step of the focus goal (a click by mistake).
+    -- Everything "Complete step" added is taken back in one statement, so a
+    -- complete-then-undo can't be used to farm streak days or feed posts:
+    --  * the step's completion date,
+    --  * the automatic "Finished step: ..." check-in from that day, but only
+    --    if the user hasn't replaced it with their own line,
+    --  * the community post about it (its notifications go with it).
+    if body.action == "undo_step" then
+        local expected_count = tonumber(body.expectedStep)
+        if not expected_count or expected_count < 1 or expected_count % 1 ~= 0 then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "There is no finished step to undo." })
+        end
+        local day = valid_checkin_day(body.day) and body.day or ""
+        local undone = database_query([[
+            WITH changed AS (
+                UPDATE public.user_progress_trees
+                SET completed_count = completed_count - 1, updated_at = now()
+                WHERE user_id = $1 AND is_active
+                  AND completed_count = $2
+                  AND completed_count > 0
+                RETURNING id, user_id, tree_data, completed_count, conversation, ai_memory
+            ),
+            -- After the UPDATE, completed_count is the 0-based index of the
+            -- step being undone.
+            removed_date AS (
+                DELETE FROM public.step_completions completion
+                USING changed
+                WHERE completion.goal_id = changed.id
+                  AND completion.step_index = changed.completed_count
+            ),
+            removed_checkin AS (
+                DELETE FROM public.daily_checkins checkin
+                USING changed
+                WHERE checkin.user_id = changed.user_id
+                  AND checkin.goal_id = changed.id
+                  AND checkin.day = NULLIF($3, '')::date
+                  AND checkin.note = 'Finished step: '
+                      || (changed.tree_data->'steps'->changed.completed_count->>'title')
+            ),
+            removed_activity AS (
+                DELETE FROM public.community_activities
+                WHERE id = (
+                    SELECT activity.id
+                    FROM public.community_activities activity, changed
+                    WHERE activity.actor_id = changed.user_id
+                      AND activity.activity_type = 'milestone_completed'
+                      AND activity.details->>'step_title'
+                          = changed.tree_data->'steps'->changed.completed_count->>'title'
+                      AND activity.details->>'completed_count' = (changed.completed_count + 1)::text
+                    ORDER BY activity.created_at DESC
+                    LIMIT 1
+                )
+            )
+            SELECT id, tree_data, completed_count, conversation, ai_memory FROM changed
+        ]], user.id, expected_count, day)
+        if not undone then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not undo the step." })
+        end
+        if not undone[1] then
+            row, load_error = load_progress_tree(user.id)
+            if load_error then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not refresh your progress tree." })
+            end
+            return respond(ngx.HTTP_CONFLICT, {
+                error = "Your progress changed in another session. Your tree has been refreshed.",
+                tree = progress_tree_payload(row, user.id),
+            })
+        end
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(undone[1], user.id), undone = true })
+    end
+
     -- A daily check-in: one short line about what you did today. Sending it
     -- again on the same day replaces the line.
     if body.action == "checkin" then

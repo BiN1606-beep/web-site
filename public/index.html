@@ -2196,6 +2196,7 @@
               <div class="tree-actions">
                 <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
                 <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
+                <button class="profile-secondary-button" id="tree-undo" type="button" hidden>Undo last step</button>
                 <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>+ Add a new goal</button>
               </div>
             </div>
@@ -2591,6 +2592,9 @@
       const checkinLabel = document.querySelector("#checkin-label");
       const checkinInput = document.querySelector("#checkin-input");
       const checkinButton = document.querySelector("#checkin-button");
+      const treeUndoButton = document.querySelector("#tree-undo");
+      // Undo takes two clicks, like removing a goal.
+      let confirmingUndo = false;
       let progressTreeRequest = null;
       let completingTreeStep = false;
       let treeAssistantOpen = false;
@@ -4294,6 +4298,9 @@
         treeAskHelpButton.hidden = tree.finished;
         treeAdjustButton.hidden = false;
         treeStartNewButton.hidden = false;
+        confirmingUndo = false;
+        treeUndoButton.textContent = "Undo last step";
+        treeUndoButton.hidden = !(tree.completed_count > 0);
       };
 
       const loadProgressTree = async () => {
@@ -4816,6 +4823,27 @@
         } finally {
           completingTreeStep = false;
           updateTreeChecklist();
+        }
+      });
+
+      treeUndoButton.addEventListener("click", async () => {
+        const tree = progressTreeState;
+        if (!tree?.exists || !(tree.completed_count > 0)) return;
+        const lastStep = tree.completed?.[tree.completed_count - 1];
+        if (!confirmingUndo) {
+          confirmingUndo = true;
+          treeUndoButton.textContent = `Click again to undo "${lastStep?.title || "the last step"}"`;
+          return;
+        }
+        treeUndoButton.disabled = true;
+        treeStatus.textContent = "Undoing the step...";
+        try {
+          await postProgressTree({ action: "undo_step", expectedStep: tree.completed_count, day: localDay() });
+          treeStatus.textContent = "Step undone. It's your current step again.";
+        } catch (error) {
+          treeStatus.textContent = error.message;
+        } finally {
+          treeUndoButton.disabled = false;
         }
       });
 
