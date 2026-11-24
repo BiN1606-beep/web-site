@@ -277,3 +277,84 @@
     transform: scale(1);
   }
 }
+
+/* ---- Phones: bigger tap targets and full screen ---- */
+
+/* The invisible circle around each dot only catches taps on touch screens,
+   so mouse hovering stays exact on computers. */
+.tree-growth .net-hit {
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .tree-growth .net-hit {
+    pointer-events: all;
+  }
+}
+
+/* The full-screen button is only useful when the network is part of a
+   longer page (phones and narrow windows). */
+.net-ctl.net-fullscreen {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .net-ctl.net-fullscreen {
+    display: inline-block;
+  }
+}
+
+@media (max-width: 560px) {
+  /* One row of controls that scrolls sideways instead of two rows. */
+  .net-controls {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .net-controls::-webkit-scrollbar {
+    display: none;
+  }
+
+  .net-ctl {
+    flex: none;
+  }
+}
+
+/* Full screen: the network covers the whole screen... */
+html.net-fullscreen-open,
+html.net-fullscreen-open body {
+  overflow: hidden;
+}
+
+.home-app.is-net-fullscreen .net-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.home-app.is-net-fullscreen .net-ctl.net-fullscreen {
+  display: inline-block;
+}
+
+/* ...and the panel only appears, as a sheet over the bottom of the
+   screen, when a dot is selected. */
+.home-app.is-net-fullscreen .home-panel {
+  display: none;
+}
+
+.home-app.is-net-fullscreen .home-panel[data-mode="node"] {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 41;
+  display: grid;
+  max-height: 55dvh;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -0.75rem 2rem var(--shadow);
+}

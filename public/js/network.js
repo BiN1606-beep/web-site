@@ -170,6 +170,9 @@ const netSkillsButton = document.querySelector("#net-skills");
 const netFocusOnlyButton = document.querySelector("#net-focus-only");
 const netTimelapseButton = document.querySelector("#net-timelapse");
 const netRecenterButton = document.querySelector("#net-recenter");
+const netFullscreenButton = document.querySelector("#net-fullscreen");
+const homeApp = document.querySelector(".home-app");
+const isNetworkFullscreen = () => homeApp.classList.contains("is-net-fullscreen");
 const netStatDone = document.querySelector("#net-stat-done");
 const netStatGoals = document.querySelector("#net-stat-goals");
 const netStatSkills = document.querySelector("#net-stat-skills");
@@ -427,7 +430,10 @@ const renderNetworkDetails = () => {
   treeNodeDetails.hidden = false;
   treeNodeDetails.replaceChildren();
   const heading = createElement("div");
-  treeNodeDetails.append(panelButton("← Back to today's step", "net-back", () => selectNetworkNode(null)), heading);
+  // In full screen the details are a sheet over the network, so the button
+  // just closes it.
+  const backLabel = isNetworkFullscreen() ? "✕ Close" : "← Back to today's step";
+  treeNodeDetails.append(panelButton(backLabel, "net-back", () => selectNetworkNode(null)), heading);
 
   if (node.kind === "area") {
     heading.append(createElement("span", "tree-step-label", "Life area"), createElement("h2", "", node.label));
@@ -627,6 +633,9 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
     .data(nodes, (node) => node.id)
     .join((enter) => {
       const group = enter.append("g");
+      // An invisible, larger circle so small dots are easy to tap with a
+      // finger. css/network.css only lets it catch taps on touch screens.
+      group.append("circle").attr("class", "net-hit");
       group.append("g").attr("class", "net-reward-rings");
       group.append("circle").attr("class", "tree-pulse");
       group.append("circle").attr("class", "net-core");
@@ -648,6 +657,7 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
           // The focus goal's step for today lives in the panel's main card.
           if (node.status === "current" && goalById(node.goalId)?.active) {
             selectNetworkNode(null);
+            if (isNetworkFullscreen()) leaveNetworkFullscreen();
             treeCurrentStep.scrollIntoView({ behavior: "smooth", block: "nearest" });
             return;
           }
@@ -677,6 +687,9 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
     node.status ? `is-${node.status}` : "",
     node.isNew ? "net-bloom" : "",
   ].join(" "));
+  nodeGroups.select(".net-hit")
+    .attr("r", (node) => Math.max(node.r + 8, 16))
+    .attr("fill", "transparent");
   nodeGroups.select(".tree-pulse")
     .attr("r", (node) => node.r)
     .attr("fill", "none")
@@ -880,6 +893,48 @@ netFocusOnlyButton.addEventListener("click", () => {
 });
 netTimelapseButton.addEventListener("click", playNetworkTimelapse);
 netRecenterButton.addEventListener("click", () => fitProgressNetwork(true));
+
+// ---- Full screen (phones) ----
+// On a phone the network is only part of a long page. Full screen lets it
+// fill the screen; a tapped dot's details then open as a sheet over it.
+// Entering adds a browser history entry, so the phone's back button (or
+// Escape, or the Close button) leaves full screen instead of the site.
+const setNetworkFullscreen = (on) => {
+  homeApp.classList.toggle("is-net-fullscreen", on);
+  document.documentElement.classList.toggle("net-fullscreen-open", on);
+  netFullscreenButton.setAttribute("aria-pressed", String(on));
+  netFullscreenButton.textContent = on ? "✕ Close" : "⛶ Full screen";
+  renderNetworkDetails();
+  // The stage changed size; fit the network to it once the layout settles.
+  requestAnimationFrame(() => fitProgressNetwork(true));
+};
+
+const leaveNetworkFullscreen = () => {
+  if (history.state?.netFullscreen) {
+    history.back(); // the popstate listener below closes it
+  } else {
+    setNetworkFullscreen(false);
+  }
+};
+
+netFullscreenButton.addEventListener("click", () => {
+  if (isNetworkFullscreen()) {
+    leaveNetworkFullscreen();
+    return;
+  }
+  history.pushState({ netFullscreen: true }, "");
+  setNetworkFullscreen(true);
+});
+
+window.addEventListener("popstate", () => {
+  if (isNetworkFullscreen()) setNetworkFullscreen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && isNetworkFullscreen() && !document.querySelector("dialog[open]")) {
+    leaveNetworkFullscreen();
+  }
+});
 
 // A short burst of leaves from the button when a step is completed.
 const celebrateStep = (origin) => {
