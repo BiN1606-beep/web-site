@@ -1725,6 +1725,14 @@
         font-size: 0.8rem;
       }
 
+      .tree-step-how {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0;
+        padding-left: 1.3rem;
+        line-height: 1.5;
+      }
+
       .tree-step-chip.is-today {
         background: var(--accent-soft);
         color: var(--accent);
@@ -2256,6 +2264,7 @@
                 <div class="tree-step-chips">
                   <span class="tree-step-chip is-today">Today's step</span>
                   <span class="tree-step-chip" id="tree-step-number"></span>
+                  <span class="tree-step-chip" id="tree-step-time" hidden></span>
                 </div>
                 <h3 id="tree-step-title"></h3>
                 <p id="tree-step-description"></p>
@@ -2267,6 +2276,11 @@
                   <span class="tree-step-label">A helpful tip</span>
                   <p id="tree-step-tip"></p>
                 </div>
+                <div id="tree-step-how-container" hidden>
+                  <span class="tree-step-label">How to do it</span>
+                  <ol class="tree-step-how" id="tree-step-how"></ol>
+                </div>
+                <button class="profile-secondary-button" id="tree-step-guide" type="button">How do I do this?</button>
                 <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
                   <legend>Checklist</legend>
                   <ul id="tree-step-tasks"></ul>
@@ -2677,6 +2691,10 @@
       const checkinInput = document.querySelector("#checkin-input");
       const checkinButton = document.querySelector("#checkin-button");
       const treeUndoButton = document.querySelector("#tree-undo");
+      const treeStepTime = document.querySelector("#tree-step-time");
+      const treeStepHowContainer = document.querySelector("#tree-step-how-container");
+      const treeStepHow = document.querySelector("#tree-step-how");
+      const treeStepGuideButton = document.querySelector("#tree-step-guide");
       const rewardStrip = document.querySelector("#reward-strip");
       const rewardMessage = document.querySelector("#reward-message");
       // Undo takes two clicks, like removing a goal.
@@ -4458,6 +4476,14 @@
           treeStepWhy.textContent = tree.current_step.why;
           treeStepTip.textContent = tree.current_step.tip || "";
           treeStepTipContainer.hidden = !tree.current_step.tip;
+          treeStepTime.textContent = tree.current_step.time ? `⏱ ${tree.current_step.time}` : "";
+          treeStepTime.hidden = !tree.current_step.time;
+          const how = Array.isArray(tree.current_step.how) ? tree.current_step.how : [];
+          treeStepHow.replaceChildren(...how.map((item) => createElement("li", "", item)));
+          treeStepHowContainer.hidden = how.length === 0;
+          treeStepGuideButton.hidden = how.length > 0;
+          treeStepGuideButton.disabled = false;
+          treeStepGuideButton.textContent = "How do I do this?";
           treeStepTasks.replaceChildren();
           const tasks = Array.isArray(tree.current_step.tasks) ? tree.current_step.tasks : [];
           for (const [index, task] of tasks.entries()) {
@@ -5009,6 +5035,19 @@
         } finally {
           completingTreeStep = false;
           updateTreeChecklist();
+        }
+      });
+
+      treeStepGuideButton.addEventListener("click", async () => {
+        if (!progressTreeState?.current_step) return;
+        treeStepGuideButton.disabled = true;
+        treeStepGuideButton.textContent = "Asking your AI coach...";
+        try {
+          await postProgressTree({ action: "step_guide", expectedStep: progressTreeState.completed_count });
+        } catch (error) {
+          treeStatus.textContent = error.message;
+          treeStepGuideButton.disabled = false;
+          treeStepGuideButton.textContent = "How do I do this?";
         }
       });
 
