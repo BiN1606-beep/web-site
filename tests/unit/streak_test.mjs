@@ -1,10 +1,10 @@
-// Pulls the pure streak and reward functions out of index.html and checks them.
+// Pulls the pure streak and reward functions out of public/js/streak.js and checks them.
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
-const html = readFileSync(new URL("../../public/index.html", import.meta.url), "utf8");
-const start = html.indexOf("      const localDay = ");
-const end = html.indexOf("      const renderStreak = ");
+const html = readFileSync(new URL("../../public/js/streak.js", import.meta.url), "utf8");
+const start = html.indexOf("const localDay = ");
+const end = html.indexOf("const renderStreak = ");
 assert.ok(start > 0 && end > start, "streak functions found");
 const { localDay, daysBetween, shiftDay, computeStreak, computeRewards } =
   new Function(`${html.slice(start, end)}; return { localDay, daysBetween, shiftDay, computeStreak, computeRewards };`)();

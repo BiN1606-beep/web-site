@@ -22,6 +22,21 @@ const compile = (code, name, asModule) => {
   }
 };
 
+// The files in public/js/ are plain scripts that share one set of top-level
+// names. Declaring the same name in two files compiles fine on its own but
+// breaks the page when both load, so look for that too.
+const topLevelNames = new Map();
+const collectTopLevelNames = (code, name) => {
+  for (const match of code.matchAll(/^(?:const|let|var|function|class|async function)\s+([A-Za-z_$][\w$]*)/gm)) {
+    const declared = match[1];
+    if (topLevelNames.has(declared)) {
+      failures.push(`"${declared}" is declared in both ${topLevelNames.get(declared)} and ${name}`);
+    } else {
+      topLevelNames.set(declared, name);
+    }
+  }
+};
+
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
   entry.isDirectory() ? walk(new URL(`${entry.name}/`, dir)) : [new URL(entry.name, dir)]);
 
@@ -35,8 +50,8 @@ for (const file of walk(publicDir)) {
       compile(code, `${name} <script> #${index + 1}`, /type=["']module["']/.test(attributes));
     });
   } else if (name.endsWith(".js")) {
-    // Files under public/js/ are ES modules; others (sw.js) are scripts.
-    compile(text, name, name.startsWith("js/"));
+    compile(text, name, false);
+    if (name.startsWith("js/")) collectTopLevelNames(text, name);
   } else if (name.endsWith(".webmanifest") || name.endsWith(".json")) {
     try {
       JSON.parse(text);
