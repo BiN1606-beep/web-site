@@ -103,6 +103,10 @@
 .checkin-row input {
   flex: 1;
   min-width: 0;
+  /* A text box asks for room for about 20 characters by default, which
+     (with the button next to it) made the whole panel wider than the
+     screen. With width 0 it simply takes the space that is left. */
+  width: 0;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--panel-border);
   border-radius: 0.65rem;

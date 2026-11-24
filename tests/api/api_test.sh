@@ -67,6 +67,17 @@ EVIL='{"endpoint":"https://evil.example.com/fcm.googleapis.com/","keys":{"p256dh
 [ "$(psql -tAc 'SELECT count(*) FROM push_subscriptions')" = 0 ] || fail "unsub row"
 echo "reminders ok"
 
+# ---- Weekly review ----
+WEEKDAY=$(date -u +%u)
+MONDAY=$(date -u -d "@$(( $(date +%s) - (WEEKDAY - 1) * 86400 ))" +%F)
+TUESDAY_OR_SUNDAY=$(date -u -d "@$(( $(date +%s) - (WEEKDAY - 1) * 86400 + 86400 ))" +%F)
+[ "$(post "{\"action\":\"weekly_review\",\"weekStart\":\"$TUESDAY_OR_SUNDAY\",\"day\":\"$TODAY\"}")" = 400 ] || { cat /tmp/out; fail "review accepted a week that doesn't start on Monday"; }
+[ "$(post "{\"action\":\"weekly_review\",\"weekStart\":\"$MONDAY\",\"day\":\"$TODAY\"}")" = 502 ] || { cat /tmp/out; fail "review without AI should fail cleanly"; }
+psql -q -v ON_ERROR_STOP=1 -c "INSERT INTO weekly_reviews (user_id, week_start, review) SELECT id, '$MONDAY', '{\"headline\":\"Solid week\",\"went_well\":\"a\",\"watch_out\":\"b\",\"next_week\":\"c\",\"suggest_adjust\":true}' FROM auth_users WHERE email='t@test.se'"
+[ "$(post "{\"action\":\"weekly_review\",\"weekStart\":\"$MONDAY\",\"day\":\"$TODAY\"}")" = 200 ] || { cat /tmp/out; fail "saved review"; }
+jq -e --arg m "$MONDAY" '.tree.weekly_review.week_start == $m and .tree.weekly_review.review.headline == "Solid week" and .tree.weekly_review.review.suggest_adjust == true' /tmp/out >/dev/null || { cat /tmp/out; fail "review payload"; }
+echo "weekly review ok"
+
 # ---- Community: two users, privacy, friends, follows, feed, reactions ----
 J2=/tmp/jar2
 cpost() { curl -sS -b "$1" -c "$1" -H 'Content-Type: application/json' -o /tmp/out -w '%{http_code}' -X POST "$B/api/community" -d "$2"; }

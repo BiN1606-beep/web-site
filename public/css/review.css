@@ -1,0 +1,67 @@
+/* The weekly review card in the side panel (public/js/review.js). */
+
+.review-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.8rem;
+  background: var(--surface);
+}
+
+.review-stats {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.review-body {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.review-headline {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.review-points {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.review-points dt {
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.review-points dd {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.review-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.review-status:empty {
+  display: none;
+}
+
+.review-card [hidden] {
+  display: none;
+}

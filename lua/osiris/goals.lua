@@ -299,6 +299,22 @@ local function load_goal_summaries(user_id, dates)
 end
 
 -- The active goal's full view plus the summary of all goals.
+-- The user's most recent weekly review (see coach.weekly_review), or nil.
+local function load_latest_review(user_id)
+    local rows = database_query([[
+        SELECT week_start::text AS week_start, review
+        FROM public.weekly_reviews
+        WHERE user_id = $1
+        ORDER BY week_start DESC
+        LIMIT 1
+    ]], user_id)
+    local row = rows and rows[1]
+    if not row then
+        return nil
+    end
+    return { week_start = row.week_start, review = decode_json_value(row.review, nil) }
+end
+
 local function progress_tree_payload(row, user_id)
     -- If the dates cannot be loaded the network still works, just without them.
     local dates = load_step_completions(user_id)
@@ -307,6 +323,7 @@ local function progress_tree_payload(row, user_id)
     -- Like the dates, a failed load only hides the streak. cjson would turn
     -- an empty Lua table into {}, so the browser also accepts an object.
     view.checkins = load_checkins(user_id) or {}
+    view.weekly_review = load_latest_review(user_id)
     view.max_goals = MAX_GOALS
     return view
 end
@@ -343,6 +360,7 @@ M.create_progress_tree_row = create_progress_tree_row
 M.load_goal_summaries = load_goal_summaries
 M.progress_tree_payload = progress_tree_payload
 M.is_progress_debug_user = is_progress_debug_user
+M.load_latest_review = load_latest_review
 M.LIFE_AREAS = LIFE_AREAS
 M.MAX_GOALS = MAX_GOALS
 

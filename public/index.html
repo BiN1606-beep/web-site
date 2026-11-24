@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="/css/base.css">
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/streak.css">
+    <link rel="stylesheet" href="/css/review.css">
     <link rel="stylesheet" href="/css/panel.css">
     <link rel="stylesheet" href="/css/community.css">
     <link rel="stylesheet" href="/css/goal.css">
@@ -126,6 +127,28 @@
                 <span class="tree-step-label" id="reward-title">Rewards</span>
                 <ol class="reward-strip" id="reward-strip"></ol>
                 <p class="reward-message" id="reward-message" role="status" aria-live="polite"></p>
+              </section>
+              <!-- Weekly review: once a week the AI coach looks back at your
+                   check-ins and steps (public/js/review.js). -->
+              <section class="review-card" id="review-card" aria-labelledby="review-title">
+                <span class="tree-step-label" id="review-title">Your week</span>
+                <p class="review-stats" id="review-stats"></p>
+                <div class="review-body" id="review-body" hidden>
+                  <p class="review-headline" id="review-headline"></p>
+                  <dl class="review-points">
+                    <dt>What went well</dt>
+                    <dd id="review-went-well"></dd>
+                    <dt>Watch out for</dt>
+                    <dd id="review-watch-out"></dd>
+                    <dt>Focus for next week</dt>
+                    <dd id="review-next-week"></dd>
+                  </dl>
+                </div>
+                <div class="review-actions">
+                  <button class="save-button" id="review-button" type="button">Review my week with your coach</button>
+                  <button class="profile-secondary-button" id="review-adjust" type="button" hidden>Adjust my path</button>
+                </div>
+                <p class="review-status" id="review-status" role="status" aria-live="polite"></p>
               </section>
               <div class="tree-progress">
                 <div class="tree-progress-label">
@@ -399,6 +422,7 @@
     <script src="/js/network.js"></script>
     <script src="/js/streak.js"></script>
     <script src="/js/goals.js"></script>
+    <script src="/js/review.js"></script>
     <script src="/js/reminders.js"></script>
     <script src="/js/profile.js"></script>
     <script src="/js/panels.js"></script>
