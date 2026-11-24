@@ -539,6 +539,57 @@ local function load_step_completions(user_id)
     return dates
 end
 
+-- The user's daily check-ins, newest first, as { day = "2026-11-24",
+-- note = "..." }. The browser works out the streak from these days, because
+-- only the browser knows what "today" is in the user's time zone. 400 days
+-- is more than any streak shown needs and keeps the answer small.
+local function load_checkins(user_id)
+    return database_query([[
+        SELECT day::text AS day, note
+        FROM public.daily_checkins
+        WHERE user_id = $1
+        ORDER BY day DESC
+        LIMIT 400
+    ]], user_id)
+end
+
+-- A check-in day must be a real calendar date written as YYYY-MM-DD. (Its
+-- distance from today is checked by the database when saving.)
+local function valid_checkin_day(day)
+    if type(day) ~= "string" then
+        return false
+    end
+    local year, month, date = day:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
+    if not year then
+        return false
+    end
+    -- os.time rolls impossible dates over (31 Feb becomes 3 Mar), so
+    -- formatting it back reveals them.
+    local time = os.time({ year = tonumber(year), month = tonumber(month), day = tonumber(date), hour = 12 })
+    return time ~= nil and os.date("%Y-%m-%d", time) == day
+end
+
+-- Saves a check-in for the user's local "day". When overwrite is true an
+-- existing check-in for that day gets the new note (editing today's line);
+-- otherwise the first check-in of the day is kept. Returns true when saved,
+-- false when the day is too far from today, and nil on a database error.
+local function save_checkin(user_id, goal_id, day, note, overwrite)
+    local rows = database_query([[
+        INSERT INTO public.daily_checkins (user_id, goal_id, day, note)
+        SELECT $1, $2, $3::date, $4
+        WHERE $3::date BETWEEN (now() AT TIME ZONE 'UTC')::date - 1
+                           AND (now() AT TIME ZONE 'UTC')::date + 1
+        ON CONFLICT (user_id, day) DO UPDATE
+            SET note = CASE WHEN $5::boolean THEN EXCLUDED.note ELSE daily_checkins.note END,
+                goal_id = CASE WHEN $5::boolean THEN EXCLUDED.goal_id ELSE daily_checkins.goal_id END
+        RETURNING day
+    ]], user_id, goal_id, day, note, overwrite == true)
+    if not rows then
+        return nil
+    end
+    return rows[1] ~= nil
+end
+
 -- The finished steps of a goal, each with its completion date when known.
 -- goal_dates is one goal's entry from load_step_completions, or nil.
 local function completed_steps(steps, completed_count, goal_dates)
@@ -668,6 +719,9 @@ local function progress_tree_payload(row, user_id)
     local dates = load_step_completions(user_id)
     local view = row and progress_tree_view(row, dates) or { exists = false, conversation = {} }
     view.goals = load_goal_summaries(user_id, dates) or {}
+    -- Like the dates, a failed load only hides the streak. cjson would turn
+    -- an empty Lua table into {}, so the browser also accepts an object.
+    view.checkins = load_checkins(user_id) or {}
     view.max_goals = MAX_GOALS
     return view
 end
@@ -1120,7 +1174,44 @@ local function handle_progress_tree()
                 tree = progress_tree_payload(row, user.id),
             })
         end
+        -- Finishing a step also counts as showing up today. The step is
+        -- already saved, so a failed or missing check-in must not undo it;
+        -- it only means the streak doesn't get this day.
+        if valid_checkin_day(body.day) then
+            local step_title = current_step and current_step.title or "a step"
+            local note = "Finished step: " .. step_title
+            if #note > 280 then
+                note = note:sub(1, 277) .. "..."
+            end
+            if save_checkin(user.id, tonumber(updated[1].id), body.day, note, false) == nil then
+                ngx.log(ngx.ERR, "Could not save the check-in for a completed step")
+            end
+        end
         return respond(ngx.HTTP_OK, { tree = progress_tree_payload(updated[1], user.id), completed = true })
+    end
+
+    -- A daily check-in: one short line about what you did today. Sending it
+    -- again on the same day replaces the line.
+    if body.action == "checkin" then
+        if not row or not decode_json_value(row.tree_data, nil) then
+            return respond(ngx.HTTP_CONFLICT, { error = "Create a goal before checking in." })
+        end
+        if not valid_checkin_day(body.day) then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "The check-in date is invalid." })
+        end
+        local note = type(body.note) == "string" and body.note:match("^%s*(.-)%s*$") or ""
+        local note_length = utf8_character_count(note)
+        if not note_length or note_length < 1 or note_length > 280 then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Write one line (up to 280 characters) about what you did today." })
+        end
+        local saved = save_checkin(user.id, tonumber(row.id), body.day, note, true)
+        if saved == nil then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save your check-in." })
+        end
+        if not saved then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "You can only check in for today. Check your device's date." })
+        end
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(row, user.id), checked_in = true })
     end
 
     local action = body.action
