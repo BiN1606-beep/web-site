@@ -192,3 +192,8 @@ every migration on a fresh PostgreSQL, starts the real Lua server code in
 OpenResty and calls the API like a browser (`tests/api/api_test.sh`), and
 sends reminders to a fake push service. It takes about a minute.
 `tests/smoke.sh` is a separate quick check against a running site.
+
+To click around the site on your own computer, `bash tests/dev_server.sh`
+starts it at http://localhost:8080 with an empty database (sign up with
+any test email). Stop it with `bash tests/dev_server.sh stop`. The AI
+coach, Google sign-in and reminders aren't connected there.

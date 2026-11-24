@@ -214,3 +214,39 @@
     justify-content: flex-start;
   }
 }
+
+/* A friend's network on their profile (public/js/friend-network.js). */
+.friend-network {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+.friend-network-stats,
+.friend-network-rewards {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.friend-network-graph {
+  width: 100%;
+  height: 240px;
+  border-radius: 0.5rem;
+  background: radial-gradient(ellipse at 50% 45%, var(--base), var(--surface) 80%);
+}
+
+.friend-network-graph .friend-link {
+  stroke: var(--panel-border);
+  stroke-width: 1.5;
+}
+
+.friend-network-graph .friend-ring {
+  fill: none;
+  stroke: var(--sun);
+  stroke-width: 0.8;
+  opacity: 0.6;
+}

@@ -105,6 +105,16 @@ jq -e '[.notifications[].notification_type] | index("milestone_completed") != nu
 jq -e '[.notifications[].notification_type] | index("reaction") != null' /tmp/out >/dev/null || { cat /tmp/out; fail "reaction notification"; }
 [ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || { cat /tmp/out; fail "public profile"; }
 jq -e '.profile.progress.completed_count == 1' /tmp/out >/dev/null || { cat /tmp/out; fail "profile progress"; }
+jq -e '.profile.network.goals | length == 1' /tmp/out >/dev/null || { cat /tmp/out; fail "friend network goals"; }
+jq -e '.profile.network.goals[0].goal == "G" and (.profile.network.goals[0].completed | length == 1)' /tmp/out >/dev/null || { cat /tmp/out; fail "friend network content"; }
+jq -e '(.profile.network.checkin_days | length >= 1) and (.profile.network | tostring | contains("ran 2 km") | not)' /tmp/out >/dev/null || { cat /tmp/out; fail "friend check-in days without notes"; }
+[ "$(cpost $J '{"action":"privacy","settings":{"profile_visibility":"public","show_goals":false,"show_progress":true,"show_activity":true,"allow_friend_requests":true,"show_in_search":true}}')" = 200 ] || fail "privacy without goals"
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || fail "profile without goals"
+jq -e '.profile.network.goals[0].goal == "Goal 1"' /tmp/out >/dev/null || { cat /tmp/out; fail "goal name hidden"; }
+[ "$(cpost $J '{"action":"privacy","settings":{"profile_visibility":"public","show_goals":false,"show_progress":false,"show_activity":true,"allow_friend_requests":true,"show_in_search":true}}')" = 200 ] || fail "privacy without progress"
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || fail "profile without progress"
+jq -e '.profile.network == null' /tmp/out >/dev/null || { cat /tmp/out; fail "network hidden without show_progress"; }
+echo "friend network ok"
 echo "feed, notifications, reactions, profile ok"
 
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"

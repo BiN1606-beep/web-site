@@ -446,6 +446,7 @@ const openCommunityProfile = async (userId) => {
       progress.append(progressTitle, progressDescription, steps);
       communityProfile.append(progress);
     }
+    if (profile.network) renderFriendNetwork(communityProfile, profile.network);
     const actions = document.createElement("div");
     actions.className = "community-actions";
     if (profile.friend_status === "accepted") {

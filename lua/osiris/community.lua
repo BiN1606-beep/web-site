@@ -14,6 +14,42 @@ local current_user = common.current_user
 local read_json_body = common.read_json_body
 local decode_json_value = common.decode_json_value
 local progress_tree_view = goals.progress_tree_view
+local load_goal_summaries = goals.load_goal_summaries
+local load_step_completions = goals.load_step_completions
+
+-- What a friend's profile shows of their network: every goal with its
+-- finished steps and current step (as in the owner's own network), and
+-- the days they checked in, for their streak and rewards. Check-in notes
+-- stay private. Without show_goals the goal names are hidden.
+local function friend_network(target_id, can_show_goal)
+    local summaries = load_goal_summaries(target_id, load_step_completions(target_id))
+    local days = database_query([[
+        SELECT day::text AS day FROM public.daily_checkins
+        WHERE user_id = $1
+        ORDER BY day DESC
+        LIMIT 400
+    ]], target_id)
+    if not summaries or not days then
+        return nil
+    end
+    local network_goals = {}
+    for index, goal in ipairs(summaries) do
+        network_goals[#network_goals + 1] = {
+            id = index,
+            goal = can_show_goal and goal.goal or ("Goal " .. index),
+            area = goal.area,
+            completed = goal.completed,
+            current_step = goal.current_step,
+            total_steps = goal.total_steps,
+            finished = goal.finished,
+        }
+    end
+    local checkin_days = {}
+    for _, row in ipairs(days) do
+        checkin_days[#checkin_days + 1] = row.day
+    end
+    return { goals = network_goals, checkin_days = checkin_days }
+end
 
 -- A user (or activity) ID from the browser, as a number, or nil.
 -- It must be a number, not text: newer pgmoon versions send Lua strings to
@@ -225,6 +261,8 @@ local function social_profile(user_id, target_id)
                 finished = tree.finished,
             }
         end
+        -- A failed load only leaves out the network; the rest still shows.
+        result.network = friend_network(target_id, database_boolean(access[1].show_goals))
     end
     return result
 end
