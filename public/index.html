@@ -4377,7 +4377,7 @@
         streakCard.classList.toggle("is-wilting", streak.missed > 0);
 
         streakCount.textContent = String(streak.current);
-        streakCountLabel.textContent = streak.current === 1 ? "day streak" : "days streak";
+        streakCountLabel.textContent = "day streak";
         streakBest.textContent = [
           streak.freezes ? `${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
           streak.best > streak.current ? `Best: ${streak.best}` : "",
@@ -4405,11 +4405,11 @@
         if (streak.missed > 0) {
           streakMessage.textContent = `Your network is wilting: ${plural(streak.missed, "day")} missed. Check in today to bring it back to life.`;
         } else if (!streak.checkedInToday && streak.frozenDays.has(shiftDay(today, -1))) {
-          streakMessage.textContent = `A freeze saved your ${plural(streak.current, "day")} streak yesterday. Check in today so you don't need another.`;
+          streakMessage.textContent = `A freeze saved your ${streak.current}-day streak yesterday. Check in today so you don't need another.`;
         } else if (streak.checkedInToday) {
           streakMessage.textContent = "You showed up today. Come back tomorrow to keep the streak going.";
         } else if (streak.current > 0) {
-          streakMessage.textContent = `Check in before midnight to keep your ${plural(streak.current, "day")} streak.`;
+          streakMessage.textContent = `Check in before midnight to keep your ${streak.current}-day streak.`;
         } else {
           streakMessage.textContent = "Check in every day to build a streak. Miss a day and your network starts to wilt.";
         }
