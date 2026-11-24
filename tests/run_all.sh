@@ -7,7 +7,8 @@
 #
 # What it checks:
 #  1. JavaScript: every script on the site compiles, and the streak, freeze
-#     and reward math gives the right answers (Node).
+#     and reward math gives the right answers (Node). Lua: luacheck finds
+#     undefined and unused names in the server code.
 #  2. Database: all migrations run with the real db/migrate.sh (PostgreSQL 16).
 #  3. Server: the real Lua code runs in OpenResty against that database, and
 #     tests/api/api_test.sh calls the API like the browser does.
@@ -41,10 +42,17 @@ step() {
     printf '\n=== %s\n' "$1"
 }
 
-step "1/4 JavaScript"
+step "1/4 JavaScript and Lua checks"
 docker run --rm -v "$ROOT_FOR_DOCKER:/repo:ro" node:22-alpine sh -c '
     node --experimental-vm-modules --no-warnings /repo/tests/unit/syntax_check.mjs &&
     node /repo/tests/unit/streak_test.mjs'
+# luacheck finds names that are used but never defined (for example a
+# function a module forgot to borrow from another module) and leftovers
+# that are never used, before the server ever runs.
+docker run --rm -v "$ROOT_FOR_DOCKER:/repo:ro" openresty/openresty:alpine-fat sh -c '
+    luarocks install luacheck >/dev/null 2>&1 &&
+    cd /repo/lua &&
+    luacheck auth.lua osiris/*.lua --std ngx_lua --codes --no-color --no-max-line-length --only 1 2 -q'
 
 step "2/4 Database migrations"
 docker network create "$NETWORK" >/dev/null
