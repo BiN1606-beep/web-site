@@ -850,6 +850,78 @@
         flex: none;
       }
 
+      /* ---- Rewards ---- */
+      .reward-card {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .reward-strip {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 0.35rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .reward {
+        display: grid;
+        justify-items: center;
+        gap: 0.2rem;
+        color: var(--muted);
+        font-size: 0.68rem;
+        text-align: center;
+      }
+
+      .reward-badge {
+        display: grid;
+        place-items: center;
+        width: 2.3rem;
+        height: 2.3rem;
+        border: 2px dashed var(--panel-border);
+        border-radius: 50%;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .reward.is-earned {
+        color: var(--text);
+      }
+
+      .reward.is-earned .reward-badge {
+        border: 2px solid var(--sun);
+        background: color-mix(in srgb, var(--sun) 22%, transparent);
+        box-shadow: 0 0 10px color-mix(in srgb, var(--sun) 45%, transparent);
+        font-weight: 600;
+      }
+
+      .reward.is-new .reward-badge {
+        animation: reward-pop 0.9s ease;
+      }
+
+      @keyframes reward-pop {
+        0% { transform: scale(0.4); }
+        60% { transform: scale(1.25); }
+        100% { transform: scale(1); }
+      }
+
+      .reward-message {
+        margin: 0;
+        min-height: 0;
+        font-size: 0.85rem;
+      }
+
+      .reward-message:empty {
+        display: none;
+      }
+
+      @media (max-width: 380px) {
+        .reward-strip {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
       /* The network wilts when check-ins are missed: --wilt goes from 0
          (healthy) to 1 (five or more days missed). It fades the colors and
          dims the picture; one check-in brings it back. */
@@ -2159,6 +2231,13 @@
                   </div>
                 </form>
               </section>
+              <!-- Rewards: milestones for steps done and for the best streak.
+                   Each one earned adds a gold ring around your goals. -->
+              <section class="reward-card" aria-labelledby="reward-title">
+                <span class="tree-step-label" id="reward-title">Rewards</span>
+                <ol class="reward-strip" id="reward-strip"></ol>
+                <p class="reward-message" id="reward-message" role="status" aria-live="polite"></p>
+              </section>
               <div class="tree-progress">
                 <div class="tree-progress-label">
                   <span id="tree-progress-count">Step 1</span>
@@ -2593,6 +2672,8 @@
       const checkinInput = document.querySelector("#checkin-input");
       const checkinButton = document.querySelector("#checkin-button");
       const treeUndoButton = document.querySelector("#tree-undo");
+      const rewardStrip = document.querySelector("#reward-strip");
+      const rewardMessage = document.querySelector("#reward-message");
       // Undo takes two clicks, like removing a goal.
       let confirmingUndo = false;
       let progressTreeRequest = null;
@@ -3854,6 +3935,7 @@
           .data(nodes, (node) => node.id)
           .join((enter) => {
             const group = enter.append("g");
+            group.append("g").attr("class", "net-reward-rings");
             group.append("circle").attr("class", "tree-pulse");
             group.append("circle").attr("class", "net-core");
             group.append("circle").attr("class", "net-focus-ring");
@@ -3930,6 +4012,19 @@
           .attr("stroke-dasharray", (node) => (node.status === "locked" || node.kind === "seed" ? "2 2" : null))
           .attr("opacity", (node) => (node.status === "done" && !node.recent ? 0.78 : 1))
           .attr("filter", (node) => (node.kind === "goal" || node.recent || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
+        // Rewards: one thin gold ring per reward earned, around every goal.
+        nodeGroups.select(".net-reward-rings")
+          .selectAll("circle")
+          .data((node) => (node.kind === "goal" ? d3.range(network.rewardRings || 0) : []))
+          .join("circle")
+          .attr("r", (ring, index, rings) => {
+            const node = d3.select(rings[index].parentNode).datum();
+            return node.r + 9 + ring * 4;
+          })
+          .attr("fill", "none")
+          .attr("stroke", "var(--sun)")
+          .attr("stroke-width", 1)
+          .attr("opacity", (ring) => 0.7 - ring * 0.08);
         // A thin ring marks the focus goal.
         nodeGroups.select(".net-focus-ring")
           .attr("r", (node) => node.r + 5)
@@ -4169,6 +4264,25 @@
         };
       };
 
+      // ---- Rewards ----
+      // Milestones for steps done (across all goals) and for the best streak
+      // ever. They're worked out from data the server already sends, so a
+      // reward can't be lost: undoing a step only takes back a steps reward
+      // if the total really drops below it.
+      const REWARDS = [
+        { id: "steps-10", kind: "steps", target: 10, label: "10 steps" },
+        { id: "steps-50", kind: "steps", target: 50, label: "50 steps" },
+        { id: "steps-100", kind: "steps", target: 100, label: "100 steps" },
+        { id: "streak-7", kind: "streak", target: 7, label: "7-day streak" },
+        { id: "streak-30", kind: "streak", target: 30, label: "30-day streak" },
+        { id: "streak-100", kind: "streak", target: 100, label: "100-day streak" },
+      ];
+
+      const computeRewards = (totalSteps, bestStreak) => REWARDS.map((reward) => {
+        const value = reward.kind === "steps" ? totalSteps : bestStreak;
+        return { ...reward, value: Math.min(value, reward.target), earned: value >= reward.target };
+      });
+
       const renderStreak = (tree) => {
         const checkins = Array.isArray(tree?.checkins) ? tree.checkins : [];
         const today = localDay();
@@ -4211,6 +4325,43 @@
         if (document.activeElement !== checkinInput) checkinInput.value = streak.todayNote;
         checkinLabel.textContent = streak.checkedInToday ? "Today's check-in" : "What did you do on your step today?";
         checkinButton.textContent = streak.checkedInToday ? "Update" : "Check in";
+        return streak;
+      };
+
+      // The rewards earned when the page last drew them; null before the
+      // first draw, so rewards you already had don't celebrate on page load.
+      let earnedRewardIds = null;
+
+      const renderRewards = (tree, streak) => {
+        const totalSteps = goalsFromTree(tree).reduce((sum, goal) => sum + goal.completed.length, 0);
+        const rewards = computeRewards(totalSteps, streak.best);
+        const earned = new Set(rewards.filter((reward) => reward.earned).map((reward) => reward.id));
+        const fresh = earnedRewardIds ? rewards.filter((reward) => reward.earned && !earnedRewardIds.has(reward.id)) : [];
+        earnedRewardIds = earned;
+        // Each reward earned draws one gold ring around every goal.
+        network.rewardRings = earned.size;
+
+        rewardStrip.replaceChildren();
+        for (const reward of rewards) {
+          const item = document.createElement("li");
+          item.className = "reward";
+          item.classList.toggle("is-earned", reward.earned);
+          item.classList.toggle("is-new", fresh.includes(reward));
+          item.setAttribute("aria-label", reward.earned
+            ? `${reward.label}: earned`
+            : `${reward.label}: ${reward.value} of ${reward.target}`);
+          const badge = document.createElement("span");
+          badge.className = "reward-badge";
+          badge.textContent = reward.earned ? String(reward.target) : `${reward.value}/${reward.target}`;
+          const label = document.createElement("span");
+          label.textContent = reward.kind === "steps" ? "steps" : "day streak";
+          item.append(badge, label);
+          rewardStrip.append(item);
+          if (fresh.includes(reward)) celebrateStep(badge);
+        }
+        rewardMessage.textContent = fresh.length
+          ? `Reward unlocked: ${fresh.map((reward) => reward.label).join(" and ")}! A new gold ring now circles your goals.`
+          : "";
       };
 
       const renderProgressTree = (tree) => {
@@ -4248,7 +4399,7 @@
         }
 
         treeActions.hidden = false;
-        renderStreak(tree);
+        renderRewards(tree, renderStreak(tree));
         treeGoal.textContent = tree.goal;
         treeSummary.textContent = tree.summary;
         treeProgressCount.textContent = tree.finished
