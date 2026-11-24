@@ -1179,46 +1179,77 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
         return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Start a fresh conversation or shorten your message." })
     end
 
-    -- The last interview answer and path adjustments can return a whole
-    -- roadmap, so those get more room.
-    local may_return_roadmap = (is_interview_answer and interview_answer_count + 1 == 10) or action == "adjust"
-    local ai_response, ai_request_error = request_progress_ai(prompt,
-        may_return_roadmap and ROADMAP_MAX_TOKENS or QUESTION_MAX_TOKENS)
-    if not ai_response then
-        if ai_request_error == "request_too_large" then
-            return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Shorten your recent messages and try again." })
+    local interview_complete = is_interview_answer and interview_answer_count + 1 == 10
+
+    -- Checks that an interview reply has the right shape: answers 1-9 need
+    -- another multiple-choice question, answer 10 needs the roadmap. Small
+    -- slips by the AI are tidied up instead of rejected:
+    -- * an empty "tree": {} counts as no tree,
+    -- * a roadmap that arrives before answer 10 finishes the interview early,
+    -- * a stray tree next to a normal question is ignored.
+    local function tidy_interview_reply(result)
+        if type(result.tree) == "table" and next(result.tree) == nil then
+            result.tree = nil
         end
-        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "The AI coach is temporarily unavailable." })
-    end
-    if is_json_generation_failure(ai_response) then
-        -- Show a plain message instead of Groq's technical one.
-        return respond(ngx.HTTP_BAD_GATEWAY, {
-            error = "The AI coach had trouble writing its answer. Your earlier answers are saved; please choose your answer again.",
-        })
-    end
-    if ai_response.status ~= ngx.HTTP_OK then
-        local upstream_error = cjson.decode(ai_response.body or "")
-        local message = type(upstream_error) == "table" and upstream_error.error
-        if type(message) == "table" then
-            message = message.message
+        if interview_complete then
+            if not result.tree then
+                return false
+            end
+            result.ready = true
+            result.choices = nil
+            return true
         end
-        return respond(ai_response.status, {
-            error = type(message) == "string" and message or "The AI coach could not respond right now.",
-        })
-    end
-    local ai_result = validate_progress_ai_result(ai_response)
-    if not ai_result then
-        ngx.log(ngx.ERR, "Progress-tree AI returned an invalid response")
-        return respond(ngx.HTTP_BAD_GATEWAY, { error = "The AI coach returned an invalid response. Please try again." })
+        if result.tree and (result.ready or type(result.choices) ~= "table") then
+            result.ready = true
+            result.choices = nil
+            return true
+        end
+        result.ready = false
+        result.tree = nil
+        return type(result.choices) == "table"
     end
 
-    if is_interview_answer then
-        local interview_complete = interview_answer_count + 1 == 10
-        if interview_complete and (not ai_result.ready or not ai_result.tree)
-            or not interview_complete and (ai_result.ready or ai_result.tree
-                or type(ai_result.choices) ~= "table") then
-            ngx.log(ngx.ERR, "Progress-tree AI returned an invalid interview step")
-            return respond(ngx.HTTP_BAD_GATEWAY, { error = "The guided interview could not continue. Please retry your answer." })
+    -- The last interview answers and path adjustments can return a whole
+    -- roadmap, so those get more room.
+    local may_return_roadmap = (is_interview_answer and interview_answer_count + 1 >= 9) or action == "adjust"
+    -- If the AI's reply can't be used, ask once more before giving up.
+    local ai_result
+    for attempt = 1, 2 do
+        local ai_response, ai_request_error = request_progress_ai(prompt,
+            may_return_roadmap and ROADMAP_MAX_TOKENS or QUESTION_MAX_TOKENS)
+        if not ai_response then
+            if ai_request_error == "request_too_large" then
+                return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Shorten your recent messages and try again." })
+            end
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "The AI coach is temporarily unavailable." })
+        end
+        if is_json_generation_failure(ai_response) then
+            -- request_progress_ai already retried; show a plain message
+            -- instead of Groq's technical one.
+            return respond(ngx.HTTP_BAD_GATEWAY, {
+                error = "The AI coach had trouble writing its answer. Your earlier answers are saved; please choose your answer again.",
+            })
+        end
+        if ai_response.status ~= ngx.HTTP_OK then
+            local upstream_error = cjson.decode(ai_response.body or "")
+            local message = type(upstream_error) == "table" and upstream_error.error
+            if type(message) == "table" then
+                message = message.message
+            end
+            return respond(ai_response.status, {
+                error = type(message) == "string" and message or "The AI coach could not respond right now.",
+            })
+        end
+        ai_result = validate_progress_ai_result(ai_response)
+        if ai_result and (not is_interview_answer or tidy_interview_reply(ai_result)) then
+            break
+        end
+        ngx.log(ngx.WARN, "Progress-tree AI reply could not be used (attempt ", attempt, ")")
+        if attempt == 2 then
+            if not ai_result then
+                return respond(ngx.HTTP_BAD_GATEWAY, { error = "The AI coach returned an invalid response. Please try again." })
+            end
+            return respond(ngx.HTTP_BAD_GATEWAY, { error = "The guided interview could not continue. Your earlier answers are saved; please choose your answer again." })
         end
     end
 
