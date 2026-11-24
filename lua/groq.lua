@@ -55,9 +55,9 @@ function M.handle_request()
     end
     local max_tokens = 500
     if body.maxTokens ~= nil then
-        if type(body.maxTokens) ~= "number" or body.maxTokens < 100 or body.maxTokens > 1600
+        if type(body.maxTokens) ~= "number" or body.maxTokens < 100 or body.maxTokens > 3000
             or body.maxTokens % 1 ~= 0 then
-            return respond(400, "maxTokens must be a whole number between 100 and 1600.")
+            return respond(400, "maxTokens must be a whole number between 100 and 3000.")
         end
         max_tokens = body.maxTokens
     end
@@ -127,6 +127,13 @@ function M.handle_request()
         },
         max_tokens = max_tokens,
         response_format = body.jsonMode and { type = "json_object" } or nil,
+        -- GPT-OSS "thinks" before answering, and that thinking uses up the
+        -- same token budget as the answer. For JSON answers (the progress
+        -- tree), keep the thinking short and don't send it back, so the JSON
+        -- itself isn't cut off halfway (which Groq reports as
+        -- "Failed to generate JSON").
+        reasoning_effort = body.jsonMode and "low" or nil,
+        include_reasoning = body.jsonMode and false or nil,
     })
     if not request_body then
         ngx.log(ngx.ERR, "Could not encode Groq request body")

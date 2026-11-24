@@ -697,27 +697,52 @@ local function validate_progress_ai_result(response)
     return parsed
 end
 
-local function request_progress_ai(prompt)
+-- Groq answers HTTP 400 with "Failed to generate JSON" (code
+-- json_validate_failed) when the model's reply isn't valid JSON.
+local function is_json_generation_failure(response)
+    local body = response and response.body or ""
+    return response and response.status == ngx.HTTP_BAD_REQUEST
+        and (string.find(body, "json_validate_failed", 1, true)
+            or string.find(body, "Failed to generate JSON", 1, true)) ~= nil
+end
+
+-- max_tokens is the length limit for the AI's answer. A complete roadmap
+-- needs more room than a single interview question.
+local function request_progress_ai(prompt, max_tokens)
     local request_body = cjson.encode({
         message = prompt,
-        maxTokens = 1600,
+        maxTokens = max_tokens or 1600,
         jsonMode = true,
     })
     if not request_body or #request_body > 24000 then
         return nil, "request_too_large"
     end
-    local subrequest_ok, response = pcall(function()
-        return ngx.location.capture("/api/groq-chat", {
-            method = ngx.HTTP_POST,
-            body = request_body,
-        })
-    end)
-    if not subrequest_ok or not response then
-        ngx.log(ngx.ERR, "Progress-tree AI request failed: ", response or "no response")
-        return nil, "request_failed"
+    -- A failed JSON answer is usually a one-off, so try once more before
+    -- showing an error to the user.
+    local response
+    for attempt = 1, 2 do
+        local subrequest_ok
+        subrequest_ok, response = pcall(function()
+            return ngx.location.capture("/api/groq-chat", {
+                method = ngx.HTTP_POST,
+                body = request_body,
+            })
+        end)
+        if not subrequest_ok or not response then
+            ngx.log(ngx.ERR, "Progress-tree AI request failed: ", response or "no response")
+            return nil, "request_failed"
+        end
+        if not is_json_generation_failure(response) then
+            return response
+        end
+        ngx.log(ngx.WARN, "Progress-tree AI reply was not valid JSON (attempt ", attempt, ")")
     end
     return response
 end
+
+-- Room for the AI's answer: a full roadmap is much longer than a question.
+local QUESTION_MAX_TOKENS = 1600
+local ROADMAP_MAX_TOKENS = 3000
 
 local function handle_progress_tree()
     local user, database_error = current_user()
@@ -1154,12 +1179,22 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
         return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Start a fresh conversation or shorten your message." })
     end
 
-    local ai_response, ai_request_error = request_progress_ai(prompt)
+    -- The last interview answer and path adjustments can return a whole
+    -- roadmap, so those get more room.
+    local may_return_roadmap = (is_interview_answer and interview_answer_count + 1 == 10) or action == "adjust"
+    local ai_response, ai_request_error = request_progress_ai(prompt,
+        may_return_roadmap and ROADMAP_MAX_TOKENS or QUESTION_MAX_TOKENS)
     if not ai_response then
         if ai_request_error == "request_too_large" then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "This conversation is too long to send. Shorten your recent messages and try again." })
         end
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "The AI coach is temporarily unavailable." })
+    end
+    if is_json_generation_failure(ai_response) then
+        -- Show a plain message instead of Groq's technical one.
+        return respond(ngx.HTTP_BAD_GATEWAY, {
+            error = "The AI coach had trouble writing its answer. Your earlier answers are saved; please choose your answer again.",
+        })
     end
     if ai_response.status ~= ngx.HTTP_OK then
         local upstream_error = cjson.decode(ai_response.body or "")
@@ -1197,7 +1232,7 @@ Keep a concise durable memory of the user's motivation, experience, preferences,
                 instructions = [[Repair this personalized roadmap and return JSON only in the form {"tree":{"goal":"...","summary":"...","area":"...","steps":[...]}}. Preserve the user's intended goal and the useful personalized milestones; change only what is needed to satisfy the schema. The tree needs a goal string of 1-200 characters, a summary string of at most 500 characters, an area string that is exactly one of "Health", "Learning", "Mind", "Career", "Creativity", "Relationships", "Money" or "Other", and 3-30 ordered steps. Every step must have a title string (1-100 characters), description string (1-500 characters), and why string (1-400 characters). Optional tip must be a string of at most 300 characters. Optional tasks must be an array of at most 4 strings, each 1-160 characters. Optional skills must be an array of 1-3 short skill names, each 1-30 characters. Do not include markdown or any other keys outside the tree object.]],
                 candidate_tree = ai_result.tree,
             })
-            local repaired_response = repair_prompt and request_progress_ai(repair_prompt)
+            local repaired_response = repair_prompt and request_progress_ai(repair_prompt, ROADMAP_MAX_TOKENS)
             local repaired_tree = nil
             if repaired_response and repaired_response.status == ngx.HTTP_OK then
                 local repair_content = progress_ai_content(repaired_response)
