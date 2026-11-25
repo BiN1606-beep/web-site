@@ -18,6 +18,24 @@
   background: var(--panel);
 }
 
+.chart-tile.is-button {
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.chart-tile.is-button:hover,
+.chart-tile.is-button[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chart-tile.is-button .chart-tile-sub {
+  color: var(--accent);
+}
+
 .chart-tile[title] {
   cursor: help;
 }

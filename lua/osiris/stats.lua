@@ -74,6 +74,7 @@ SELECT json_build_object(
         FROM (
             SELECT u.profile_display_name AS name, u.email, users.joined,
                    (SELECT max(day) FROM activity a WHERE a.user_id = u.id) AS last_active,
+                   (SELECT max((created_at AT TIME ZONE 'Europe/Stockholm')::date) FROM public.auth_sessions s WHERE s.user_id = u.id) AS last_login,
                    (SELECT count(*) FROM goals g WHERE g.user_id = u.id) AS goals,
                    (SELECT count(*) FROM public.step_completions s WHERE s.user_id = u.id) AS steps,
                    (SELECT count(*) FROM public.daily_checkins c WHERE c.user_id = u.id) AS checkins

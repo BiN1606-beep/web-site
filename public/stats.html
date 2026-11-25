@@ -31,6 +31,14 @@
     <main class="stats-main" id="stats-main" hidden>
       <div class="chart-tiles" id="stats-tiles"></div>
 
+      <section id="stats-members-section" aria-labelledby="stats-members-title" hidden>
+        <div class="chart-head">
+          <h2 id="stats-members-title">Members</h2>
+          <input class="stats-search" id="stats-search" type="search" placeholder="Search name or email" aria-label="Search members">
+        </div>
+        <ul class="stats-members" id="stats-members"></ul>
+      </section>
+
       <section aria-labelledby="stats-trend-title">
         <div class="chart-head">
           <h2 id="stats-trend-title">Last 30 days</h2>
@@ -45,14 +53,6 @@
       </section>
 
       <div class="chart-tiles is-small" id="stats-extra"></div>
-
-      <section aria-labelledby="stats-members-title">
-        <div class="chart-head">
-          <h2 id="stats-members-title">Members</h2>
-          <input class="stats-search" id="stats-search" type="search" placeholder="Search name or email" aria-label="Search members">
-        </div>
-        <ul class="stats-members" id="stats-members"></ul>
-      </section>
     </main>
 
     <script src="/js/charts.js"></script>

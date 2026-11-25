@@ -16,9 +16,14 @@ const chartElement = (tag, className, text) => {
   return node;
 };
 
-// A tile: label, big number, one short line. "help" shows on hover.
-const chartTile = ({ label, value, sub, help }) => {
-  const card = chartElement("div", "chart-tile");
+// A tile: label, big number, one short line. "help" shows on hover. With
+// "onClick" the tile is a button.
+const chartTile = ({ label, value, sub, help, onClick }) => {
+  const card = chartElement(onClick ? "button" : "div", onClick ? "chart-tile is-button" : "chart-tile");
+  if (onClick) {
+    card.type = "button";
+    card.addEventListener("click", onClick);
+  }
   if (help) card.title = help;
   card.append(chartElement("span", "chart-tile-label", label), chartElement("strong", "chart-tile-value", value));
   if (sub) card.append(chartElement("span", "chart-tile-sub", sub));

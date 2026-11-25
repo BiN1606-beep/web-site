@@ -8,9 +8,17 @@ const STATS_SERIES = [
   { key: "ai", label: "AI requests", unit: "AI requests" },
 ];
 
+// Tapping the Members tile shows or hides the member list.
+const toggleMembers = (event) => {
+  const section = document.querySelector("#stats-members-section");
+  section.hidden = !section.hidden;
+  event.currentTarget.setAttribute("aria-expanded", String(!section.hidden));
+  if (!section.hidden) section.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
 const drawStats = (stats, maxGoals) => {
   document.querySelector("#stats-tiles").replaceChildren(
-    chartTile({ label: "Members", value: chartNumber(stats.members), sub: `+${chartNumber(stats.new_7d)} this week` }),
+    chartTile({ label: "Members", value: chartNumber(stats.members), sub: `+${chartNumber(stats.new_7d)} this week · see who`, onClick: toggleMembers }),
     chartTile({ label: "Active today", value: chartNumber(stats.active_today), sub: `${chartNumber(stats.active_30d)} this month`, help: "Checked in or finished a step today. Just opening the site does not count." }),
     chartTile({ label: "Active this week", value: chartNumber(stats.active_7d), sub: `${chartPercent(stats.active_7d, stats.members)} of members` }),
     chartTile({ label: "Came back", value: chartPercent(stats.came_back, stats.cohort), sub: "in their 2nd week", help: `${stats.came_back} of ${stats.cohort} people who joined 2–6 weeks ago were active in their second week. Above 30% is good.` }),
@@ -86,7 +94,8 @@ const drawMembers = (members, todayIso) => {
       const facts = chartElement("div", "stats-member-facts");
       facts.append(
         chartElement("span", member.last_active === todayIso ? "is-today" : null, when),
-        chartElement("span", null, `Joined ${ago(member.joined, todayIso)} · ${member.steps} steps · ${member.checkins} check-ins`),
+        chartElement("span", null, `Joined ${ago(member.joined, todayIso)}${member.last_login ? ` · last login ${ago(member.last_login, todayIso)}` : ""}`),
+        chartElement("span", null, `${member.steps} steps · ${member.checkins} check-ins`),
       );
       row.append(who, facts);
       return row;
