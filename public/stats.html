@@ -16,6 +16,7 @@
       }
     </script>
     <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/charts.css">
     <link rel="stylesheet" href="/css/stats.css">
   </head>
   <body class="stats-page">
@@ -28,24 +29,33 @@
     </header>
 
     <main class="stats-main" id="stats-main" hidden>
-      <div class="stats-tiles" id="stats-tiles"></div>
+      <div class="chart-tiles" id="stats-tiles"></div>
+
+      <section id="stats-members-section" aria-labelledby="stats-members-title" hidden>
+        <div class="chart-head">
+          <h2 id="stats-members-title">Members</h2>
+          <input class="stats-search" id="stats-search" type="search" placeholder="Search name or email" aria-label="Search members">
+        </div>
+        <ul class="stats-members" id="stats-members"></ul>
+      </section>
 
       <section aria-labelledby="stats-trend-title">
-        <div class="stats-section-head">
+        <div class="chart-head">
           <h2 id="stats-trend-title">Last 30 days</h2>
-          <div class="stats-switch" id="stats-switch" role="group" aria-label="Which number to show"></div>
+          <div class="chart-switch" id="stats-switch" role="group" aria-label="Which number to show"></div>
         </div>
-        <div class="stats-chart" id="stats-chart"></div>
+        <div class="chart-box" id="stats-chart"></div>
       </section>
 
       <section aria-labelledby="stats-funnel-title">
         <h2 id="stats-funnel-title">Where people stop</h2>
-        <ol class="stats-funnel" id="stats-funnel"></ol>
+        <ol class="chart-bars" id="stats-funnel"></ol>
       </section>
 
-      <div class="stats-tiles is-small" id="stats-extra"></div>
+      <div class="chart-tiles is-small" id="stats-extra"></div>
     </main>
 
+    <script src="/js/charts.js"></script>
     <script src="/js/stats.js"></script>
   </body>
 </html>

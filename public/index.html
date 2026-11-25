@@ -36,6 +36,8 @@
     <link rel="stylesheet" href="/css/settings.css">
     <link rel="stylesheet" href="/css/tabs.css">
     <link rel="stylesheet" href="/css/lesson.css">
+    <link rel="stylesheet" href="/css/charts.css">
+    <link rel="stylesheet" href="/css/my-stats.css">
   </head>
   <body>
     <div class="startup-screen" id="startup-screen">
@@ -212,6 +214,7 @@
                   <div class="net-stat"><b id="net-stat-goals">0</b><span>goals reached</span></div>
                   <div class="net-stat"><b id="net-stat-skills">0</b><span>skills</span></div>
                 </div>
+                <button class="profile-secondary-button my-stats-open" id="my-stats-open" type="button">See your stats</button>
                 <!-- Daily streak: check in once a day to keep it. Missing days
                      makes the network wilt until you check in again. -->
                 <section class="streak-card" id="streak-card" aria-labelledby="streak-count-label">
@@ -487,6 +490,27 @@
         </form>
         <p id="groq-answer" aria-live="polite"></p>
       </dialog>
+      <!-- "Your stats": your own progress in the same layout as the site
+           stats page (public/js/my-stats.js, public/js/charts.js). -->
+      <dialog class="my-stats" id="my-stats" aria-labelledby="my-stats-title">
+        <div class="my-stats-top">
+          <h2 id="my-stats-title">Your stats</h2>
+          <button class="lesson-close" id="my-stats-close" type="button" aria-label="Close your stats">&times;</button>
+        </div>
+        <div class="chart-tiles" id="my-stats-tiles"></div>
+        <section class="my-stats-section" aria-labelledby="my-stats-trend-title">
+          <div class="chart-head">
+            <h3 id="my-stats-trend-title">Last 30 days</h3>
+            <div class="chart-switch" id="my-stats-switch" role="group" aria-label="Which number to show"></div>
+          </div>
+          <div class="chart-box" id="my-stats-chart"></div>
+        </section>
+        <section class="my-stats-section" aria-labelledby="my-stats-goals-title">
+          <h3 id="my-stats-goals-title">Your goals</h3>
+          <ol class="chart-bars" id="my-stats-goals"></ol>
+        </section>
+        <div class="chart-tiles is-small" id="my-stats-extra"></div>
+      </dialog>
       <!-- The step as a game: one card at a time with a progress bar,
            like a language-learning app (public/js/lesson.js). -->
       <dialog class="lesson" id="lesson" aria-labelledby="lesson-title">
@@ -524,6 +548,8 @@
     <script src="/js/goals.js"></script>
     <script src="/js/lesson.js"></script>
     <script src="/js/evolve.js"></script>
+    <script src="/js/charts.js"></script>
+    <script src="/js/my-stats.js"></script>
     <script src="/js/review.js"></script>
     <script src="/js/reminders.js"></script>
     <script src="/js/profile.js"></script>

@@ -58,176 +58,73 @@
   font-size: 1.35rem;
 }
 
-/* Tiles */
-.stats-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: 0.75rem;
+/* ---- Members ---- */
+.stats-search {
+  width: min(100%, 16rem);
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
 }
 
-.stats-tile {
+.stats-members {
   display: grid;
-  gap: 0.2rem;
-  padding: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   border: 1px solid var(--panel-border);
   border-radius: 1rem;
   background: var(--panel);
+  max-height: 32rem;
+  overflow-y: auto;
 }
 
-.stats-tile-label,
-.stats-tile-sub {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.stats-tile[title] {
-  cursor: help;
-}
-
-/* The smaller row at the bottom. */
-.stats-tiles.is-small .stats-tile-value {
-  font-size: 1.4rem;
-}
-
-.stats-tile-value {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Chart */
-.stats-section-head {
+.stats-member {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--panel-border);
 }
 
-.stats-switch {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+.stats-member:last-child {
+  border-bottom: 0;
 }
 
-.stats-switch-button {
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 999px;
-  background: transparent;
+.stats-member-who,
+.stats-member-facts {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.stats-member-facts {
+  text-align: right;
+}
+
+.stats-member-email,
+.stats-member-facts span {
   color: var(--muted);
-  font: inherit;
   font-size: 0.85rem;
-  cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
-.stats-switch-button[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+.stats-member-facts .is-today {
   color: var(--accent);
   font-weight: 600;
 }
 
-.stats-chart {
-  position: relative;
-  padding: 2.4rem 1rem 0.5rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 1rem;
-  background: var(--panel);
-}
-
-.stats-chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.stats-chart-info {
-  position: absolute;
-  top: 0.55rem;
-  left: 1rem;
+.stats-member-empty {
+  padding: 1rem;
   color: var(--muted);
-  font-size: 0.85rem;
-}
-
-/* Each day is a rounded pillar on a soft track. Tap one to see its day. */
-.stats-pillar {
-  cursor: pointer;
-  outline: none;
-}
-
-.stats-pillar-track {
-  fill: var(--surface);
-  opacity: 0.55;
-}
-
-.stats-pillar-bar {
-  fill: var(--accent);
-  opacity: 0.5;
-  transition: opacity 150ms ease;
-}
-
-.stats-pillar.is-today .stats-pillar-bar,
-.stats-pillar:hover .stats-pillar-bar,
-.stats-pillar.is-picked .stats-pillar-bar {
-  opacity: 1;
-}
-
-.stats-pillar:hover .stats-pillar-track,
-.stats-pillar.is-picked .stats-pillar-track,
-.stats-pillar:focus-visible .stats-pillar-track {
-  fill: var(--accent-soft);
-  opacity: 1;
-}
-
-.stats-pillar.is-picked .stats-pillar-bar {
-  fill: var(--sun);
-}
-
-.stats-chart-label {
-  fill: var(--muted);
-  font-size: 12px;
-}
-
-/* Funnel bars */
-.stats-funnel {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.stats-funnel-row {
-  display: grid;
-  grid-template-columns: 9rem 1fr auto;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
-}
-
-.stats-funnel-bar {
-  min-width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 999px;
-  background: var(--accent);
-}
-
-.stats-funnel-value {
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 @media (max-width: 520px) {
-  .stats-funnel-row {
-    grid-template-columns: 1fr auto;
-  }
-
-  .stats-funnel-bar {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .stats-member-facts {
+    text-align: left;
   }
 }

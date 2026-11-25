@@ -1,0 +1,64 @@
+/* "Your stats" (public/js/my-stats.js): a centered card on big screens and
+   the whole screen on phones, like the step game. The tiles, chart and
+   bars inside come from charts.css. */
+
+.my-stats-open {
+  justify-self: stretch;
+}
+
+.my-stats {
+  width: min(94vw, 44rem);
+  max-width: none;
+  max-height: 92vh;
+  padding: 1.25rem 1.5rem 1.5rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1.5rem;
+  background: var(--base);
+  color: var(--text);
+  box-shadow: 0 20px 45px var(--shadow);
+  overflow-y: auto;
+}
+
+.my-stats[open] {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.my-stats::backdrop {
+  background: var(--backdrop);
+}
+
+.my-stats-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.my-stats-top h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2rem);
+}
+
+.my-stats-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.my-stats h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+@media (max-width: 560px) {
+  .my-stats {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 1rem;
+    border: 0;
+    border-radius: 0;
+  }
+}
