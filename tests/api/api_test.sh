@@ -184,5 +184,20 @@ jq -e '.trees | length == 0' /tmp/out >/dev/null || { cat /tmp/out; fail "remove
 jq -e '.profile.i_follow == "none"' /tmp/out >/dev/null || { cat /tmp/out; fail "removed follower no longer follows"; }
 echo "shared trees ok"
 
+# ---- Network style: saved per account, junk dropped ----
+style() { curl -sS -b $J -H 'Content-Type: application/json' -o /tmp/out -w '%{http_code}' -X POST "$B/api/network-style" -d "$1"; }
+[ "$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' $B/api/network-style -d '{"style":{}}')" = 401 ] || fail "style signed out"
+[ "$(style '{"nope":1}')" = 400 ] || fail "style without style"
+[ "$(style '{"style":{"shape":"galaxy","palette":"ocean","sky":"stars","pull":0.734,"spread":2,"dots":0.2,"curved":true,"names":"yes","evil":"<script>"}}')" = 200 ] || { cat /tmp/out; fail "save style"; }
+curl -sS -b $J -o /tmp/out $B/api/progress-tree
+jq -e '.network_style.shape == "galaxy" and .network_style.sky == "stars" and .network_style.pull == 0.73 and .network_style.curved == true' /tmp/out >/dev/null || { cat /tmp/out; fail "style in progress tree"; }
+jq -e '.network_style | has("spread") or has("names") or has("evil") | not' /tmp/out >/dev/null || { cat /tmp/out; fail "bad style values kept"; }
+[ "$(style '{"style":{"shape":"pyramid"}}')" = 200 ] || fail "unknown shape"
+jq -e '.style | has("shape") | not' /tmp/out >/dev/null || { cat /tmp/out; fail "unknown shape kept"; }
+[ "$(style '{"reset":true}')" = 200 ] || fail "reset style"
+curl -sS -b $J -o /tmp/out $B/api/network-style
+jq -e '.style == null' /tmp/out >/dev/null || { cat /tmp/out; fail "style after reset"; }
+echo "network style ok"
+
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"
 echo "ALL_API_TESTS_OK"

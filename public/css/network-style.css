@@ -1,0 +1,584 @@
+/* Customize your network: the button, the panel and every style choice.
+   js/network-style.js sets data-palette on .home-app and data-sky,
+   data-shape on the network stage; the colors here follow from that. */
+
+/* ---- Colors ----
+   Each palette sets the eight life-area colors. Light and dark versions,
+   and the dark version also under the "Stars" sky. The swatches in the
+   panel carry data-palette too, so they always show their own colors. */
+
+[data-palette="areas"] {
+  --area-health: #4f8a3c;
+  --area-learning: #3d6fa8;
+  --area-mind: #a8557a;
+  --area-career: #c2642a;
+  --area-creativity: #c98a1b;
+  --area-relationships: #b03f38;
+  --area-money: #2b8580;
+  --area-other: #857e72;
+}
+
+html.is-dark [data-palette="areas"],
+[data-palette="areas"] .net-stage[data-sky="stars"],
+.net-stage[data-sky="stars"] [data-palette="areas"] {
+  --area-health: #9bcf86;
+  --area-learning: #8fb3dd;
+  --area-mind: #dc9ab8;
+  --area-career: #e4a073;
+  --area-creativity: #e3b25c;
+  --area-relationships: #e08a80;
+  --area-money: #7ccbc2;
+  --area-other: #b8b0a2;
+}
+
+[data-palette="forest"] {
+  --area-health: #3f7d3a;
+  --area-learning: #2f6b4f;
+  --area-mind: #6b8e23;
+  --area-career: #4a7c59;
+  --area-creativity: #8a9a3b;
+  --area-relationships: #5e7d3a;
+  --area-money: #2e5e4e;
+  --area-other: #7d7a5c;
+}
+
+html.is-dark [data-palette="forest"],
+[data-palette="forest"] .net-stage[data-sky="stars"],
+.net-stage[data-sky="stars"] [data-palette="forest"] {
+  --area-health: #9bcf86;
+  --area-learning: #8cc29f;
+  --area-mind: #b9d17a;
+  --area-career: #a3c9a8;
+  --area-creativity: #d0d48a;
+  --area-relationships: #b5cf8f;
+  --area-money: #7fbfa8;
+  --area-other: #bdb796;
+}
+
+[data-palette="sunset"] {
+  --area-health: #c2642a;
+  --area-learning: #c98a1b;
+  --area-mind: #b03f38;
+  --area-career: #a8557a;
+  --area-creativity: #d07a3a;
+  --area-relationships: #b8483f;
+  --area-money: #9c5a2e;
+  --area-other: #8c6f5a;
+}
+
+html.is-dark [data-palette="sunset"],
+[data-palette="sunset"] .net-stage[data-sky="stars"],
+.net-stage[data-sky="stars"] [data-palette="sunset"] {
+  --area-health: #e4a073;
+  --area-learning: #e3b25c;
+  --area-mind: #e08a80;
+  --area-career: #dc9ab8;
+  --area-creativity: #f0b878;
+  --area-relationships: #ee9a8a;
+  --area-money: #d9a67a;
+  --area-other: #c4a894;
+}
+
+[data-palette="ocean"] {
+  --area-health: #2b8580;
+  --area-learning: #3d6fa8;
+  --area-mind: #4a5fa8;
+  --area-career: #2f7a9e;
+  --area-creativity: #3f8f8a;
+  --area-relationships: #5a6fb0;
+  --area-money: #a8863a;
+  --area-other: #6f7f8c;
+}
+
+html.is-dark [data-palette="ocean"],
+[data-palette="ocean"] .net-stage[data-sky="stars"],
+.net-stage[data-sky="stars"] [data-palette="ocean"] {
+  --area-health: #7ccbc2;
+  --area-learning: #8fb3dd;
+  --area-mind: #a3aee8;
+  --area-career: #86c2de;
+  --area-creativity: #8ad8cf;
+  --area-relationships: #b0b8ec;
+  --area-money: #d8c27a;
+  --area-other: #aab7c2;
+}
+
+[data-palette="ink"] {
+  --area-health: #2f6b4f;
+  --area-learning: #2f6b4f;
+  --area-mind: #2f6b4f;
+  --area-career: #2f6b4f;
+  --area-creativity: #2f6b4f;
+  --area-relationships: #2f6b4f;
+  --area-money: #2f6b4f;
+  --area-other: #2f6b4f;
+}
+
+html.is-dark [data-palette="ink"],
+[data-palette="ink"] .net-stage[data-sky="stars"],
+.net-stage[data-sky="stars"] [data-palette="ink"] {
+  --area-health: #8cc29f;
+  --area-learning: #8cc29f;
+  --area-mind: #8cc29f;
+  --area-career: #8cc29f;
+  --area-creativity: #8cc29f;
+  --area-relationships: #8cc29f;
+  --area-money: #8cc29f;
+  --area-other: #8cc29f;
+}
+
+/* ---- Sky: what is behind the network ---- */
+.net-stage[data-sky="dots"] {
+  background:
+    radial-gradient(circle, var(--panel-border) 1.1px, transparent 1.6px) 0 0 / 22px 22px,
+    radial-gradient(ellipse at 50% 45%, var(--surface), var(--base) 70%);
+}
+
+/* A night sky in both themes: the network's own colors switch to the
+   dark set inside it, so every dot and name stays easy to read. */
+.net-stage[data-sky="stars"] {
+  color-scheme: dark;
+  --base: #0e1322;
+  --surface: #18203a;
+  --panel: #141b2e;
+  --panel-border: #2c3756;
+  --text: #e8eaf2;
+  --muted: #9ea7bd;
+  --accent: #8cc29f;
+  --accent-hover: #a5d2b5;
+  --accent-soft: rgba(140, 194, 159, 0.16);
+  --button-text: #0e1322;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --sun: #e3b25c;
+  --leaf: #9bcf86;
+  color: var(--text);
+  background:
+    radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 78% 12%, #fff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 34% 72%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 88% 64%, #dfe6ff 50%, transparent 100%),
+    radial-gradient(1px 1px at 56% 34%, #fff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 22% 48%, #f4e7c8 50%, transparent 100%),
+    radial-gradient(1px 1px at 66% 88%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 92% 30%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 6% 82%, #dfe6ff 50%, transparent 100%),
+    radial-gradient(1px 1px at 44% 8%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 72% 50%, #fff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 4% 36%, #fff 50%, transparent 100%),
+    radial-gradient(ellipse at 50% 45%, #1d2747, #0e1322 72%);
+  background-size: 340px 300px, 340px 300px, 340px 300px, 340px 300px, 340px 300px, 340px 300px,
+    260px 230px, 260px 230px, 260px 230px, 260px 230px, 260px 230px, 260px 230px, 100% 100%;
+}
+
+/* ---- Shapes: quiet drawings behind them ---- */
+.net-decor {
+  pointer-events: none;
+}
+
+.net-decor-ring {
+  fill: none;
+  stroke: var(--panel-border);
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
+}
+
+.net-decor-core {
+  fill: var(--sun);
+  opacity: 0.14;
+  filter: blur(10px);
+}
+
+.net-decor-core.is-inner {
+  opacity: 0.85;
+  filter: url(#net-glow);
+}
+
+.net-decor-ground {
+  fill: var(--accent-soft);
+}
+
+/* The thick lines from a tree's root to its big branches. */
+.net-link {
+  fill: none;
+}
+
+.net-link.is-trunk {
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+/* "Goal names" off: names only show on hover, tap or zoom, like steps. */
+.net-stage.hide-goal-names .tree-growth .net-node.is-goal text,
+.net-stage.hide-goal-names .tree-growth .net-node.is-area text,
+.net-stage.hide-goal-names .tree-growth .net-node.is-milestone text {
+  opacity: 0;
+}
+
+.net-stage.hide-goal-names .tree-growth.is-zoomed .net-node text,
+.net-stage.hide-goal-names .tree-growth .net-node.is-hovered text,
+.net-stage.hide-goal-names .tree-growth .net-node.is-selected text,
+.net-stage.hide-goal-names .tree-growth .net-node.is-near text {
+  opacity: 1;
+}
+
+/* ---- The button ---- */
+.net-controls {
+  max-width: calc(100% - 4.5rem);
+}
+
+.net-style-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 0.25rem 0.8rem var(--shadow);
+}
+
+.net-style-button:hover,
+.net-style-button[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---- The panel ---- */
+.net-style-panel {
+  position: absolute;
+  top: 3.6rem;
+  right: 0.75rem;
+  left: auto;
+  z-index: 5;
+  width: min(19.5rem, calc(100% - 1.5rem));
+  max-height: calc(100% - 4.6rem);
+  margin: 0;
+  padding: 0.85rem 0.9rem 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-body);
+  box-shadow: 0 0.9rem 2.4rem var(--shadow);
+}
+
+.net-style-panel[open] {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.net-style-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.net-style-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.net-style-close {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.net-style-close:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.net-style-section {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.net-style-section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.net-style-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+}
+
+.net-style-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.4rem 0.15rem 0.35rem;
+  border: 1.5px solid transparent;
+  border-radius: 0.7rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+
+.net-style-choice:hover {
+  border-color: var(--panel-border);
+}
+
+.net-style-choice[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.net-style-choice svg {
+  width: 100%;
+  max-width: 2.6rem;
+  height: 2rem;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.net-style-choice svg path {
+  fill: none;
+}
+
+.net-style-choice svg circle[fill="none"] {
+  stroke-width: 1.2;
+  opacity: 0.6;
+}
+
+.net-style-swatch {
+  display: grid;
+  grid-template-columns: repeat(2, 0.7rem);
+  gap: 0.2rem;
+  padding: 0.25rem;
+}
+
+.net-style-swatch b {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+
+.net-style-swatch b:nth-child(1) { background: var(--area-health); }
+.net-style-swatch b:nth-child(2) { background: var(--area-learning); }
+.net-style-swatch b:nth-child(3) { background: var(--area-mind); }
+.net-style-swatch b:nth-child(4) { background: var(--area-career); }
+
+.net-style-row:has(.is-sky) {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.net-style-sky {
+  display: block;
+  width: 100%;
+  height: 1.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.45rem;
+  background: var(--base);
+}
+
+.net-style-sky.is-dots {
+  background:
+    radial-gradient(circle, var(--muted) 0.9px, transparent 1.3px) 0 0 / 7px 7px,
+    var(--base);
+}
+
+.net-style-sky.is-stars {
+  border-color: #2c3756;
+  background:
+    radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 70% 20%, #fff 50%, transparent 100%),
+    radial-gradient(1.4px 1.4px at 45% 70%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 85% 75%, #fff 50%, transparent 100%),
+    radial-gradient(ellipse at 50% 50%, #1d2747, #0e1322);
+}
+
+.net-style-slider {
+  display: grid;
+  grid-template-columns: 4.2rem 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+}
+
+.net-style-slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.net-style-row.is-switches {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 0.2rem;
+}
+
+.net-style-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+/* A small on/off track with a knob. */
+.net-style-switch i {
+  position: relative;
+  flex: none;
+  width: 1.7rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--panel-border);
+  transition: background-color 150ms ease;
+}
+
+.net-style-switch i::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--panel);
+  transition: transform 150ms ease;
+}
+
+.net-style-switch[aria-pressed="true"] i {
+  background: var(--accent);
+}
+
+.net-style-switch[aria-pressed="true"] i::after {
+  transform: translateX(0.7rem);
+}
+
+.net-style-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.net-style-reset {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.net-style-reset:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.net-style-status {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* Phones: the panel becomes a sheet over the bottom of the network. */
+@media (max-width: 560px) {
+  .net-style-panel {
+    top: auto;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-height: 58%;
+    gap: 0.6rem;
+    padding: 0.7rem 0.75rem 0.6rem;
+  }
+
+  .net-style-choice {
+    padding: 0.3rem 0.1rem 0.25rem;
+  }
+
+  .net-style-choice svg {
+    height: 1.6rem;
+  }
+
+  .net-style-sky {
+    height: 1.3rem;
+  }
+}
+
+/* Short animations: the panel pops open, a picked tile bounces. */
+@media (prefers-reduced-motion: no-preference) {
+  .net-style-panel[open] {
+    animation: net-style-open 180ms cubic-bezier(0.2, 1.2, 0.4, 1);
+    transform-origin: top right;
+  }
+
+  .net-style-choice:active {
+    transform: scale(0.94);
+  }
+
+  .net-stage .tree-growth .net-link {
+    transition: opacity 200ms ease, stroke 300ms ease;
+  }
+
+  .net-stage .tree-growth .net-core {
+    transition: fill 300ms ease;
+  }
+
+  @media (max-width: 560px) {
+    .net-style-panel[open] {
+      animation-name: net-style-sheet;
+    }
+  }
+}
+
+@keyframes net-style-open {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes net-style-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

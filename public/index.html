@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/css/community.css">
     <link rel="stylesheet" href="/css/goal.css">
     <link rel="stylesheet" href="/css/network.css">
+    <link rel="stylesheet" href="/css/network-style.css">
     <link rel="stylesheet" href="/css/steps.css">
     <link rel="stylesheet" href="/css/settings.css">
     <link rel="stylesheet" href="/css/tabs.css">
@@ -85,6 +86,15 @@
             <!-- Only shown on phones and small windows (css/network.css). -->
             <button class="net-ctl net-fullscreen" id="net-fullscreen" type="button" aria-pressed="false">&#x26F6; Full screen</button>
           </div>
+          <!-- Customize: shape, colors, sky and feel of your network (js/network-style.js). -->
+          <button class="net-style-button" id="net-style-button" type="button" aria-label="Customize your network" aria-expanded="false" aria-controls="net-style-panel" hidden>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 7h9M17 7h3M4 17h3M11 17h9"></path>
+              <circle cx="15" cy="7" r="2"></circle>
+              <circle cx="9" cy="17" r="2"></circle>
+            </svg>
+          </button>
+          <dialog class="net-style-panel" id="net-style-panel" aria-label="Customize your network"></dialog>
           <div class="net-legend" id="net-legend" aria-hidden="true"></div>
           <p class="net-hint" id="tree-network-hint">Hover to see names &middot; drag &middot; scroll to zoom</p>
         </section>
@@ -580,6 +590,7 @@
     <script src="/js/friend-network.js"></script>
     <script src="/js/shared-tree.js"></script>
     <script src="/js/network.js"></script>
+    <script src="/js/network-style.js"></script>
     <script src="/js/tabs.js"></script>
     <script src="/js/streak.js"></script>
     <script src="/js/goals.js"></script>
