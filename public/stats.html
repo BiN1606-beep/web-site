@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="robots" content="noindex">
+    <title>Site stats | Osiris</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+    <script>
+      // Same light/dark choice as the main page (the cookie set by theme.js).
+      if (document.cookie.split(";").some((cookie) => cookie.trim() === "background-theme=dark")) {
+        document.documentElement.classList.add("is-dark");
+      }
+    </script>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/stats.css">
+  </head>
+  <body class="stats-page">
+    <!-- Filled in by js/stats.js from /api/stats (lua/osiris/stats.lua).
+         Totals only, no personal data. Hover a number for what it means. -->
+    <header class="stats-header">
+      <a class="stats-back" href="/">&larr; Osiris</a>
+      <h1>Stats</h1>
+      <p class="stats-updated" id="stats-updated">Loading...</p>
+    </header>
+
+    <main class="stats-main" id="stats-main" hidden>
+      <div class="stats-tiles" id="stats-tiles"></div>
+
+      <section aria-labelledby="stats-trend-title">
+        <div class="stats-section-head">
+          <h2 id="stats-trend-title">Last 30 days</h2>
+          <div class="stats-switch" id="stats-switch" role="group" aria-label="Which number to show"></div>
+        </div>
+        <div class="stats-chart" id="stats-chart"></div>
+      </section>
+
+      <section aria-labelledby="stats-funnel-title">
+        <h2 id="stats-funnel-title">Where people stop</h2>
+        <ol class="stats-funnel" id="stats-funnel"></ol>
+      </section>
+
+      <div class="stats-tiles is-small" id="stats-extra"></div>
+    </main>
+
+    <script src="/js/stats.js"></script>
+  </body>
+</html>
