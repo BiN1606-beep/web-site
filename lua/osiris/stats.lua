@@ -20,102 +20,66 @@ local is_progress_debug_user = goals.is_progress_debug_user
 local MAX_GOALS = goals.MAX_GOALS
 
 -- One query that builds the whole answer as JSON inside PostgreSQL. Each
--- part is a small sub-select, so it is easy to add or remove a number.
+-- table is read once into a small summary (the WITH parts), and the 30-day
+-- chart joins those summaries instead of counting again for every day.
 local STATS_SQL = [[
-WITH activity AS (
+WITH today AS (SELECT (now() AT TIME ZONE 'Europe/Stockholm')::date AS d),
+users AS (
+    SELECT id, (created_at AT TIME ZONE 'Europe/Stockholm')::date AS joined FROM public.auth_users
+),
+activity AS (
     SELECT user_id, day FROM public.daily_checkins
     UNION
     SELECT user_id, (completed_at AT TIME ZONE 'Europe/Stockholm')::date FROM public.step_completions
 ),
-today AS (SELECT (now() AT TIME ZONE 'Europe/Stockholm')::date AS d),
 goals AS (
-    SELECT user_id, completed_count, created_at,
-           COALESCE(tree_data->>'area', 'Other') AS area,
+    SELECT user_id, completed_count,
            jsonb_array_length(COALESCE(tree_data->'steps', '[]'::jsonb)) AS total_steps
     FROM public.user_progress_trees
     WHERE tree_data IS NOT NULL
 ),
-days AS (
-    SELECT generate_series((SELECT d FROM today) - 29, (SELECT d FROM today), interval '1 day')::date AS day
+-- People who joined 14 to 42 days ago, and whether they were active in
+-- their second week.
+cohort AS (
+    SELECT u.id, EXISTS (
+        SELECT 1 FROM activity a
+        WHERE a.user_id = u.id AND a.day >= u.joined + 7 AND a.day < u.joined + 14
+    ) AS came_back
+    FROM users u, today
+    WHERE u.joined <= today.d - 14 AND u.joined > today.d - 42
 ),
-signup_week AS (
-    -- People who signed up 14 to 42 days ago: old enough to measure if they
-    -- came back in their second week.
-    SELECT id, (created_at AT TIME ZONE 'Europe/Stockholm')::date AS joined
-    FROM public.auth_users
-    WHERE created_at < now() - interval '14 days'
-      AND created_at >= now() - interval '42 days'
-)
+days AS (
+    SELECT generate_series(today.d - 29, today.d, interval '1 day')::date AS day FROM today
+),
+active_per_day AS (SELECT day, count(DISTINCT user_id) AS n FROM activity GROUP BY day),
+signups_per_day AS (SELECT joined AS day, count(*) AS n FROM users GROUP BY joined)
 SELECT json_build_object(
     'generated_at', now(),
-    'users', json_build_object(
-        'total', (SELECT count(*) FROM public.auth_users),
-        'new_today', (SELECT count(*) FROM public.auth_users WHERE (created_at AT TIME ZONE 'Europe/Stockholm')::date = (SELECT d FROM today)),
-        'new_7d', (SELECT count(*) FROM public.auth_users WHERE created_at >= now() - interval '7 days'),
-        'new_30d', (SELECT count(*) FROM public.auth_users WHERE created_at >= now() - interval '30 days'),
-        'google', (SELECT count(*) FROM public.auth_users WHERE google_sub IS NOT NULL)
-    ),
-    'active', json_build_object(
-        'today', (SELECT count(DISTINCT user_id) FROM activity WHERE day = (SELECT d FROM today)),
-        'last_7d', (SELECT count(DISTINCT user_id) FROM activity WHERE day > (SELECT d FROM today) - 7),
-        'last_30d', (SELECT count(DISTINCT user_id) FROM activity WHERE day > (SELECT d FROM today) - 30)
-    ),
-    'funnel', json_build_object(
-        'signed_up', (SELECT count(*) FROM public.auth_users),
-        'made_goal', (SELECT count(DISTINCT user_id) FROM goals),
-        'finished_step', (SELECT count(DISTINCT user_id) FROM public.step_completions),
-        'checked_in', (SELECT count(DISTINCT user_id) FROM public.daily_checkins),
-        'active_7d', (SELECT count(DISTINCT user_id) FROM activity WHERE day > (SELECT d FROM today) - 7)
-    ),
-    'retention', json_build_object(
-        'cohort', (SELECT count(*) FROM signup_week),
-        'came_back_week2', (
-            SELECT count(DISTINCT s.id) FROM signup_week s
-            JOIN activity a ON a.user_id = s.id
-            WHERE a.day >= s.joined + 7 AND a.day < s.joined + 14
-        )
-    ),
-    'goals', json_build_object(
-        'total', (SELECT count(*) FROM goals),
-        'finished', (SELECT count(*) FROM goals WHERE total_steps > 0 AND completed_count >= total_steps),
-        'new_7d', (SELECT count(*) FROM goals WHERE created_at >= now() - interval '7 days'),
-        'avg_per_user', (SELECT round(avg(n), 1) FROM (SELECT count(*) AS n FROM goals GROUP BY user_id) g),
-        'at_limit', (SELECT count(*) FROM (SELECT user_id FROM goals GROUP BY user_id HAVING count(*) >= $1) g),
-        'by_area', (SELECT COALESCE(json_object_agg(area, n), '{}'::json) FROM (SELECT area, count(*) AS n FROM goals GROUP BY area ORDER BY n DESC) a)
-    ),
-    'steps', json_build_object(
-        'total', (SELECT count(*) FROM public.step_completions),
-        'last_7d', (SELECT count(*) FROM public.step_completions WHERE completed_at >= now() - interval '7 days')
-    ),
-    'checkins', json_build_object(
-        'total', (SELECT count(*) FROM public.daily_checkins),
-        'last_7d', (SELECT count(*) FROM public.daily_checkins WHERE day > (SELECT d FROM today) - 7)
-    ),
-    'features', json_build_object(
-        'reminders_on', (SELECT count(DISTINCT user_id) FROM public.push_subscriptions),
-        'weekly_reviews', (SELECT count(*) FROM public.weekly_reviews),
-        'weekly_review_users', (SELECT count(DISTINCT user_id) FROM public.weekly_reviews)
-    ),
-    'community', json_build_object(
-        'friendships', (SELECT count(*) FROM public.user_friendships WHERE status = 'accepted'),
-        'follows', (SELECT count(*) FROM public.user_follows),
-        'reactions', (SELECT count(*) FROM public.community_reactions),
-        'open_reports', (SELECT count(*) FROM public.user_reports WHERE status <> 'resolved')
-    ),
-    'ai', json_build_object(
-        'today', (SELECT COALESCE(sum(request_count), 0) FROM public.groq_daily_usage WHERE usage_date = CURRENT_DATE),
-        'last_30d', (SELECT COALESCE(sum(request_count), 0) FROM public.groq_daily_usage WHERE usage_date > CURRENT_DATE - 30)
-    ),
+    'members', (SELECT count(*) FROM users),
+    'new_7d', (SELECT count(*) FROM users, today WHERE joined > today.d - 7),
+    'active_today', (SELECT count(DISTINCT user_id) FROM activity, today WHERE day = today.d),
+    'active_7d', (SELECT count(DISTINCT user_id) FROM activity, today WHERE day > today.d - 7),
+    'active_30d', (SELECT count(DISTINCT user_id) FROM activity, today WHERE day > today.d - 30),
+    'cohort', (SELECT count(*) FROM cohort),
+    'came_back', (SELECT count(*) FROM cohort WHERE came_back),
+    'made_goal', (SELECT count(DISTINCT user_id) FROM goals),
+    'checked_in', (SELECT count(DISTINCT user_id) FROM public.daily_checkins),
+    'finished_step', (SELECT count(DISTINCT user_id) FROM public.step_completions),
+    'goals', (SELECT count(*) FROM goals),
+    'goals_finished', (SELECT count(*) FROM goals WHERE total_steps > 0 AND completed_count >= total_steps),
+    'at_limit', (SELECT count(*) FROM (SELECT 1 FROM goals GROUP BY user_id HAVING count(*) >= $1) g),
+    'ai_today', (SELECT COALESCE(sum(request_count), 0) FROM public.groq_daily_usage WHERE usage_date = CURRENT_DATE),
     'daily', (
         SELECT json_agg(json_build_object(
             'day', days.day,
-            'signups', (SELECT count(*) FROM public.auth_users u WHERE (u.created_at AT TIME ZONE 'Europe/Stockholm')::date = days.day),
-            'active', (SELECT count(DISTINCT user_id) FROM activity a WHERE a.day = days.day),
-            'checkins', (SELECT count(*) FROM public.daily_checkins c WHERE c.day = days.day),
-            'steps', (SELECT count(*) FROM public.step_completions s WHERE (s.completed_at AT TIME ZONE 'Europe/Stockholm')::date = days.day),
-            'ai', (SELECT COALESCE(sum(request_count), 0) FROM public.groq_daily_usage g WHERE g.usage_date = days.day)
+            'active', COALESCE(a.n, 0),
+            'signups', COALESCE(s.n, 0),
+            'ai', COALESCE(g.request_count, 0)
         ) ORDER BY days.day)
         FROM days
+        LEFT JOIN active_per_day a ON a.day = days.day
+        LEFT JOIN signups_per_day s ON s.day = days.day
+        LEFT JOIN public.groq_daily_usage g ON g.usage_date = days.day
     )
 )::text AS stats
 ]]
