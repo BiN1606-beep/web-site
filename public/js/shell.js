@@ -173,6 +173,10 @@ const streakCountLabel = document.querySelector("#streak-count-label");
 const streakBest = document.querySelector("#streak-best");
 const streakWeek = document.querySelector("#streak-week");
 const streakMessage = document.querySelector("#streak-message");
+// The short streak line on the Today tab, next to the check-in.
+const checkinCard = document.querySelector("#checkin-card");
+const todayStreak = document.querySelector("#today-streak");
+const todayStreakLabel = document.querySelector("#today-streak-label");
 const checkinForm = document.querySelector("#checkin-form");
 const checkinLabel = document.querySelector("#checkin-label");
 const checkinInput = document.querySelector("#checkin-input");

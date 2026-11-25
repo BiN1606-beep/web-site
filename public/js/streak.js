@@ -104,11 +104,18 @@ const renderStreak = (tree) => {
   const wilt = Math.min(streak.missed, FULL_WILT_DAYS) / FULL_WILT_DAYS;
   netStage.style.setProperty("--wilt", String(wilt));
   streakCard.classList.toggle("is-wilting", streak.missed > 0);
+  checkinCard.classList.toggle("is-wilting", streak.missed > 0);
+  // A dot on the Today tab until you've checked in today.
+  setPanelTabDot("today", !streak.checkedInToday);
 
   streakCount.textContent = String(streak.current);
   streakCountLabel.textContent = "day streak";
+  todayStreak.textContent = String(streak.current);
+  todayStreakLabel.textContent = streak.freezes
+    ? `day streak · ❄ ${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}`
+    : "day streak";
   streakBest.textContent = [
-    streak.freezes ? `${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
+    streak.freezes ? `❄ ${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
     streak.best > streak.current ? `Best: ${streak.best}` : "",
   ].filter(Boolean).join(" · ");
   streakBest.title = `Every ${FREEZE_EVERY} days in a row earns a freeze (you can hold ${MAX_FREEZES}). A freeze covers one missed day.`;
@@ -181,6 +188,8 @@ const renderRewards = (tree, streak) => {
     rewardStrip.append(item);
     if (fresh.includes(reward)) celebrateStep(badge);
   }
+  // A new reward lights up the Progress tab until you open it.
+  if (fresh.length) setPanelTabDot("progress", true);
   rewardMessage.textContent = fresh.length
     ? `Reward unlocked: ${fresh.map((reward) => reward.label).join(" and ")}! A new gold ring now circles your goals.`
     : "";

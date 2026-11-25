@@ -1,0 +1,166 @@
+/* The side panel's tabs (Today, Progress, Week), the folded-away step
+   details, the "More" menu and the short help lines. See public/js/tabs.js. */
+
+.panel-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.8rem;
+  background: var(--surface);
+}
+
+.panel-tab {
+  position: relative;
+  padding: 0.5rem 0.4rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.panel-tab:hover {
+  color: var(--text);
+}
+
+.panel-tab[aria-selected="true"] {
+  background: var(--base);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.panel-tab:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The dot that says "something is waiting for you here". */
+.panel-tab.has-dot::after {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.55rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.panel-tab-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel-tab-page[hidden] {
+  display: none;
+}
+
+/* A one-line explanation under a section, so every feature says what it's for. */
+.section-help {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* ---- Today: the check-in card ---- */
+.checkin-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.8rem;
+  background: var(--surface);
+}
+
+.checkin-card.is-wilting {
+  border-color: var(--area-career);
+}
+
+.checkin-streak {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.checkin-streak b {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkin-streak span:last-child {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---- Today: "Why, tips and how to do it" folded under the step ---- */
+.step-more {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.step-more > summary,
+.more-menu > summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.step-more > summary:hover,
+.more-menu > summary:hover {
+  color: var(--text);
+}
+
+.step-more[open] {
+  padding-bottom: 0.25rem;
+}
+
+.step-more[open] > summary {
+  margin-bottom: 0.6rem;
+}
+
+.step-more > div + div,
+.step-more > div + button {
+  margin-top: 0.75rem;
+}
+
+/* ---- Today: the "More" menu for less common actions ---- */
+.tree-actions {
+  align-items: center;
+}
+
+.more-menu {
+  position: relative;
+}
+
+.more-menu > summary {
+  padding: 0.55rem 0.4rem;
+}
+
+.more-menu-items {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+/* ---- Settings: daily reminder ---- */
+.reminder-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reminder-section h2 {
+  margin-bottom: 0;
+}
+
+.reminder-section .reminder-row button {
+  margin-left: 0;
+}

@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/css/network.css">
     <link rel="stylesheet" href="/css/steps.css">
     <link rel="stylesheet" href="/css/settings.css">
+    <link rel="stylesheet" href="/css/tabs.css">
   </head>
   <body>
     <div class="startup-screen" id="startup-screen">
@@ -86,72 +87,12 @@
           <section class="tree-node-details" id="tree-node-details" hidden></section>
           <section class="tree-view" id="tree-view" hidden>
             <div id="tree-details">
+              <!-- Always visible: the goal in focus and how far along it you are. -->
               <div class="tree-heading">
                 <h1 id="progress-tree-title">Your focus goal</h1>
                 <h2 id="tree-goal"></h2>
                 <p id="tree-summary"></p>
               </div>
-              <div class="net-stats">
-                <div class="net-stat"><b id="net-stat-done">0</b><span>steps done</span></div>
-                <div class="net-stat"><b id="net-stat-goals">0</b><span>goals reached</span></div>
-                <div class="net-stat"><b id="net-stat-skills">0</b><span>skills</span></div>
-              </div>
-              <!-- Daily streak: check in once a day to keep it. Missing days
-                   makes the network wilt until you check in again. -->
-              <section class="streak-card" id="streak-card" aria-labelledby="streak-count-label">
-                <div class="streak-head">
-                  <b id="streak-count">0</b>
-                  <span id="streak-count-label">day streak</span>
-                  <span class="streak-best" id="streak-best"></span>
-                </div>
-                <ol class="streak-week" id="streak-week" aria-label="The last 7 days"></ol>
-                <p class="streak-message" id="streak-message"></p>
-                <form class="checkin-form" id="checkin-form">
-                  <label for="checkin-input" id="checkin-label">What did you do on your step today?</label>
-                  <div class="checkin-row">
-                    <input id="checkin-input" type="text" maxlength="280" autocomplete="off" required
-                      placeholder="e.g. Ran 2 km, read 10 pages">
-                    <button class="save-button" id="checkin-button" type="submit">Check in</button>
-                  </div>
-                </form>
-                <!-- Daily reminder on this device. Hidden when the browser or
-                     the server can't do push notifications. -->
-                <div class="reminder-row" id="reminder-row" hidden>
-                  <label for="reminder-hour">Remind me at</label>
-                  <select id="reminder-hour"></select>
-                  <button class="profile-secondary-button" id="reminder-toggle" type="button">Turn on</button>
-                </div>
-                <p class="reminder-hint" id="reminder-hint" hidden></p>
-              </section>
-              <!-- Rewards: milestones for steps done and for the best streak.
-                   Each one earned adds a gold ring around your goals. -->
-              <section class="reward-card" aria-labelledby="reward-title">
-                <span class="tree-step-label" id="reward-title">Rewards</span>
-                <ol class="reward-strip" id="reward-strip"></ol>
-                <p class="reward-message" id="reward-message" role="status" aria-live="polite"></p>
-              </section>
-              <!-- Weekly review: once a week the AI coach looks back at your
-                   check-ins and steps (public/js/review.js). -->
-              <section class="review-card" id="review-card" aria-labelledby="review-title">
-                <span class="tree-step-label" id="review-title">Your week</span>
-                <p class="review-stats" id="review-stats"></p>
-                <div class="review-body" id="review-body" hidden>
-                  <p class="review-headline" id="review-headline"></p>
-                  <dl class="review-points">
-                    <dt>What went well</dt>
-                    <dd id="review-went-well"></dd>
-                    <dt>Watch out for</dt>
-                    <dd id="review-watch-out"></dd>
-                    <dt>Focus for next week</dt>
-                    <dd id="review-next-week"></dd>
-                  </dl>
-                </div>
-                <div class="review-actions">
-                  <button class="save-button" id="review-button" type="button">Review my week with your coach</button>
-                  <button class="profile-secondary-button" id="review-adjust" type="button" hidden>Adjust my path</button>
-                </div>
-                <p class="review-status" id="review-status" role="status" aria-live="polite"></p>
-              </section>
               <div class="tree-progress">
                 <div class="tree-progress-label">
                   <span id="tree-progress-count">Step 1</span>
@@ -161,43 +102,136 @@
                   <div class="tree-progress-fill" id="tree-progress-fill"></div>
                 </div>
               </div>
-              <article class="tree-step-card" id="tree-current-step" hidden>
-                <div class="tree-step-chips">
-                  <span class="tree-step-chip is-today">Today's step</span>
-                  <span class="tree-step-chip" id="tree-step-number"></span>
-                  <span class="tree-step-chip" id="tree-step-time" hidden></span>
-                </div>
-                <h3 id="tree-step-title"></h3>
-                <p id="tree-step-description"></p>
-                <div>
-                  <span class="tree-step-label">Why it matters</span>
-                  <p id="tree-step-why"></p>
-                </div>
-                <div id="tree-step-tip-container">
-                  <span class="tree-step-label">A helpful tip</span>
-                  <p id="tree-step-tip"></p>
-                </div>
-                <div id="tree-step-how-container" hidden>
-                  <span class="tree-step-label">How to do it</span>
-                  <ol class="tree-step-how" id="tree-step-how"></ol>
-                </div>
-                <button class="profile-secondary-button" id="tree-step-guide" type="button">How do I do this?</button>
-                <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
-                  <legend>Checklist</legend>
-                  <ul id="tree-step-tasks"></ul>
-                  <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
-                </fieldset>
-                <button class="save-button" id="tree-complete" type="button">Complete step</button>
-              </article>
-              <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
-              <div class="net-list" id="net-goal-list" hidden></div>
-              <div class="net-list" id="net-top-skills" hidden></div>
-              <div class="tree-actions">
-                <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
-                <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
-                <button class="profile-secondary-button" id="tree-undo" type="button" hidden>Undo last step</button>
-                <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>+ Add a new goal</button>
+              <!-- Everything else is split into three tabs so the panel
+                   shows one thing at a time (public/js/tabs.js):
+                   Today = what to do now, Progress = how far you've come,
+                   Week = the coach's look back. -->
+              <div class="panel-tabs" role="tablist" aria-label="Focus goal sections">
+                <button class="panel-tab" id="panel-tab-today" type="button" role="tab" data-tab="today" aria-controls="panel-today" aria-selected="true">Today</button>
+                <button class="panel-tab" id="panel-tab-progress" type="button" role="tab" data-tab="progress" aria-controls="panel-progress" aria-selected="false" tabindex="-1">Progress</button>
+                <button class="panel-tab" id="panel-tab-week" type="button" role="tab" data-tab="week" aria-controls="panel-week" aria-selected="false" tabindex="-1">Week</button>
               </div>
+
+              <!-- ---- Today: the step to work on and the daily check-in ---- -->
+              <section class="panel-tab-page" id="panel-today" role="tabpanel" aria-labelledby="panel-tab-today">
+                <article class="tree-step-card" id="tree-current-step" hidden>
+                  <div class="tree-step-chips">
+                    <span class="tree-step-chip is-today">Today's step</span>
+                    <!-- The progress bar above already says which step this is. -->
+                    <span class="tree-step-chip" id="tree-step-number" hidden></span>
+                    <span class="tree-step-chip" id="tree-step-time" hidden></span>
+                  </div>
+                  <h3 id="tree-step-title"></h3>
+                  <p id="tree-step-description"></p>
+                  <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
+                    <legend>Checklist</legend>
+                    <ul id="tree-step-tasks"></ul>
+                    <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
+                  </fieldset>
+                  <!-- The background for the step, folded away until wanted. -->
+                  <details class="step-more">
+                    <summary>Why, tips and how to do it</summary>
+                    <div>
+                      <span class="tree-step-label">Why it matters</span>
+                      <p id="tree-step-why"></p>
+                    </div>
+                    <div id="tree-step-tip-container">
+                      <span class="tree-step-label">A helpful tip</span>
+                      <p id="tree-step-tip"></p>
+                    </div>
+                    <div id="tree-step-how-container" hidden>
+                      <span class="tree-step-label">How to do it</span>
+                      <ol class="tree-step-how" id="tree-step-how"></ol>
+                    </div>
+                    <button class="profile-secondary-button" id="tree-step-guide" type="button">How do I do this?</button>
+                  </details>
+                  <button class="save-button" id="tree-complete" type="button">Complete step</button>
+                </article>
+                <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
+
+                <!-- Daily check-in: one line a day keeps the streak alive.
+                     The full streak (week dots, freezes) is on the Progress tab. -->
+                <section class="checkin-card" id="checkin-card" aria-labelledby="checkin-label">
+                  <p class="checkin-streak"><span aria-hidden="true">🔥</span> <b id="today-streak">0</b> <span id="today-streak-label">day streak</span></p>
+                  <p class="streak-message" id="streak-message"></p>
+                  <form class="checkin-form" id="checkin-form">
+                    <label for="checkin-input" id="checkin-label">What did you do on your step today?</label>
+                    <div class="checkin-row">
+                      <input id="checkin-input" type="text" maxlength="280" autocomplete="off" required
+                        placeholder="e.g. Ran 2 km, read 10 pages">
+                      <button class="save-button" id="checkin-button" type="submit">Check in</button>
+                    </div>
+                  </form>
+                </section>
+
+                <div class="tree-actions">
+                  <button class="profile-secondary-button" id="tree-ask-help" type="button" hidden>Stuck? Ask your AI coach</button>
+                  <!-- Less common actions live behind "More". -->
+                  <details class="more-menu">
+                    <summary>More</summary>
+                    <div class="more-menu-items">
+                      <button class="profile-secondary-button" id="tree-adjust" type="button" hidden>Adjust my path</button>
+                      <button class="profile-secondary-button" id="tree-undo" type="button" hidden>Undo last step</button>
+                    </div>
+                  </details>
+                </div>
+              </section>
+
+              <!-- ---- Progress: stats, streak, rewards, all goals ---- -->
+              <section class="panel-tab-page" id="panel-progress" role="tabpanel" aria-labelledby="panel-tab-progress" hidden>
+                <div class="net-stats">
+                  <div class="net-stat"><b id="net-stat-done">0</b><span>steps done</span></div>
+                  <div class="net-stat"><b id="net-stat-goals">0</b><span>goals reached</span></div>
+                  <div class="net-stat"><b id="net-stat-skills">0</b><span>skills</span></div>
+                </div>
+                <!-- Daily streak: check in once a day to keep it. Missing days
+                     makes the network wilt until you check in again. -->
+                <section class="streak-card" id="streak-card" aria-labelledby="streak-count-label">
+                  <div class="streak-head">
+                    <b id="streak-count">0</b>
+                    <span id="streak-count-label">day streak</span>
+                    <span class="streak-best" id="streak-best"></span>
+                  </div>
+                  <ol class="streak-week" id="streak-week" aria-label="The last 7 days"></ol>
+                  <p class="section-help">Check in once a day to grow it. Every 7 days in a row earns a ❄ freeze that covers one missed day. Miss a day without one and your network wilts.</p>
+                </section>
+                <!-- Rewards: milestones for steps done and for the best streak.
+                     Each one earned adds a gold ring around your goals. -->
+                <section class="reward-card" aria-labelledby="reward-title">
+                  <span class="tree-step-label" id="reward-title">Rewards</span>
+                  <ol class="reward-strip" id="reward-strip"></ol>
+                  <p class="section-help">Milestones for steps done and for your best streak. Each one you reach puts a gold ring around your goals.</p>
+                  <p class="reward-message" id="reward-message" role="status" aria-live="polite"></p>
+                </section>
+                <div class="net-list" id="net-goal-list" hidden></div>
+                <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>+ Add a new goal</button>
+                <div class="net-list" id="net-top-skills" hidden></div>
+              </section>
+
+              <!-- ---- Week: the weekly review by the AI coach (public/js/review.js) ---- -->
+              <section class="panel-tab-page" id="panel-week" role="tabpanel" aria-labelledby="panel-tab-week" hidden>
+                <section class="review-card" id="review-card" aria-labelledby="review-title">
+                  <span class="tree-step-label" id="review-title">Your week</span>
+                  <p class="review-stats" id="review-stats"></p>
+                  <p class="section-help" id="review-help">Once a week your AI coach reads your check-ins and steps, then tells you what went well and what to focus on next.</p>
+                  <div class="review-body" id="review-body" hidden>
+                    <p class="review-headline" id="review-headline"></p>
+                    <dl class="review-points">
+                      <dt>What went well</dt>
+                      <dd id="review-went-well"></dd>
+                      <dt>Watch out for</dt>
+                      <dd id="review-watch-out"></dd>
+                      <dt>Focus for next week</dt>
+                      <dd id="review-next-week"></dd>
+                    </dl>
+                  </div>
+                  <div class="review-actions">
+                    <button class="save-button" id="review-button" type="button">Review my week with your coach</button>
+                    <button class="profile-secondary-button" id="review-adjust" type="button" hidden>Adjust my path</button>
+                  </div>
+                  <p class="review-status" id="review-status" role="status" aria-live="polite"></p>
+                </section>
+              </section>
             </div>
             <section class="tree-assistant" id="tree-assistant" aria-labelledby="tree-assistant-title" hidden>
             <h2 id="tree-assistant-title">Build your personalized skill tree</h2>
@@ -254,6 +288,19 @@
               <span id="background-toggle-label">Switch to dark theme</span>
             </button>
           </div>
+        </section>
+        <!-- Daily reminder on this device (public/js/reminders.js). The row
+             is hidden when the browser or the server can't do push
+             notifications; the hint then says why. -->
+        <section class="settings-section reminder-section" aria-labelledby="reminder-title">
+          <h2 id="reminder-title">Daily reminder</h2>
+          <p class="section-help">A nudge in the evening on days you haven't checked in yet, so your streak doesn't slip.</p>
+          <div class="reminder-row" id="reminder-row" hidden>
+            <label for="reminder-hour">Remind me at</label>
+            <select id="reminder-hour"></select>
+            <button class="profile-secondary-button" id="reminder-toggle" type="button">Turn on</button>
+          </div>
+          <p class="reminder-hint" id="reminder-hint" hidden></p>
         </section>
         <!-- The shared-text and Groq demos test the server integrations.
              They live here instead of the main navigation so regular
@@ -423,6 +470,7 @@
     <script src="/js/community.js"></script>
     <script src="/js/friend-network.js"></script>
     <script src="/js/network.js"></script>
+    <script src="/js/tabs.js"></script>
     <script src="/js/streak.js"></script>
     <script src="/js/goals.js"></script>
     <script src="/js/review.js"></script>
