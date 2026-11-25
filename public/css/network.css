@@ -134,6 +134,13 @@
   stroke: var(--accent);
 }
 
+/* Where a "Keep evolving" goal sprouts from the end of the goal before it. */
+.net-link.is-sprout {
+  stroke: var(--sun);
+  stroke-width: 2.4;
+  stroke-dasharray: 5 4;
+}
+
 .net-link.is-skill {
   stroke-dasharray: 2 4;
 }

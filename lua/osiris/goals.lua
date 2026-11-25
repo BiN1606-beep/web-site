@@ -292,6 +292,8 @@ local function load_goal_summaries(user_id, dates)
                 completed = completed,
                 current_step = current and { title = current.title, skills = current.skills } or nil,
                 finished = current == nil,
+                -- Set on goals made with "Keep evolving": the goal it grew from.
+                grows_from = tonumber(tree.grows_from),
             }
         end
     end
