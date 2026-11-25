@@ -25,9 +25,33 @@ const chartTile = ({ label, value, sub, help, onClick }) => {
     card.addEventListener("click", onClick);
   }
   if (help) card.title = help;
-  card.append(chartElement("span", "chart-tile-label", label), chartElement("strong", "chart-tile-value", value));
+  const number = chartElement("strong", "chart-tile-value", value);
+  card.append(chartElement("span", "chart-tile-label", label), number);
   if (sub) card.append(chartElement("span", "chart-tile-sub", sub));
+  chartCountUp(number);
   return card;
+};
+
+// Counts the first number in a tile up from 0 ("15%", "8 / 30", "1 234"),
+// unless the device asks for reduced motion.
+const chartCountUp = (node) => {
+  const text = node.textContent;
+  const match = text.match(/^(\d+(?:[\s\u00a0]\d{3})*)(.*)$/);
+  if (!match || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const target = Number(match[1].replace(/[\s\u00a0]/g, ""));
+  if (!Number.isFinite(target) || target < 2) return;
+  const rest = match[2];
+  const start = performance.now();
+  const duration = 800;
+  const step = (now) => {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - (1 - progress) ** 3;
+    node.textContent = `${chartNumber(Math.round(target * eased))}${rest}`;
+    if (progress < 1) requestAnimationFrame(step);
+    else node.textContent = text;
+  };
+  node.textContent = `0${rest}`;
+  requestAnimationFrame(step);
 };
 
 // The last `count` days as "YYYY-MM-DD", oldest first, in local time.
@@ -83,6 +107,8 @@ const drawPillarChart = (container, { days, values, describe, summary, label }) 
     group.setAttribute("role", "button");
     const text = `${chartDayName(days[index], todayIso)}: ${describe(value)}`;
     group.setAttribute("aria-label", text);
+    // Its place in the row, so the pillars pop up one after another.
+    group.style.setProperty("--i", String(index));
 
     // A soft track behind each pillar, so empty days still look tidy.
     const track = document.createElementNS(ns, "path");
@@ -147,12 +173,13 @@ const drawChartSwitch = (group, seriesList, draw) => {
 
 // Horizontal bars: [{ label, value, max, text, color }].
 const drawChartBars = (list, rows) => {
-  list.replaceChildren(...rows.map((row) => {
+  list.replaceChildren(...rows.map((row, index) => {
     const item = chartElement("li", "chart-bar-row");
     const track = chartElement("span", "chart-bar-track");
     const bar = chartElement("span", "chart-bar");
     bar.style.width = `${Math.max(0, Math.min(100, (row.value / Math.max(1, row.max)) * 100))}%`;
     if (row.color) bar.style.background = row.color;
+    bar.style.setProperty("--i", String(index));
     track.append(bar);
     item.append(chartElement("span", "chart-bar-label", row.label), track, chartElement("span", "chart-bar-value", row.text));
     return item;

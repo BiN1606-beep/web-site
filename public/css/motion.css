@@ -1,0 +1,211 @@
+/* Motion: the small animations that make the site feel alive. Loaded last
+   on the main page and the stats page, so it only adds movement on top of
+   the normal styles. Everything here is skipped for people who ask their
+   device for reduced motion, and nothing depends on it to work. */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ---- Shared keyframes ---- */
+  @keyframes motion-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes motion-pop {
+    0% { opacity: 0; transform: scale(0.6); }
+    60% { opacity: 1; transform: scale(1.08); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes motion-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes motion-zoom-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes motion-zoom-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(12px) scale(0.97); }
+  }
+
+  @keyframes motion-pillar {
+    0% { transform: scaleY(0); }
+    70% { transform: scaleY(1.06); }
+    100% { transform: scaleY(1); }
+  }
+
+  @keyframes motion-bar {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes motion-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---- Buttons: a soft press ---- */
+  button:not(.game-button):not(:disabled) {
+    transition: transform 120ms ease, background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  button:not(.game-button):not(:disabled):active {
+    transform: scale(0.96);
+  }
+
+  /* ---- Side panel tabs: a pill slides to the chosen tab ---- */
+  .panel-tabs {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .panel-tabs::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    left: 0.25rem;
+    width: calc((100% - 1rem) / 3);
+    border-radius: 0.6rem;
+    background: var(--base);
+    box-shadow: 0 1px 3px var(--shadow);
+    transform: translateX(calc(var(--tab-index, 0) * (100% + 0.25rem)));
+    transition: transform 380ms cubic-bezier(0.3, 1.35, 0.5, 1);
+  }
+
+  .panel-tabs.has-pill .panel-tab[aria-selected="true"] {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* The new tab's cards rise in one after another. */
+  .panel-tab-page.is-entering > * {
+    animation: motion-rise 360ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  .panel-tab-page.is-entering > :nth-child(2) { animation-delay: 50ms; }
+  .panel-tab-page.is-entering > :nth-child(3) { animation-delay: 100ms; }
+  .panel-tab-page.is-entering > :nth-child(4) { animation-delay: 150ms; }
+  .panel-tab-page.is-entering > :nth-child(5) { animation-delay: 200ms; }
+  .panel-tab-page.is-entering > :nth-child(n + 6) { animation-delay: 250ms; }
+
+  /* Rewards pop in when the Progress tab opens. */
+  .panel-tab-page.is-entering .reward-strip > li {
+    animation: motion-pop 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  }
+
+  .panel-tab-page.is-entering .reward-strip > li:nth-child(2) { animation-delay: 160ms; }
+  .panel-tab-page.is-entering .reward-strip > li:nth-child(3) { animation-delay: 200ms; }
+  .panel-tab-page.is-entering .reward-strip > li:nth-child(4) { animation-delay: 240ms; }
+  .panel-tab-page.is-entering .reward-strip > li:nth-child(5) { animation-delay: 280ms; }
+  .panel-tab-page.is-entering .reward-strip > li:nth-child(n + 6) { animation-delay: 320ms; }
+
+  /* The streak number bumps when it grows. */
+  #streak-count.is-bumping {
+    display: inline-block;
+    animation: motion-bump 520ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  /* ---- Cards that appear ---- */
+  .evolve-card:not([hidden]),
+  .evolve-choice:not([hidden]),
+  .evolve-form:not([hidden]) {
+    animation: motion-rise 360ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  /* ---- Pop-up windows ---- */
+  .my-stats[open],
+  .lesson[open] {
+    animation: motion-zoom-in 320ms cubic-bezier(0.2, 0.9, 0.3, 1.05) both;
+  }
+
+  .my-stats[open].is-closing,
+  .lesson[open].is-closing {
+    animation: motion-zoom-out 200ms ease-in both;
+  }
+
+  .my-stats[open]::backdrop,
+  .lesson[open]::backdrop,
+  .content-panel[open]::backdrop {
+    animation: motion-fade 260ms ease-out both;
+  }
+
+  /* ---- Charts (charts.js): tiles, pillars and bars ---- */
+  .chart-tile {
+    animation: motion-rise 420ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  .chart-tile:nth-child(2) { animation-delay: 60ms; }
+  .chart-tile:nth-child(3) { animation-delay: 120ms; }
+  .chart-tile:nth-child(4) { animation-delay: 180ms; }
+
+  .chart-tile.is-button:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Each pillar springs up from the bottom, left to right. */
+  .chart-pillar-bar {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: motion-pillar 620ms cubic-bezier(0.3, 1.2, 0.5, 1) both;
+    animation-delay: calc(var(--i, 0) * 22ms + 120ms);
+  }
+
+  .chart-pillar-track {
+    animation: motion-fade 400ms ease-out both;
+    animation-delay: calc(var(--i, 0) * 12ms);
+  }
+
+  .chart-pillar:hover .chart-pillar-bar {
+    filter: brightness(1.08);
+  }
+
+  .chart-info {
+    animation: motion-fade 260ms ease-out both;
+  }
+
+  /* Bars grow from the left. */
+  .chart-bar {
+    transform-origin: 0 50%;
+    animation: motion-bar 760ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 90ms + 150ms);
+  }
+
+  /* ---- Stats page: the member list ---- */
+  .stats-member {
+    animation: motion-rise 320ms ease-out both;
+    animation-delay: calc(min(var(--i, 0), 12) * 30ms);
+  }
+
+  #stats-members-section:not([hidden]) {
+    animation: motion-rise 360ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  /* ---- Top navigation: icons come alive on hover ---- */
+  .launcher svg {
+    transition: transform 380ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  .launcher:hover svg {
+    transform: translateY(-1px) scale(1.12);
+  }
+
+  /* The settings gear turns. */
+  .launcher[aria-controls="settings-panel"]:hover svg {
+    transform: rotate(90deg);
+  }
+
+  .launcher[aria-controls="settings-panel"][aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  /* The goal's progress bar fills with a little spring. */
+  .tree-progress-fill {
+    transition: width 800ms cubic-bezier(0.3, 1.25, 0.5, 1);
+  }
+}

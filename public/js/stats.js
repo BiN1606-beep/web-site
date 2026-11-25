@@ -81,8 +81,9 @@ const drawMembers = (members, todayIso) => {
       list.replaceChildren(chartElement("li", "stats-member-empty", query ? "No one matches that." : "No members yet."));
       return;
     }
-    list.replaceChildren(...shown.map((member) => {
+    list.replaceChildren(...shown.map((member, index) => {
       const row = chartElement("li", "stats-member");
+      row.style.setProperty("--i", String(index));
       const who = chartElement("div", "stats-member-who");
       who.append(
         chartElement("strong", null, member.name || member.email.split("@")[0]),
