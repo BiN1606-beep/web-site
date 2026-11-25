@@ -8,6 +8,75 @@ const STATS_SERIES = [
   { key: "ai", label: "AI requests", unit: "AI requests" },
 ];
 
+// ---- Members over time: a line of the total, for five time spans ----
+const GROWTH_RANGES = [
+  { key: "today", label: "Today", when: "today", from: "Midnight" },
+  { key: "week", label: "Week", when: "this week", from: "7 days ago" },
+  { key: "month", label: "Month", when: "this month", from: "30 days ago" },
+  { key: "year", label: "Year", when: "this year" },
+  { key: "all", label: "All time", when: "since the start" },
+];
+
+const growthIsoDay = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+const growthMonth = (date, now) => date.toLocaleDateString("en-GB", date.getFullYear() === now.getFullYear() ? { month: "long" } : { month: "long", year: "numeric" });
+
+// The time slices for a span: [{ start, end, label }] oldest first, cut by
+// hour (today), day (week, month) or month (year, and long "all time").
+const growthSlices = (rangeKey, firstJoin, now = new Date()) => {
+  const midnight = (date, addDays = 0) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + addDays);
+  const monthStart = (date, addMonths = 0) => new Date(date.getFullYear(), date.getMonth() + addMonths, 1);
+  const todayIso = growthIsoDay(now);
+  const slices = [];
+  const cut = (start, next, label) => {
+    for (let at = start; at <= now; at = next(at)) slices.push({ start: at, end: next(at), label: label(at) });
+  };
+  const byDay = (start) => cut(start, (at) => midnight(at, 1), (at) => chartDayName(growthIsoDay(at), todayIso));
+  const byMonth = (start) => cut(start, (at) => monthStart(at, 1), (at) => growthMonth(at, now));
+
+  if (rangeKey === "today") {
+    cut(midnight(now), (at) => new Date(at.getTime() + 3600000), (at) => `Today ${String(at.getHours()).padStart(2, "0")}:00`);
+  } else if (rangeKey === "week") {
+    byDay(midnight(now, -6));
+  } else if (rangeKey === "month") {
+    byDay(midnight(now, -29));
+  } else if (rangeKey === "year") {
+    byMonth(monthStart(now, -11));
+  } else {
+    const first = firstJoin || now;
+    // Up to two months: one point a day. Longer: one a month.
+    if ((now - first) / 86400000 <= 60) byDay(midnight(first));
+    else byMonth(monthStart(first));
+  }
+  return slices;
+};
+
+const drawGrowth = (joinTimes) => {
+  const joins = joinTimes.map((seconds) => seconds * 1000).sort((a, b) => a - b);
+  const joinedBefore = (time) => {
+    let count = 0;
+    while (count < joins.length && joins[count] < time) count += 1;
+    return count;
+  };
+  const chart = document.querySelector("#stats-growth");
+  drawChartSwitch(document.querySelector("#stats-growth-switch"), GROWTH_RANGES, (range) => {
+    const slices = growthSlices(range.key, joins.length ? new Date(joins[0]) : null);
+    const before = joinedBefore(slices[0].start.getTime());
+    const points = slices.map((slice) => {
+      const value = joinedBefore(slice.end.getTime());
+      return { label: slice.label, value, added: value - joinedBefore(slice.start.getTime()) };
+    });
+    const total = joins.length;
+    const added = total - before;
+    drawLineChart(chart, {
+      points,
+      label: `Members over time, ${range.when}`,
+      summary: `+${chartNumber(added)} joined ${range.when} · ${chartNumber(total)} members`,
+      describe: (point) => `${point.label}: ${chartNumber(point.value)} members${point.added ? ` (+${chartNumber(point.added)})` : ""}`,
+      ends: [range.from || points[0].label, "Now"],
+    });
+  });
+};
+
 // Tapping the Members tile shows or hides the member list.
 const toggleMembers = (event) => {
   const section = document.querySelector("#stats-members-section");
@@ -42,6 +111,8 @@ const drawStats = (stats, maxGoals) => {
       label: `${series.label} per day, last 30 days`,
     });
   });
+
+  drawGrowth(stats.join_times || []);
 
   drawMembers(stats.member_list || [], daily.length ? daily[daily.length - 1].day : "");
 

@@ -185,3 +185,103 @@ const drawChartBars = (list, rows) => {
     return item;
   }));
 };
+
+// A line chart for a total that grows over time, like the number of members.
+//   points:  [{ label, value, added }] oldest first. "label" names the
+//            hour/day/month, "value" is the total at its end, "added" how
+//            much it grew in it.
+//   describe: (point) => text shown when a point is picked
+//   summary:  the line shown when nothing is picked
+//   ends:     [left text, right text] under the line
+// Move over the chart (or tap it) to pick the nearest point.
+const drawLineChart = (container, { points, describe, summary, label, ends }) => {
+  const ns = "http://www.w3.org/2000/svg";
+  const width = Math.max(260, Math.round(container.clientWidth - 32) || 600);
+  const height = width < 500 ? 120 : 160;
+  const pad = 8;
+  // Room above the line for the label of the highest total.
+  const top = 22;
+  const values = points.map((point) => point.value);
+  // The line uses the full height between the lowest and highest total, so
+  // even a few new members show as a clear climb.
+  const low = Math.min(...values);
+  const high = Math.max(low + 1, ...values);
+  const xOf = (index) => (points.length < 2 ? width / 2 : pad + (index / (points.length - 1)) * (width - pad * 2));
+  const yOf = (value) => top + (1 - (value - low) / (high - low)) * (height - top - pad);
+
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height + 20}`);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `${label}. ${summary}`);
+  svg.setAttribute("class", "chart-line-chart");
+  const info = chartElement("span", "chart-info", summary);
+
+  const add = (tag, attributes, className) => {
+    const node = document.createElementNS(ns, tag);
+    Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+    if (className) node.setAttribute("class", className);
+    svg.append(node);
+    return node;
+  };
+
+  // Two faint lines with the highest and lowest total. A growing total is
+  // low on the left and high on the right, so the highest label sits on the
+  // left and the lowest on the right, where the line never covers them.
+  [[high, top, 0, "start"], [low, height - pad, width, "end"]].forEach(([value, y, x, anchor]) => {
+    add("line", { x1: 0, x2: width, y1: y, y2: y }, "chart-grid");
+    const text = add("text", { x, y: y - 6, "text-anchor": anchor }, "chart-label");
+    text.textContent = chartNumber(value);
+  });
+
+  const line = points.map((point, index) => `${index ? "L" : "M"}${xOf(index).toFixed(1)},${yOf(point.value).toFixed(1)}`).join(" ");
+  if (points.length > 1) {
+    add("path", { d: `${line} L${xOf(points.length - 1)},${height} L${xOf(0)},${height} Z` }, "chart-line-area");
+  }
+  // pathLength=1 lets the CSS draw the line from left to right.
+  add("path", { d: line, pathLength: 1 }, "chart-line");
+
+  // The picked point: a guide line and a dot.
+  const guide = add("line", { y1: 0, y2: height }, "chart-line-guide");
+  const dot = add("circle", { r: 5 }, "chart-line-dot");
+  const last = points.length - 1;
+  const show = (index) => {
+    const x = xOf(index);
+    guide.setAttribute("x1", x);
+    guide.setAttribute("x2", x);
+    dot.setAttribute("cx", x);
+    dot.setAttribute("cy", yOf(points[index].value));
+    svg.classList.toggle("is-picking", index !== last || info.textContent !== summary);
+  };
+  show(last);
+
+  ends.forEach((text, index) => {
+    const end = add("text", { x: index ? width : 0, y: height + 15, "text-anchor": index ? "end" : "start" }, "chart-label");
+    end.textContent = text;
+  });
+
+  const nearest = (event) => {
+    const box = svg.getBoundingClientRect();
+    const x = ((event.clientX - box.left) / box.width) * width;
+    const step = points.length < 2 ? 1 : (width - pad * 2) / (points.length - 1);
+    return Math.max(0, Math.min(last, Math.round((x - pad) / step)));
+  };
+  svg.addEventListener("pointermove", (event) => {
+    const index = nearest(event);
+    info.textContent = describe(points[index]);
+    show(index);
+  });
+  svg.addEventListener("pointerleave", (event) => {
+    // Touch screens fire "leave" right after a tap, so keep the pick there.
+    if (event.pointerType === "touch") return;
+    info.textContent = summary;
+    svg.classList.remove("is-picking");
+    show(last);
+  });
+  svg.addEventListener("pointerdown", (event) => {
+    const index = nearest(event);
+    info.textContent = describe(points[index]);
+    show(index);
+  });
+
+  container.replaceChildren(info, svg);
+};
