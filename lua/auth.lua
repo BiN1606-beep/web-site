@@ -9,6 +9,7 @@ local progress = require "osiris.progress"
 local community = require "osiris.community"
 local stats = require "osiris.stats"
 local network_style = require "osiris.network_style"
+local appearance = require "osiris.appearance"
 
 local respond = common.respond
 local current_user = common.current_user
@@ -91,6 +92,8 @@ function M.handle_request()
         return handle_community()
     elseif path == "/api/network-style" then
         return network_style.handle_network_style()
+    elseif path == "/api/appearance" then
+        return appearance.handle_appearance()
     elseif path == "/api/stats" then
         return stats.handle_stats()
     elseif path == "/api/auth/google" then

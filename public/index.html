@@ -22,9 +22,12 @@
         document.documentElement.classList.add("show-startup");
       }
     </script>
+    <!-- Your color theme and fonts, before the page is shown. -->
+    <script src="/js/appearance-boot.js"></script>
     <!-- The styles, split by part of the page. Order matters: later files
          can override earlier ones. -->
     <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/themes.css">
     <link rel="stylesheet" href="/css/startup.css">
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/streak.css">
@@ -36,6 +39,7 @@
     <link rel="stylesheet" href="/css/network-style.css">
     <link rel="stylesheet" href="/css/steps.css">
     <link rel="stylesheet" href="/css/settings.css">
+    <link rel="stylesheet" href="/css/appearance.css">
     <link rel="stylesheet" href="/css/tabs.css">
     <link rel="stylesheet" href="/css/lesson.css">
     <link rel="stylesheet" href="/css/charts.css">
@@ -346,6 +350,18 @@
               <span id="background-toggle-label">Switch to dark theme</span>
             </button>
           </div>
+          <!-- Color theme and fonts (public/js/appearance.js fills these
+               with tiles; colors in css/themes.css). Saved to your account. -->
+          <h3 class="look-label">Theme</h3>
+          <div class="theme-grid" id="theme-grid" role="group" aria-label="Color theme"></div>
+          <h3 class="look-label">Headings</h3>
+          <div class="font-row" id="heading-font-row" role="group" aria-label="Font for headings"></div>
+          <h3 class="look-label">Text</h3>
+          <div class="font-row" id="text-font-row" role="group" aria-label="Font for text"></div>
+          <div class="appearance-footer">
+            <button class="profile-secondary-button" id="appearance-reset" type="button">Default look</button>
+            <span class="appearance-status" id="appearance-status" role="status" aria-live="polite"></span>
+          </div>
         </section>
         <!-- Daily reminder on this device (public/js/reminders.js). The row
              is hidden when the browser or the server can't do push
@@ -604,6 +620,7 @@
     <script src="/js/panels.js"></script>
     <script src="/js/debug.js"></script>
     <script src="/js/demos.js"></script>
+    <script src="/js/appearance.js"></script>
     <script src="/js/theme.js"></script>
     <script src="/js/main.js"></script>
   </body>

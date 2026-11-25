@@ -156,6 +156,7 @@ const loadProgressTree = async () => {
       const result = await readApiResponse(response, "Progress tree");
       if (!response.ok) throw new Error(result.error || "Could not load your progress tree.");
       useSavedNetworkStyle(result.network_style);
+      useSavedAppearance(result.appearance);
       renderProgressTree(result.tree);
       setupReminders(result.reminders_key);
     } catch (error) {

@@ -78,6 +78,12 @@ its shape (a free web, a tree, a galaxy, orbits or lines), the colors, the
 sky behind it (paper, dots or stars), how hard the lines pull, how spread
 out it is, dot size, curvy lines and goal names. The choice is saved on your
 account (`/api/network-style`), so it looks the same on every device.
+Settings > Appearance picks a color theme for the whole site (Osiris paper,
+the four Catppuccin flavors, Nord, Gruvbox, Rose Pine, Solarized, Tokyo
+Night and Everforest, each with a light and a dark look), a font for
+headings and a font for text (free Google Fonts, plus JetBrains Mono Nerd
+Font served from `public/fonts`). It is saved on the account the same way
+(`/api/appearance`, shared code in `lua/osiris/saved_look.lua`).
 The goal sits in the middle, finished and current steps link out from it,
 and the AI tags each step with 1-3 skills; steps that train the same skill
 are connected through that skill's node, which grows as more steps use it.

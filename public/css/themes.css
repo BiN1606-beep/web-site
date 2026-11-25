@@ -1,0 +1,465 @@
+/* Color themes and fonts, picked in Settings > Appearance
+   (js/appearance.js, saved per account by lua/osiris/appearance.lua).
+
+   A "look" is one full set of colors. Each theme has a light look and a
+   dark look; js/appearance.js puts the right one on <html data-look="...">
+   whenever the theme or the light/dark switch changes. The theme tiles in
+   Settings carry data-look too, so each tile always shows its own colors.
+
+   A look only lists its paper colors, its text colors, one accent and
+   eight colors (--c-*). Everything else (hover color, soft accent, the
+   life-area colors of the network) is worked out from those below, so a
+   new theme is one short block. All palettes are the themes' own
+   published colors (Catppuccin, Nord, Gruvbox, Rose Pine, Solarized,
+   Tokyo Night, Everforest), all free to use. */
+
+/* JetBrains Mono Nerd Font is served from our own server (free, OFL, see
+   public/fonts/OFL.txt). It is only downloaded when someone picks it, and
+   a copy installed on the computer is used first. */
+@font-face {
+  font-family: "JetBrainsMono Nerd Font";
+  src: local("JetBrainsMono Nerd Font"), local("JetBrainsMono NF"),
+    url("/fonts/JetBrainsMonoNerdFont-Regular.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- Worked out from each look's own colors ----
+   ":root[data-look]" is there so these win over html.is-dark in base.css. */
+:root[data-look],
+[data-look] {
+  --accent-hover: color-mix(in srgb, var(--accent) 80%, var(--text));
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --button-text: var(--panel);
+  --shadow: color-mix(in srgb, var(--text) 10%, transparent);
+  --backdrop: color-mix(in srgb, var(--base) 55%, rgba(0, 0, 0, 0.45));
+  --sun: var(--c-yellow);
+  --moon: var(--c-blue);
+  --leaf: var(--c-green);
+  --area-health: var(--c-green);
+  --area-learning: var(--c-blue);
+  --area-mind: var(--c-pink);
+  --area-career: var(--c-orange);
+  --area-creativity: var(--c-yellow);
+  --area-relationships: var(--c-red);
+  --area-money: var(--c-teal);
+  --area-other: var(--c-gray);
+}
+
+/* The network's default "Areas" colors follow the theme. (The other
+   network palettes, like Sunset or Ocean, keep their own colors.) */
+:root[data-look] [data-palette="areas"] {
+  --area-health: var(--c-green);
+  --area-learning: var(--c-blue);
+  --area-mind: var(--c-pink);
+  --area-career: var(--c-orange);
+  --area-creativity: var(--c-yellow);
+  --area-relationships: var(--c-red);
+  --area-money: var(--c-teal);
+  --area-other: var(--c-gray);
+}
+
+/* ---- Osiris (the default): warm paper and deep green ----
+   The same colors as base.css, written out in full so the default theme
+   looks exactly as it always has. */
+:root[data-look="osiris-light"],
+[data-look="osiris-light"] {
+  color-scheme: light;
+  --base: #f5f2eb;
+  --surface: #ebe6db;
+  --panel: #faf8f3;
+  --panel-border: #dcd5c6;
+  --text: #24221d;
+  --muted: #6b655a;
+  --accent: #2f6b4f;
+  --accent-hover: #24563f;
+  --accent-soft: rgba(47, 107, 79, 0.11);
+  --button-text: #fbfaf6;
+  --shadow: rgba(36, 34, 29, 0.09);
+  --backdrop: rgba(36, 34, 29, 0.38);
+  --sun: #c98a1b;
+  --moon: #3d6fa8;
+  --leaf: #4f8a3c;
+  --c-green: #4f8a3c;
+  --c-blue: #3d6fa8;
+  --c-pink: #a8557a;
+  --c-orange: #c2642a;
+  --c-yellow: #c98a1b;
+  --c-red: #b03f38;
+  --c-teal: #2b8580;
+  --c-gray: #857e72;
+}
+
+:root[data-look="osiris-dark"],
+[data-look="osiris-dark"] {
+  color-scheme: dark;
+  --base: #15140f;
+  --surface: #221f19;
+  --panel: #1b1a15;
+  --panel-border: #36322a;
+  --text: #ece6d9;
+  --muted: #a8a091;
+  --accent: #8cc29f;
+  --accent-hover: #a5d2b5;
+  --accent-soft: rgba(140, 194, 159, 0.14);
+  --button-text: #15140f;
+  --shadow: rgba(0, 0, 0, 0.45);
+  --backdrop: rgba(0, 0, 0, 0.62);
+  --sun: #e3b25c;
+  --moon: #8fb3dd;
+  --leaf: #9bcf86;
+  --c-green: #9bcf86;
+  --c-blue: #8fb3dd;
+  --c-pink: #dc9ab8;
+  --c-orange: #e4a073;
+  --c-yellow: #e3b25c;
+  --c-red: #e08a80;
+  --c-teal: #7ccbc2;
+  --c-gray: #b8b0a2;
+}
+
+/* Catppuccin Latte */
+:root[data-look="latte"],
+[data-look="latte"] {
+  color-scheme: light;
+  --base: #e6e9ef;
+  --surface: #dce0e8;
+  --panel: #eff1f5;
+  --panel-border: #ccd0da;
+  --text: #4c4f69;
+  --muted: #6c6f85;
+  --accent: #8839ef;
+  --c-green: #40a02b;
+  --c-blue: #1e66f5;
+  --c-pink: #ea76cb;
+  --c-orange: #fe640b;
+  --c-yellow: #df8e1d;
+  --c-red: #d20f39;
+  --c-teal: #179299;
+  --c-gray: #8c8fa1;
+}
+
+/* Catppuccin Frappé */
+:root[data-look="frappe"],
+[data-look="frappe"] {
+  color-scheme: dark;
+  --base: #303446;
+  --surface: #414559;
+  --panel: #292c3c;
+  --panel-border: #51576d;
+  --text: #c6d0f5;
+  --muted: #a5adce;
+  --accent: #ca9ee6;
+  --c-green: #a6d189;
+  --c-blue: #8caaee;
+  --c-pink: #f4b8e4;
+  --c-orange: #ef9f76;
+  --c-yellow: #e5c890;
+  --c-red: #e78284;
+  --c-teal: #81c8be;
+  --c-gray: #838ba7;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Catppuccin Macchiato */
+:root[data-look="macchiato"],
+[data-look="macchiato"] {
+  color-scheme: dark;
+  --base: #24273a;
+  --surface: #363a4f;
+  --panel: #1e2030;
+  --panel-border: #494d64;
+  --text: #cad3f5;
+  --muted: #a5adcb;
+  --accent: #c6a0f6;
+  --c-green: #a6da95;
+  --c-blue: #8aadf4;
+  --c-pink: #f5bde6;
+  --c-orange: #f5a97f;
+  --c-yellow: #eed49f;
+  --c-red: #ed8796;
+  --c-teal: #8bd5ca;
+  --c-gray: #8087a2;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Catppuccin Mocha */
+:root[data-look="mocha"],
+[data-look="mocha"] {
+  color-scheme: dark;
+  --base: #1e1e2e;
+  --surface: #313244;
+  --panel: #181825;
+  --panel-border: #45475a;
+  --text: #cdd6f4;
+  --muted: #a6adc8;
+  --accent: #cba6f7;
+  --c-green: #a6e3a1;
+  --c-blue: #89b4fa;
+  --c-pink: #f5c2e7;
+  --c-orange: #fab387;
+  --c-yellow: #f9e2af;
+  --c-red: #f38ba8;
+  --c-teal: #94e2d5;
+  --c-gray: #7f849c;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Nord, light (Snow Storm) */
+:root[data-look="nord-light"],
+[data-look="nord-light"] {
+  color-scheme: light;
+  --base: #eceff4;
+  --surface: #e5e9f0;
+  --panel: #f5f7fa;
+  --panel-border: #d8dee9;
+  --text: #2e3440;
+  --muted: #4c566a;
+  --accent: #5e81ac;
+  --c-green: #6f9a4f;
+  --c-blue: #5e81ac;
+  --c-pink: #a0729b;
+  --c-orange: #c0704f;
+  --c-yellow: #c99a2e;
+  --c-red: #bf616a;
+  --c-teal: #5a9a98;
+  --c-gray: #7b8394;
+}
+
+/* Nord, dark (Polar Night) */
+:root[data-look="nord-dark"],
+[data-look="nord-dark"] {
+  color-scheme: dark;
+  --base: #2e3440;
+  --surface: #3b4252;
+  --panel: #272c36;
+  --panel-border: #434c5e;
+  --text: #eceff4;
+  --muted: #a3abb9;
+  --accent: #88c0d0;
+  --c-green: #a3be8c;
+  --c-blue: #81a1c1;
+  --c-pink: #b48ead;
+  --c-orange: #d08770;
+  --c-yellow: #ebcb8b;
+  --c-red: #bf616a;
+  --c-teal: #8fbcbb;
+  --c-gray: #7b8394;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Gruvbox light */
+:root[data-look="gruvbox-light"],
+[data-look="gruvbox-light"] {
+  color-scheme: light;
+  --base: #fbf1c7;
+  --surface: #ebdbb2;
+  --panel: #f9f5d7;
+  --panel-border: #d5c4a1;
+  --text: #3c3836;
+  --muted: #7c6f64;
+  --accent: #af3a03;
+  --c-green: #79740e;
+  --c-blue: #076678;
+  --c-pink: #8f3f71;
+  --c-orange: #af3a03;
+  --c-yellow: #b57614;
+  --c-red: #9d0006;
+  --c-teal: #427b58;
+  --c-gray: #928374;
+}
+
+/* Gruvbox dark */
+:root[data-look="gruvbox-dark"],
+[data-look="gruvbox-dark"] {
+  color-scheme: dark;
+  --base: #282828;
+  --surface: #3c3836;
+  --panel: #1d2021;
+  --panel-border: #504945;
+  --text: #ebdbb2;
+  --muted: #a89984;
+  --accent: #fabd2f;
+  --c-green: #b8bb26;
+  --c-blue: #83a598;
+  --c-pink: #d3869b;
+  --c-orange: #fe8019;
+  --c-yellow: #fabd2f;
+  --c-red: #fb4934;
+  --c-teal: #8ec07c;
+  --c-gray: #928374;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Rosé Pine Dawn */
+:root[data-look="rose-pine-dawn"],
+[data-look="rose-pine-dawn"] {
+  color-scheme: light;
+  --base: #faf4ed;
+  --surface: #f2e9e1;
+  --panel: #fffaf3;
+  --panel-border: #dfdad9;
+  --text: #575279;
+  --muted: #797593;
+  --accent: #286983;
+  --c-green: #56949f;
+  --c-blue: #286983;
+  --c-pink: #907aa9;
+  --c-orange: #d7827e;
+  --c-yellow: #ea9d34;
+  --c-red: #b4637a;
+  --c-teal: #56949f;
+  --c-gray: #9893a5;
+}
+
+/* Rosé Pine */
+:root[data-look="rose-pine"],
+[data-look="rose-pine"] {
+  color-scheme: dark;
+  --base: #191724;
+  --surface: #26233a;
+  --panel: #1f1d2e;
+  --panel-border: #403d52;
+  --text: #e0def4;
+  --muted: #908caa;
+  --accent: #c4a7e7;
+  --c-green: #9ccfd8;
+  --c-blue: #3e8fb0;
+  --c-pink: #c4a7e7;
+  --c-orange: #ebbcba;
+  --c-yellow: #f6c177;
+  --c-red: #eb6f92;
+  --c-teal: #9ccfd8;
+  --c-gray: #6e6a86;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Solarized light */
+:root[data-look="solarized-light"],
+[data-look="solarized-light"] {
+  color-scheme: light;
+  --base: #fdf6e3;
+  --surface: #eee8d5;
+  --panel: #fffbf0;
+  --panel-border: #e0d8c0;
+  --text: #475b62;
+  --muted: #839496;
+  --accent: #268bd2;
+  --c-green: #859900;
+  --c-blue: #268bd2;
+  --c-pink: #6c71c4;
+  --c-orange: #cb4b16;
+  --c-yellow: #b58900;
+  --c-red: #dc322f;
+  --c-teal: #2aa198;
+  --c-gray: #93a1a1;
+}
+
+/* Solarized dark */
+:root[data-look="solarized-dark"],
+[data-look="solarized-dark"] {
+  color-scheme: dark;
+  --base: #002b36;
+  --surface: #073642;
+  --panel: #00252f;
+  --panel-border: #0d4552;
+  --text: #c3cfcf;
+  --muted: #839496;
+  --accent: #2aa198;
+  --c-green: #859900;
+  --c-blue: #268bd2;
+  --c-pink: #6c71c4;
+  --c-orange: #cb4b16;
+  --c-yellow: #b58900;
+  --c-red: #dc322f;
+  --c-teal: #2aa198;
+  --c-gray: #657b83;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Tokyo Night Day */
+:root[data-look="tokyo-day"],
+[data-look="tokyo-day"] {
+  color-scheme: light;
+  --base: #e1e2e7;
+  --surface: #d0d5e3;
+  --panel: #e9e9ed;
+  --panel-border: #c4c8da;
+  --text: #3760bf;
+  --muted: #6172b0;
+  --accent: #2e7de9;
+  --c-green: #587539;
+  --c-blue: #2e7de9;
+  --c-pink: #9854f1;
+  --c-orange: #b15c00;
+  --c-yellow: #8c6c3e;
+  --c-red: #f52a65;
+  --c-teal: #007197;
+  --c-gray: #848cb5;
+}
+
+/* Tokyo Night */
+:root[data-look="tokyo-night"],
+[data-look="tokyo-night"] {
+  color-scheme: dark;
+  --base: #1a1b26;
+  --surface: #24283b;
+  --panel: #16161e;
+  --panel-border: #292e42;
+  --text: #c0caf5;
+  --muted: #9aa5ce;
+  --accent: #7aa2f7;
+  --c-green: #9ece6a;
+  --c-blue: #7aa2f7;
+  --c-pink: #bb9af7;
+  --c-orange: #ff9e64;
+  --c-yellow: #e0af68;
+  --c-red: #f7768e;
+  --c-teal: #73daca;
+  --c-gray: #565f89;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Everforest light */
+:root[data-look="everforest-light"],
+[data-look="everforest-light"] {
+  color-scheme: light;
+  --base: #fdf6e3;
+  --surface: #efebd4;
+  --panel: #fffbef;
+  --panel-border: #e6e2cc;
+  --text: #5c6a72;
+  --muted: #829181;
+  --accent: #35a77c;
+  --c-green: #8da101;
+  --c-blue: #3a94c5;
+  --c-pink: #df69ba;
+  --c-orange: #f57d26;
+  --c-yellow: #dfa000;
+  --c-red: #f85552;
+  --c-teal: #35a77c;
+  --c-gray: #939f91;
+}
+
+/* Everforest dark */
+:root[data-look="everforest-dark"],
+[data-look="everforest-dark"] {
+  color-scheme: dark;
+  --base: #2d353b;
+  --surface: #3d484d;
+  --panel: #272e33;
+  --panel-border: #475258;
+  --text: #d3c6aa;
+  --muted: #9da9a0;
+  --accent: #a7c080;
+  --c-green: #a7c080;
+  --c-blue: #7fbbb3;
+  --c-pink: #d699b6;
+  --c-orange: #e69875;
+  --c-yellow: #dbbc7f;
+  --c-red: #e67e80;
+  --c-teal: #83c092;
+  --c-gray: #859289;
+  --shadow: rgba(0, 0, 0, 0.4);
+}

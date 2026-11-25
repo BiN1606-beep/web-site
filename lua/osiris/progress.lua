@@ -11,6 +11,7 @@ local goals = require "osiris.goals"
 local reminders = require "osiris.reminders"
 local coach = require "osiris.coach"
 local network_style = require "osiris.network_style"
+local appearance = require "osiris.appearance"
 
 local respond = common.respond
 local database_query = common.database_query
@@ -54,6 +55,8 @@ local function handle_progress_tree()
             reminders_key = vapid_public_key(),
             -- How you like your network to look (nil = the default look).
             network_style = network_style.load_style(user.id),
+            -- Your color theme and fonts (nil = the default look).
+            appearance = appearance.load_appearance(user.id),
         })
     end
     if method ~= "POST" then
