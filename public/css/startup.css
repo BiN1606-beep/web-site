@@ -1,0 +1,350 @@
+/* The startup screen: a short "sunrise" intro with the Osiris logo.
+   (index.html holds the markup, js/profile.js removes it after 2.5 s or
+   when the arrow is pressed.) It only shows when the device does not ask
+   for reduced motion, and looks the same in light and dark mode: each mode
+   just uses its own logo files.
+
+   The sequence:
+   1. a warm glow rises behind the logo, like the sun coming up
+   2. the ten stripes of the sun fly in from both sides and click together
+   3. a ring of light pulses out once the sun is whole
+   4. the wordmark wipes in from the left, then a shine runs over the letters
+   5. a thin bar along the bottom shows it is loading
+   6. on the way out the logo grows a little and the screen fades away */
+
+.startup-screen {
+  /* The light the logo gives off: warm sun in light mode, cool blue to
+     match the dark-mode logo. */
+  --startup-light: var(--sun);
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: none;
+  place-items: center;
+  overflow: hidden;
+  background: var(--base);
+  opacity: 1;
+  transition: opacity 600ms ease;
+}
+
+html.is-dark .startup-screen {
+  --startup-light: #6f9ff0;
+}
+
+.show-startup .startup-screen {
+  display: grid;
+}
+
+.startup-screen.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.show-startup .launcher-actions {
+  opacity: 0;
+}
+
+.show-startup .launcher-actions.is-appearing {
+  animation: startup-fade-in 1.2s ease-out both;
+}
+
+/* ---- 1. The sunrise glow ---- */
+.startup-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(120vw, 900px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--startup-light) 26%, transparent), transparent);
+  transform: translate(-50%, -30%) scale(0.4);
+  opacity: 0;
+  animation: startup-sunrise 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) 100ms both;
+  pointer-events: none;
+}
+
+/* ---- The logo and wordmark side by side ---- */
+.startup-logo-motion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: min(94vw, 780px);
+  animation: startup-float 2.6s 1.9s ease-in-out infinite alternate;
+}
+
+.startup-logo-art {
+  position: relative;
+  flex: 0 0 min(44vw, 360px);
+  width: min(44vw, 360px);
+  aspect-ratio: 1;
+  animation: startup-rise 1s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+.startup-logo {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url("/background-logo.png") center / contain no-repeat;
+}
+
+html.is-dark .startup-logo {
+  background-image: url("/arvid-logo.png");
+}
+
+/* ---- 2. The stripes fly in ---- */
+/* Each stripe is the whole logo cut to one diagonal band. Odd stripes come
+   in from the upper left, even ones from the lower right, along the
+   direction of the stripes, and they land in their place one by one. */
+.startup-logo-stripe {
+  z-index: 1;
+  opacity: 0;
+  filter: blur(4px);
+  animation: startup-stripe-in 700ms cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  animation-delay: calc(200ms + var(--stripe-delay));
+  --stripe-from: translate(-70px, -32px);
+}
+
+.startup-logo-stripe:nth-child(even) {
+  --stripe-from: translate(70px, 32px);
+}
+
+.startup-logo-stripe-1 {
+  clip-path: polygon(65.12% 0, 100% 0, 100% 15%);
+  --stripe-delay: 0ms;
+}
+
+.startup-logo-stripe-2 {
+  clip-path: polygon(31.86% 0, 68.37% 0, 100% 13.6%, 100% 29.3%);
+  --stripe-delay: 60ms;
+}
+
+.startup-logo-stripe-3 {
+  clip-path: polygon(0 0, 35.12% 0, 100% 27.9%, 100% 43.6%, 0 0.6%);
+  --stripe-delay: 120ms;
+}
+
+.startup-logo-stripe-4 {
+  clip-path: polygon(0 0, 1.86% 0, 100% 42.2%, 100% 57.9%, 0 14.9%);
+  --stripe-delay: 180ms;
+}
+
+.startup-logo-stripe-5 {
+  clip-path: polygon(100% 56.5%, 100% 72.2%, 0 29.2%, 0 13.5%);
+  --stripe-delay: 240ms;
+}
+
+.startup-logo-stripe-6 {
+  clip-path: polygon(100% 70.8%, 100% 86.5%, 0 43.5%, 0 27.8%);
+  --stripe-delay: 300ms;
+}
+
+.startup-logo-stripe-7 {
+  clip-path: polygon(100% 85.1%, 100% 100%, 98.14% 100%, 0 57.8%, 0 42.1%);
+  --stripe-delay: 360ms;
+}
+
+.startup-logo-stripe-8 {
+  clip-path: polygon(100% 99.4%, 100% 100%, 64.88% 100%, 0 72.1%, 0 56.4%);
+  --stripe-delay: 420ms;
+}
+
+.startup-logo-stripe-9 {
+  clip-path: polygon(68.14% 100%, 31.63% 100%, 0 86.4%, 0 70.7%);
+  --stripe-delay: 480ms;
+}
+
+.startup-logo-stripe-10 {
+  clip-path: polygon(34.88% 100%, 0 100%, 0 85%);
+  --stripe-delay: 540ms;
+}
+
+/* ---- 3. A ring of light when the sun is whole ---- */
+.startup-ring {
+  position: absolute;
+  top: 50%;
+  left: 47%;
+  width: 58%;
+  aspect-ratio: 1;
+  border: 3px solid var(--startup-light);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+  animation: startup-ring 1s ease-out 1.15s both;
+  pointer-events: none;
+}
+
+/* ---- 4. The wordmark wipes in ---- */
+.startup-wordmark-wrap {
+  position: relative;
+  flex: 0 0 min(52vw, 430px);
+  width: min(52vw, 430px);
+  margin-left: clamp(-28px, -3vw, -10px);
+}
+
+.startup-wordmark {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  -webkit-mask-size: 260% 100%;
+  mask-size: 260% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: startup-wordmark 900ms cubic-bezier(0.3, 0.8, 0.3, 1) 1.05s both;
+}
+
+.startup-wordmark-dark {
+  display: none;
+}
+
+html.is-dark .startup-wordmark-bright {
+  display: none;
+}
+
+html.is-dark .startup-wordmark-dark {
+  display: block;
+}
+
+/* A shine sweeps across the letters once they are in. The wordmark image
+   itself is the mask, so only the letters light up, not the space around. */
+.startup-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.7) 50%, transparent 65%) no-repeat;
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  -webkit-mask: url("/arvid-wordmark-bright.png") center / contain no-repeat;
+  mask: url("/arvid-wordmark-bright.png") center / contain no-repeat;
+  mix-blend-mode: normal;
+  animation: startup-shine 900ms ease-in-out 1.85s both;
+  pointer-events: none;
+}
+
+html.is-dark .startup-shine {
+  -webkit-mask-image: url("/arvid-wordmark.png");
+  mask-image: url("/arvid-wordmark.png");
+  mix-blend-mode: normal;
+  background-image: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+}
+
+/* ---- 5. The loading bar ---- */
+.startup-progress {
+  position: absolute;
+  bottom: max(2.5rem, 8vh);
+  left: 50%;
+  width: min(60vw, 240px);
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface);
+  transform: translateX(-50%);
+  animation: startup-fade-in 400ms ease-out 300ms both;
+}
+
+.startup-progress::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--startup-light);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: startup-load 2.2s cubic-bezier(0.4, 0.1, 0.2, 1) 300ms both;
+}
+
+/* ---- 6. Leaving: the logo grows a little and blurs as the screen fades ---- */
+.startup-screen.is-leaving .startup-logo-motion {
+  animation: startup-exit 600ms cubic-bezier(0.4, 0, 0.6, 1) both;
+}
+
+.startup-skip {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  animation: startup-fade-in 500ms 700ms both;
+}
+
+.startup-skip:hover {
+  background: var(--accent-soft);
+}
+
+.startup-skip:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* ---- Keyframes ---- */
+@keyframes startup-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes startup-sunrise {
+  from { opacity: 0; transform: translate(-50%, -20%) scale(0.4); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes startup-rise {
+  from { transform: translateY(40px) scale(0.86); }
+  to { transform: none; }
+}
+
+@keyframes startup-stripe-in {
+  from { opacity: 0; filter: blur(4px); transform: var(--stripe-from); }
+  60% { opacity: 1; filter: blur(0); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+
+@keyframes startup-ring {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  25% { opacity: 0.7; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+}
+
+@keyframes startup-wordmark {
+  from {
+    opacity: 0;
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+    transform: translateX(-14px);
+  }
+
+  to {
+    opacity: 1;
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+    transform: none;
+  }
+}
+
+@keyframes startup-shine {
+  from { background-position: 120% 0; }
+  to { background-position: -20% 0; }
+}
+
+@keyframes startup-load {
+  0% { transform: scaleX(0); }
+  60% { transform: scaleX(0.75); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes startup-float {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-8px) scale(1.012); }
+}
+
+@keyframes startup-exit {
+  from { opacity: 1; filter: blur(0); transform: scale(1); }
+  to { opacity: 0; filter: blur(8px); transform: scale(1.12); }
+}

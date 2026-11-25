@@ -123,62 +123,6 @@
   }
 }
 
-@keyframes logo-float {
-  from {
-    transform: translateY(0) scale(1);
-  }
-
-  to {
-    transform: translateY(-9px) scale(1.015);
-  }
-}
-
-@keyframes launcher-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes logo-stripe-appear {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes wordmark-extend {
-  from {
-    opacity: 0;
-    clip-path: inset(0 100% 0 0);
-    transform: translateX(-16px);
-  }
-
-  to {
-    opacity: 1;
-    clip-path: inset(0);
-    transform: translateX(0);
-  }
-}
-
-@keyframes skip-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (max-width: 480px) {
   .launcher-actions {
     gap: 0.2rem;

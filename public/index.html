@@ -25,6 +25,7 @@
     <!-- The styles, split by part of the page. Order matters: later files
          can override earlier ones. -->
     <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/startup.css">
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/streak.css">
     <link rel="stylesheet" href="/css/review.css">
@@ -42,8 +43,9 @@
   </head>
   <body>
     <div class="startup-screen" id="startup-screen">
+      <div class="startup-glow" aria-hidden="true"></div>
       <div class="startup-logo-motion">
-        <div class="startup-logo-art" role="img" aria-label="Arvid logo">
+        <div class="startup-logo-art" role="img" aria-label="Osiris logo">
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-1"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-2"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-3"></div>
@@ -54,10 +56,15 @@
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-8"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-9"></div>
           <div class="startup-logo startup-logo-stripe startup-logo-stripe-10"></div>
+          <div class="startup-ring" aria-hidden="true"></div>
         </div>
-        <img class="startup-wordmark startup-wordmark-bright" src="/arvid-wordmark-bright.png" alt="" aria-hidden="true" width="550" height="182">
-        <img class="startup-wordmark startup-wordmark-dark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
+        <div class="startup-wordmark-wrap">
+          <img class="startup-wordmark startup-wordmark-bright" src="/arvid-wordmark-bright.png" alt="" aria-hidden="true" width="550" height="182">
+          <img class="startup-wordmark startup-wordmark-dark" src="/arvid-wordmark.png" alt="" aria-hidden="true" width="2220" height="752">
+          <div class="startup-shine" aria-hidden="true"></div>
+        </div>
       </div>
+      <div class="startup-progress" aria-hidden="true"></div>
       <button class="startup-skip" id="startup-skip" type="button" aria-label="Skip intro">&rarr;</button>
     </div>
     <main class="home">
