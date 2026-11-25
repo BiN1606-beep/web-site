@@ -699,6 +699,10 @@
   stroke-width: 1.5;
 }
 
+.shared-node.is-waiting.is-you {
+  stroke: var(--accent);
+}
+
 .shared-ring {
   fill: none;
   stroke: var(--sun);
@@ -809,6 +813,35 @@
 .shared-person-mark svg {
   width: 0.95rem;
   height: 0.95rem;
+}
+
+/* The nudge button in your friend's box. */
+.shared-nudge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sun);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shared-nudge svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.shared-nudge.is-sent {
+  background: var(--surface);
+  color: var(--muted);
+  cursor: default;
 }
 
 .shared-water {
@@ -1081,6 +1114,19 @@
   @keyframes shared-pulse {
     0%, 100% { opacity: 0.25; transform: scale(0.8); }
     50% { opacity: 1; transform: scale(1.15); }
+  }
+
+  .shared-nudge:not(.is-sent) svg {
+    animation: shared-ring-bell 2.4s ease-in-out infinite;
+    transform-origin: 50% 15%;
+  }
+
+  @keyframes shared-ring-bell {
+    0%, 70%, 100% { transform: rotate(0); }
+    75% { transform: rotate(16deg); }
+    80% { transform: rotate(-14deg); }
+    85% { transform: rotate(10deg); }
+    90% { transform: rotate(-6deg); }
   }
 
   .shared-person.is-splash .shared-person-mark {

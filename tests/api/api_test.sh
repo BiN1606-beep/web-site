@@ -141,8 +141,19 @@ TREE=$(jq -r .id /tmp/out)
 jq -e '.grew == false' /tmp/out >/dev/null || { cat /tmp/out; fail "one watering doesn't grow"; }
 [ "$(cget $J2 "action=trees&day=$TODAY")" = 200 ] || { cat /tmp/out; fail "trees"; }
 jq -e --arg t "$TODAY" '.trees[0].grown == 0 and .trees[0].status == "growing" and .trees[0].days[0].day == $t and .trees[0].days[0].partner == "ran 3 km" and .trees[0].days[0].me == null' /tmp/out >/dev/null || { cat /tmp/out; fail "tree waiting for B"; }
+# A nudges B, who hasn't checked in yet: once a day.
+[ "$(tpost $J tree_nudge "")" = 200 ] || { cat /tmp/out; fail "nudge"; }
+jq -e '.already == false' /tmp/out >/dev/null || { cat /tmp/out; fail "first nudge"; }
+[ "$(tpost $J tree_nudge "")" = 200 ] || { cat /tmp/out; fail "nudge again"; }
+jq -e '.already == true' /tmp/out >/dev/null || { cat /tmp/out; fail "second nudge is the same one"; }
+[ "$(cget $J "action=trees&day=$TODAY")" = 200 ] && jq -e '.trees[0].nudged_today == true' /tmp/out >/dev/null || { cat /tmp/out; fail "nudged_today"; }
+[ "$(psql -tAc "SELECT count(*) FROM user_notifications WHERE notification_type = 'tree_nudge' AND user_id = $B_ID")" = 1 ] || fail "one nudge notification"
+[ "$(psql -tAc "SELECT count(*) FROM shared_tree_nudges WHERE to_user = $B_ID AND pushed_at IS NULL")" = 1 ] || fail "nudge waits for the push sender"
 [ "$(tpost $J2 tree_water "did yoga")" = 200 ] || { cat /tmp/out; fail "water B"; }
 jq -e '.grew == true' /tmp/out >/dev/null || { cat /tmp/out; fail "both watered grows"; }
+# Both checked in: no nudge needed either way.
+[ "$(tpost $J2 tree_nudge "")" = 409 ] || { cat /tmp/out; fail "no nudge for someone who checked in"; }
+[ "$(tpost $J tree_nudge "")" = 409 ] || { cat /tmp/out; fail "no nudge after check-in"; }
 [ "$(tpost $J2 tree_water "did yoga twice")" = 200 ] || { cat /tmp/out; fail "edit watering"; }
 [ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees A"
 jq -e '.trees[0].grown == 1 and .trees[0].days[0].partner == "did yoga twice" and .trees[0].still_friends == true' /tmp/out >/dev/null || { cat /tmp/out; fail "tree grew"; }

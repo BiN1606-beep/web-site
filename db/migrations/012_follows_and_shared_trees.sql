@@ -97,6 +97,24 @@ CREATE TABLE public.shared_tree_waterings (
     PRIMARY KEY (tree_id, user_id, day)
 );
 
+-- A nudge: "hop on and check in!" sent to a friend who hasn't checked in
+-- on your shared goal today. One per person, tree and day. It shows in the
+-- friend's inbox right away, and reminders/send_reminders.py also sends it
+-- to their phone as a push notification (pushed_at marks it as sent).
+CREATE TABLE public.shared_tree_nudges (
+    tree_id bigint NOT NULL REFERENCES public.shared_trees(id) ON DELETE CASCADE,
+    from_user bigint NOT NULL REFERENCES public.auth_users(id) ON DELETE CASCADE,
+    to_user bigint NOT NULL REFERENCES public.auth_users(id) ON DELETE CASCADE,
+    day date NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    pushed_at timestamptz,
+    PRIMARY KEY (tree_id, from_user, day)
+);
+
+CREATE INDEX shared_tree_nudges_unpushed_idx
+    ON public.shared_tree_nudges (created_at)
+    WHERE pushed_at IS NULL;
+
 -- 4. New notification kinds. Old friend notifications get their new names.
 ALTER TABLE public.user_notifications
     DROP CONSTRAINT user_notifications_notification_type_check;
@@ -118,6 +136,7 @@ ALTER TABLE public.user_notifications
             'tree_invite',
             'tree_started',
             'tree_watered',
-            'tree_grew'
+            'tree_grew',
+            'tree_nudge'
         )
     );

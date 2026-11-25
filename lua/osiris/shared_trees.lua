@@ -6,7 +6,7 @@
 --
 -- The /api/community endpoint (community.lua) hands its tree actions to
 -- this module: GET ?action=trees, and POST tree_plant, tree_accept,
--- tree_remove and tree_water.
+-- tree_remove, tree_water and tree_nudge.
 
 local M = {}
 local common = require "osiris.common"
@@ -66,6 +66,9 @@ function M.list_trees(user_id, today)
                ON theirs.tree_id = mine.tree_id AND theirs.day = mine.day
               AND theirs.user_id = partner.id
              WHERE mine.tree_id = tree.id AND mine.user_id = $1) AS grown,
+            EXISTS (SELECT 1 FROM public.shared_tree_nudges nudge
+                WHERE nudge.tree_id = tree.id AND nudge.from_user = $1
+                  AND nudge.day = $2::date) AS nudged_today,
             COALESCE((
                 SELECT jsonb_agg(jsonb_build_object(
                     'day', day_rows.day::text,
@@ -255,6 +258,56 @@ local function handle_water(user, tree_id, body)
     return respond(ngx.HTTP_OK, { ok = true, grew = grew })
 end
 
+-- A nudge: reminds your friend to check in today. Only on a growing
+-- tree, only while you follow each other, only when they haven't checked
+-- in yet that day, and only once a day.
+local function handle_nudge(user, tree_id, body)
+    if not valid_checkin_day(body.day) then
+        return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid day is required." })
+    end
+    local rows = database_query([[
+        WITH tree AS (
+            SELECT tree.id,
+                CASE WHEN tree.user_low = $1 THEN tree.user_high ELSE tree.user_low END AS partner_id
+            FROM public.shared_trees tree
+            WHERE tree.id = $2 AND tree.status = 'growing'
+              AND (tree.user_low = $1 OR tree.user_high = $1)
+              AND $3::date BETWEEN (now() AT TIME ZONE 'UTC')::date - 1
+                               AND (now() AT TIME ZONE 'UTC')::date + 1
+        ),
+        allowed AS (
+            SELECT tree.* FROM tree
+            JOIN public.user_friends friend
+              ON friend.user_id = $1 AND friend.friend_id = tree.partner_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM public.shared_tree_waterings watering
+                WHERE watering.tree_id = tree.id AND watering.user_id = tree.partner_id
+                  AND watering.day = $3::date
+            )
+        ),
+        nudged AS (
+            INSERT INTO public.shared_tree_nudges (tree_id, from_user, to_user, day)
+            SELECT id, $1, partner_id, $3::date FROM allowed
+            ON CONFLICT (tree_id, from_user, day) DO NOTHING
+            RETURNING to_user
+        ),
+        notified AS (
+            INSERT INTO public.user_notifications (user_id, actor_id, notification_type)
+            SELECT to_user, $1, 'tree_nudge' FROM nudged
+            RETURNING id
+        )
+        SELECT (SELECT count(*) FROM allowed) AS allowed,
+            (SELECT count(*) FROM nudged) AS nudged
+    ]], user.id, tree_id, body.day)
+    if not rows or not rows[1] then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not send the nudge." })
+    end
+    if tonumber(rows[1].allowed) == 0 then
+        return respond(ngx.HTTP_CONFLICT, { error = "No nudge needed: they already checked in, or you don't follow each other." })
+    end
+    return respond(ngx.HTTP_OK, { ok = true, already = tonumber(rows[1].nudged) == 0 })
+end
+
 -- Handles a POST tree action. Returns false when the action is not a tree
 -- action, so community.lua can carry on with its own actions.
 function M.handle_action(user, body)
@@ -262,7 +315,8 @@ function M.handle_action(user, body)
     if action == "tree_plant" then
         return handle_plant(user, body)
     end
-    if action ~= "tree_accept" and action ~= "tree_remove" and action ~= "tree_water" then
+    if action ~= "tree_accept" and action ~= "tree_remove" and action ~= "tree_water"
+        and action ~= "tree_nudge" then
         return false
     end
     local tree_id = valid_tree_id(body.treeId)
@@ -273,6 +327,8 @@ function M.handle_action(user, body)
         return handle_accept(user, tree_id)
     elseif action == "tree_remove" then
         return handle_remove(user, tree_id)
+    elseif action == "tree_nudge" then
+        return handle_nudge(user, tree_id, body)
     end
     return handle_water(user, tree_id, body)
 end

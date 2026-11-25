@@ -126,4 +126,24 @@ with psycopg.connect(autocommit=True) as db:
     if hour_now < 23:
         assert received == [], received
 
+    # A friend's nudge goes to every device of that friend, once.
+    friend = db.execute("INSERT INTO auth_users (email, password_hash, profile_display_name) "
+                        "VALUES ('nudger@test', 'x', 'Maja') RETURNING id").fetchone()[0]
+    low, high = sorted((friend, with_goal))
+    tree_id = db.execute("INSERT INTO shared_trees (user_low, user_high, planted_by, title, status) "
+                         "VALUES (%s, %s, %s, 'Run every morning', 'growing') RETURNING id",
+                         (low, high, friend)).fetchone()[0]
+    db.execute("INSERT INTO shared_tree_nudges (tree_id, from_user, to_user, day) "
+               "VALUES (%s, %s, %s, (now() AT TIME ZONE 'UTC')::date)", (tree_id, friend, with_goal))
+    db.execute("UPDATE push_subscriptions SET last_sent_day = (now() AT TIME ZONE 'UTC')::date")
+    received.clear()
+    send_reminders.main()
+    assert [path for path, _, _ in received] == ["/ok"], received
+    message = json.loads(http_ece.decrypt(received[0][2], private_key=browser_key, auth_secret=auth_secret, version="aes128gcm"))
+    assert message["title"] == "Maja is waiting for you" and "Run every morning" in message["body"], message
+    assert message["tag"] == f"osiris-nudge-{tree_id}", message
+    received.clear()
+    send_reminders.main()
+    assert received == [], received  # sent once
+
 print("REMINDER_TESTS_OK")

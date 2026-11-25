@@ -66,6 +66,7 @@ const COMMUNITY_ICONS = {
   more: '<circle cx="5" cy="12" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="19" cy="12" r="1.3"></circle>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path>',
   back: '<path d="m15 6-6 6 6 6"></path>',
+  bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Zm4 4h4"></path>',
 };
 
 const communityAvatar = (person, size = "") => {
@@ -101,7 +102,7 @@ const communityButton = (label, className, onClick) => {
     } catch (error) {
       communityStatus.textContent = error.message;
     } finally {
-      button.disabled = false;
+      button.disabled = button.classList.contains("is-sent");
     }
   });
   return button;
@@ -437,6 +438,7 @@ const NOTIFICATION_TEXTS = {
   tree_started: "said yes. Your shared network has started.",
   tree_watered: "checked in on your shared goal. Your turn!",
   tree_grew: "checked in too. Your network grew!",
+  tree_nudge: "nudged you: hop on and check in!",
 };
 const NOTIFICATION_VIEWS = {
   follow_request: "requests",
@@ -444,6 +446,7 @@ const NOTIFICATION_VIEWS = {
   tree_started: "trees",
   tree_watered: "trees",
   tree_grew: "trees",
+  tree_nudge: "trees",
 };
 
 const renderNotifications = (notifications) => {
@@ -654,6 +657,24 @@ const sharedTreeCard = (tree) => {
     sharedTreePerson({ display_name: "You", picture: communityState?.me_picture }, "You", Boolean(today.me), today.me),
     sharedTreePerson(partner, tree.partner_name, Boolean(today.partner), today.partner),
   );
+  // Nudge: remind your friend to hop on and check in. Their phone gets a
+  // notification (when they turned reminders on) and their inbox a note.
+  if (!today.partner && communityBool(tree.still_friends)) {
+    const partnerPill = people.lastChild;
+    const nudged = communityBool(tree.nudged_today);
+    const nudge = communityButton("", `shared-nudge${nudged ? " is-sent" : ""}`, async (button) => {
+      await communityPost({ action: "tree_nudge", treeId: String(tree.id), day: sharedTreeToday() });
+      tree.nudged_today = true;
+      button.classList.add("is-sent");
+      button.replaceChildren(communityIcon(COMMUNITY_ICONS.check), document.createTextNode("Nudged"));
+      communityCelebrate(button, 8);
+      communityToast(`${tree.partner_name} got your nudge.`);
+    });
+    nudge.append(communityIcon(nudged ? COMMUNITY_ICONS.check : COMMUNITY_ICONS.bell), document.createTextNode(nudged ? "Nudged" : "Nudge"));
+    nudge.setAttribute("aria-label", nudged ? `You nudged ${tree.partner_name} today` : `Nudge ${tree.partner_name} to check in`);
+    if (nudged) nudge.disabled = true;
+    partnerPill.querySelector(".shared-person-mark").replaceWith(nudge);
+  }
   card.append(people);
 
   if (!communityBool(tree.still_friends)) {
