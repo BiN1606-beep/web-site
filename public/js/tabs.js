@@ -53,3 +53,21 @@ try {
 } catch {
   // Keep Today.
 }
+
+// The one-line explanations under Streak, Rewards and Your week start folded
+// away behind a small "What's this?" button, so the panel stays calm.
+for (const help of document.querySelectorAll(".home-panel .section-help")) {
+  if (!help.id) help.id = `help-${Math.random().toString(36).slice(2, 8)}`;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "help-toggle";
+  button.textContent = "What's this?";
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", help.id);
+  help.hidden = true;
+  help.before(button);
+  button.addEventListener("click", () => {
+    help.hidden = !help.hidden;
+    button.setAttribute("aria-expanded", String(!help.hidden));
+  });
+}

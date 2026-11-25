@@ -68,8 +68,8 @@ const drawProgressTree = (tree, sproutIndex = -1) => {
   const defs = createSvg("defs");
   const gradient = createSvg("linearGradient", { id: "tree-sun", x1: 0, y1: 0, x2: 0, y2: 1 });
   gradient.append(
-    createSvg("stop", { offset: 0, "stop-color": "#fab387" }),
-    createSvg("stop", { offset: 1, "stop-color": "#f38ba8" }),
+    createSvg("stop", { offset: 0, "stop-color": "#e8b65a" }),
+    createSvg("stop", { offset: 1, "stop-color": "#c98a1b" }),
   );
   defs.append(gradient);
   treeGrowth.append(defs);
@@ -80,7 +80,7 @@ const drawProgressTree = (tree, sproutIndex = -1) => {
   treeGrowth.append(sun);
   if (tree.finished) {
     treeGrowth.append(createSvg("circle", {
-      class: "tree-pulse", cx: crown.x, cy: crown.y, r: 24, fill: "none", stroke: "#fab387", "stroke-width": 2,
+      class: "tree-pulse", cx: crown.x, cy: crown.y, r: 24, fill: "none", stroke: "#e8b65a", "stroke-width": 2,
     }));
   }
   const goalTag = createSvg("text", { class: "tree-node-tag", x: labelX, y: crown.y - 6 });
@@ -286,8 +286,8 @@ const setUpProgressNetwork = () => {
   merge.append("feMergeNode").attr("in", "blur");
   merge.append("feMergeNode").attr("in", "SourceGraphic");
   const sun = defs.append("radialGradient").attr("id", "net-sun");
-  sun.append("stop").attr("offset", "0%").attr("stop-color", "#fab387");
-  sun.append("stop").attr("offset", "100%").attr("stop-color", "#f38ba8");
+  sun.append("stop").attr("offset", "0%").attr("stop-color", "#e8b65a");
+  sun.append("stop").attr("offset", "100%").attr("stop-color", "#c98a1b");
 
   network.world = svg.append("g");
   network.linkLayer = network.world.append("g");
@@ -693,7 +693,7 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
   nodeGroups.select(".tree-pulse")
     .attr("r", (node) => node.r)
     .attr("fill", "none")
-    .attr("stroke", (node) => (node.kind === "goal" ? "#fab387" : "var(--accent)"))
+    .attr("stroke", (node) => (node.kind === "goal" ? "#e8b65a" : "var(--accent)"))
     .attr("stroke-width", 2)
     .attr("display", (node) => (node.status === "current" || (node.kind === "goal" && node.finished) ? null : "none"));
   nodeGroups.select(".net-core")

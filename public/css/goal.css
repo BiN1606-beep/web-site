@@ -28,7 +28,7 @@
 .tree-empty-state h2,
 .tree-heading h2 {
   margin: 0;
-  color: var(--accent);
+  color: var(--text);
   font-size: clamp(1.3rem, 4vw, 1.9rem);
   line-height: 1.25;
   text-wrap: balance;
@@ -78,7 +78,7 @@
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  background: var(--accent);
   transition: width 550ms ease;
 }
 

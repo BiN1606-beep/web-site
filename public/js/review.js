@@ -13,7 +13,6 @@ const reviewNextWeek = document.querySelector("#review-next-week");
 const reviewButton = document.querySelector("#review-button");
 const reviewAdjustButton = document.querySelector("#review-adjust");
 const reviewStatus = document.querySelector("#review-status");
-const reviewHelp = document.querySelector("#review-help");
 
 // The Monday of the week that contains `day` ("YYYY-MM-DD"). Weeks start on
 // Monday, as in most of Europe; the server checks the same rule.
@@ -43,7 +42,6 @@ const renderWeeklyReview = (tree) => {
   const saved = tree.weekly_review;
   const current = saved && saved.week_start === weekStartOf(today) ? saved.review : null;
   reviewBody.hidden = !current;
-  reviewHelp.hidden = Boolean(current);
   // A dot on the Week tab while this week's review is still waiting.
   // Only once there is something to review, so it doesn't nag a new user.
   setPanelTabDot("week", !current && week.days > 0);

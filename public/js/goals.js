@@ -106,7 +106,7 @@ const renderProgressTree = (tree) => {
     treeStepWhy.textContent = tree.current_step.why;
     treeStepTip.textContent = tree.current_step.tip || "";
     treeStepTipContainer.hidden = !tree.current_step.tip;
-    treeStepTime.textContent = tree.current_step.time ? `⏱ ${tree.current_step.time}` : "";
+    treeStepTime.textContent = tree.current_step.time ? `About ${tree.current_step.time}` : "";
     treeStepTime.hidden = !tree.current_step.time;
     const how = Array.isArray(tree.current_step.how) ? tree.current_step.how : [];
     treeStepHow.replaceChildren(...how.map((item) => createElement("li", "", item)));
@@ -143,6 +143,7 @@ const renderProgressTree = (tree) => {
   confirmingUndo = false;
   treeUndoButton.textContent = "Undo last step";
   treeUndoButton.hidden = !(tree.completed_count > 0);
+  refreshLesson(tree);
 };
 
 const loadProgressTree = async () => {

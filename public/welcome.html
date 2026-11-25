@@ -8,40 +8,53 @@
     <title>Osiris | Grow toward your goals</title>
     <!-- This page is shown to visitors who are not signed in, so it has to
          be self-contained: everything else on the site needs a session. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
     <style>
+      /* Same fonts and colors as the rest of the site (public/css/base.css). */
       :root {
         color-scheme: light;
-        --base: #eff1f5;
-        --surface: #e6e9ef;
-        --border: #ccd0da;
-        --text: #4c4f69;
-        --muted: #6c6f85;
-        --accent: #8839ef;
-        --accent-soft: rgba(136, 57, 239, 0.12);
-        --button-text: #eff1f5;
-        --leaf: #40a02b;
-        --sun: #df8e1d;
-        --learning: #1e66f5;
-        --mind: #ea76cb;
-        --font: "Instrument Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --base: #f5f2eb;
+        --surface: #ebe6db;
+        --border: #dcd5c6;
+        --text: #24221d;
+        --muted: #6b655a;
+        --accent: #2f6b4f;
+        --accent-soft: rgba(47, 107, 79, 0.11);
+        --button-text: #fbfaf6;
+        --leaf: #4f8a3c;
+        --sun: #c98a1b;
+        --learning: #3d6fa8;
+        --mind: #a8557a;
+        --font: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-display: "Fraunces", Georgia, "Times New Roman", serif;
       }
 
       @media (prefers-color-scheme: dark) {
         :root {
           color-scheme: dark;
-          --base: #100f19;
-          --surface: #1d1b2c;
-          --border: #34314c;
-          --text: #ecebf6;
-          --muted: #a6a2c4;
-          --accent: #c6a6ff;
-          --accent-soft: rgba(203, 166, 247, 0.16);
-          --button-text: #1e1e2e;
-          --leaf: #a6e3a1;
-          --sun: #f9e2af;
-          --learning: #89b4fa;
-          --mind: #f5c2e7;
+          --base: #15140f;
+          --surface: #221f19;
+          --border: #36322a;
+          --text: #ece6d9;
+          --muted: #a8a091;
+          --accent: #8cc29f;
+          --accent-soft: rgba(140, 194, 159, 0.14);
+          --button-text: #15140f;
+          --leaf: #9bcf86;
+          --sun: #e3b25c;
+          --learning: #8fb3dd;
+          --mind: #dc9ab8;
         }
+      }
+
+      h1,
+      h2,
+      .brand {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.01em;
       }
 
       * {
@@ -73,9 +86,7 @@
       }
 
       .brand {
-        font-size: 1.15rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+        font-size: 1.3rem;
         text-decoration: none;
       }
 
@@ -114,7 +125,7 @@
         border-radius: 0.8rem;
         background: var(--accent);
         color: var(--button-text);
-        font-weight: 700;
+        font-weight: 600;
         text-decoration: none;
       }
 
@@ -263,7 +274,7 @@
   <body>
     <div class="wrap">
       <header>
-        <a class="brand" href="/welcome"><span>&#10022;</span> Osiris</a>
+        <a class="brand" href="/welcome">Osiris</a>
         <a class="sign-in" href="/login">Sign in</a>
       </header>
 

@@ -1,70 +1,65 @@
 /* Colors (light and dark), fonts and basic page elements. */
 
+/* The look: warm paper colors, one deep green accent (Osiris was the
+   Egyptian god of growth, and the network is full of leaves), a serif
+   with character for headings and a plain sans for reading. Both fonts
+   are free on Google Fonts and loaded in index.html. */
 :root {
   color-scheme: light;
-  --base: #eff1f5;
-  --surface: #e6e9ef;
-  --panel: rgba(230, 233, 239, 0.94);
-  --panel-border: #ccd0da;
-  --text: #4c4f69;
-  --muted: #6c6f85;
-  --accent: #8839ef;
-  --accent-hover: #7287fd;
-  --accent-soft: rgba(136, 57, 239, 0.12);
-  --button-text: #eff1f5;
-  --shadow: rgba(76, 79, 105, 0.16);
-  --backdrop: rgba(76, 79, 105, 0.35);
-  --sun: #df8e1d;
-  --moon: #1e66f5;
+  --base: #f5f2eb;
+  --surface: #ebe6db;
+  --panel: #faf8f3;
+  --panel-border: #dcd5c6;
+  --text: #24221d;
+  --muted: #6b655a;
+  --accent: #2f6b4f;
+  --accent-hover: #24563f;
+  --accent-soft: rgba(47, 107, 79, 0.11);
+  --button-text: #fbfaf6;
+  --shadow: rgba(36, 34, 29, 0.09);
+  --backdrop: rgba(36, 34, 29, 0.38);
+  --sun: #c98a1b;
+  --moon: #3d6fa8;
   /* Green for finished steps and the leaves on the progress tree. */
-  --leaf: #40a02b;
+  --leaf: #4f8a3c;
   /* One color per life area in the progress network. */
-  --area-health: #40a02b;
-  --area-learning: #1e66f5;
-  --area-mind: #ea76cb;
-  --area-career: #fe640b;
-  --area-creativity: #df8e1d;
-  --area-relationships: #d20f39;
-  --area-money: #179299;
-  --area-other: #7c7f93;
-  /* Monospace stays for headings and labels; longer text uses a
-     regular font because it is much easier to read in paragraphs. */
-  --font-body: "Instrument Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --area-health: #4f8a3c;
+  --area-learning: #3d6fa8;
+  --area-mind: #a8557a;
+  --area-career: #c2642a;
+  --area-creativity: #c98a1b;
+  --area-relationships: #b03f38;
+  --area-money: #2b8580;
+  --area-other: #857e72;
+  --font-body: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
 html.is-dark {
   color-scheme: dark;
-  --base: #100f19;
-  --surface: #1d1b2c;
-  --panel: #1a1828;
-  --panel-border: #34314c;
-  --text: #ecebf6;
-  --muted: #a6a2c4;
-  --accent: #c6a6ff;
-  --accent-hover: #b4befe;
-  --accent-soft: rgba(203, 166, 247, 0.16);
-  --button-text: #1e1e2e;
-  --shadow: rgba(17, 17, 27, 0.48);
-  --backdrop: rgba(17, 17, 27, 0.72);
-  --sun: #f9e2af;
-  --moon: #89b4fa;
-  --leaf: #a6e3a1;
-  --area-health: #a6e3a1;
-  --area-learning: #89b4fa;
-  --area-mind: #f5c2e7;
-  --area-career: #fab387;
-  --area-creativity: #f9e2af;
-  --area-relationships: #f38ba8;
-  --area-money: #94e2d5;
-  --area-other: #bac2de;
-}
-
-@font-face {
-  font-family: "JetBrainsMono Nerd Font";
-  src: url("/fonts/JetBrainsMonoNerdFont-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
+  --base: #15140f;
+  --surface: #221f19;
+  --panel: #1b1a15;
+  --panel-border: #36322a;
+  --text: #ece6d9;
+  --muted: #a8a091;
+  --accent: #8cc29f;
+  --accent-hover: #a5d2b5;
+  --accent-soft: rgba(140, 194, 159, 0.14);
+  --button-text: #15140f;
+  --shadow: rgba(0, 0, 0, 0.45);
+  --backdrop: rgba(0, 0, 0, 0.62);
+  --sun: #e3b25c;
+  --moon: #8fb3dd;
+  --leaf: #9bcf86;
+  --area-health: #9bcf86;
+  --area-learning: #8fb3dd;
+  --area-mind: #dc9ab8;
+  --area-career: #e4a073;
+  --area-creativity: #e3b25c;
+  --area-relationships: #e08a80;
+  --area-money: #7ccbc2;
+  --area-other: #b8b0a2;
 }
 
 * {
@@ -89,10 +84,19 @@ html.is-dark {
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+  font-family: var(--font-body);
   background: var(--base);
   color: var(--text);
   transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* Headings use the serif; everything else the sans. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .startup-screen {

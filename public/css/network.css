@@ -162,18 +162,17 @@
 }
 
 .tree-growth .net-node.is-goal text {
-  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
-  font-size: 12px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
   opacity: 1;
 }
 
 .tree-growth .net-node.is-area text {
-  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 500;
   opacity: 1;
 }
 
@@ -230,9 +229,9 @@
 
 .tree-growth .tree-node-tag {
   fill: var(--muted);
-  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 500;
 }
 
 .tree-growth .is-locked text {
