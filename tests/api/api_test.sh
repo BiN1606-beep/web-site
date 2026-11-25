@@ -28,7 +28,7 @@ code=$(curl -sS -c $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: applicatio
 psql -q -v ON_ERROR_STOP=1 -c "INSERT INTO user_progress_trees (user_id, tree_data, completed_count, is_active) SELECT id, '{\"goal\":\"G\",\"area\":\"Health\",\"summary\":\"s\",\"steps\":[{\"title\":\"s1\",\"description\":\"d\",\"why\":\"w\"},{\"title\":\"s2\",\"description\":\"d\",\"why\":\"w\",\"how\":[\"a\",\"b\"]},{\"title\":\"s3\",\"description\":\"d\",\"why\":\"w\"}]}', 0, true FROM auth_users WHERE email='t@test.se'"
 
 curl -sS -b $J -o /tmp/out $B/api/progress-tree
-jq -e '.reminders_key | startswith("BPLACEHOLDER")' /tmp/out >/dev/null || fail "reminders_key"
+jq -e '.reminders_key | startswith("B") and length == 87' /tmp/out >/dev/null || fail "reminders_key"
 jq -e '.tree.exists and (.tree.checkins | length == 0)' /tmp/out >/dev/null || fail "initial tree"
 echo "GET tree ok"
 

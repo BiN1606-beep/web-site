@@ -159,27 +159,24 @@ How it fits together:
   (migration 010) through the `reminder_subscribe` action of `/api/progress-tree`.
   Only addresses at the real push services (Google, Mozilla, Apple,
   Microsoft) are accepted.
-- `reminders/send_reminders.py` runs every 15 minutes from a systemd timer
-  and sends the reminders that are due. It's Python because push messages
-  must be encrypted and signed, and `pywebpush` does that in one call.
+- `lua/osiris/push_sender.lua` runs inside OpenResty every 5 minutes and
+  sends the reminders that are due, and friends' nudges. Push messages must
+  be encrypted for each browser (RFC 8291) and signed with our key (RFC
+  8292); it does both with `lua-resty-openssl`, which comes with OpenResty.
+  So the server needs nothing extra: no Python, no separate timer.
 
-### One-time server setup
+### Server setup
 
-Reminders stay hidden on the site until this is done. On the server, as the
-deploy user:
+There is no manual step. The first deploy makes the key pair that signs
+push messages (`reminders/make_vapid_keys.sh`, using the `openssl` command):
+`/etc/mysite/vapid_private.pem` (readable by root only; OpenResty's master
+process reads it at start) and `/etc/mysite/vapid_public.txt`, which deploy
+copies to where the site reads it. From then on deploy always keeps that
+pair. Never delete or replace it: every reminder people have turned on would
+stop working.
 
-```sh
-sudo bash /opt/mysite/reminders/setup.sh
-```
-
-It installs a Python environment in `/opt/mysite-reminders`, makes the key
-pair that signs push messages (`/etc/mysite/vapid_private.pem`, kept secret,
-and `/etc/mysite/vapid_public.txt`) and starts the `osiris-reminders.timer`.
-Then deploy once more so the site picks up the public key. Never make a new
-key pair afterwards: every existing reminder subscription would stop working.
-
-Check that it runs with `systemctl status osiris-reminders.timer` and read
-its log with `journalctl -u osiris-reminders.service`.
+The sender logs to OpenResty's error log; look for lines with
+"Push messages" or "push sender".
 
 ## Tests
 

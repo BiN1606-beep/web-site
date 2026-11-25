@@ -1,25 +1,31 @@
-"""End-to-end test of reminders/send_reminders.py against a fake push service.
+"""End-to-end test of the server's push sender (lua/osiris/push_sender.lua).
 
-The fake service records each request and answers 201 (or 410 for a
-"gone" subscription). The test then decrypts the message with the
-receiving browser's private key, which proves the encryption is right.
+The server runs in its own container (tests/run_all.sh, step 3). This test
+runs a fake push service, puts subscriptions in the database, and asks the
+server to send (/_test/send-reminders, which only exists in the test
+nginx.conf). The fake service records each request and answers 201 (or 410
+for a "gone" subscription). The test then checks the VAPID signature and
+decrypts each message with the receiving browser's private key, using
+independent libraries, which proves the Lua crypto is right.
+
+Python is only used here, in the test container; the real server has none.
 """
 import base64
 import json
 import os
-import subprocess
-import sys
 import threading
+import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import http_ece
 import psycopg
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 
-REMINDERS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "reminders")
-sys.path.insert(0, REMINDERS)
-import send_reminders  # noqa: E402
+WEB_URL = os.environ["WEB_URL"]
+PUSH_BASE = f"http://{os.environ['PUSH_HOST']}:8099"
 
 received = []
 
@@ -35,36 +41,53 @@ class FakePushService(BaseHTTPRequestHandler):
         pass
 
 
-server = HTTPServer(("127.0.0.1", 8099), FakePushService)
+server = HTTPServer(("0.0.0.0", 8099), FakePushService)
 threading.Thread(target=server.serve_forever, daemon=True).start()
 
-# Make the VAPID key the same way setup.sh does.
-setup = open(os.path.join(REMINDERS, "setup.sh")).read()
-key_script = setup.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
-for path in ("/tmp/vapid_private.pem", "/tmp/vapid_public.txt"):
-    if os.path.exists(path):
-        os.remove(path)
-subprocess.run([sys.executable, "-I", "-", "/tmp/vapid_private.pem", "/tmp/vapid_public.txt"],
-               input=key_script.encode(), check=True)
-public_key = open("/tmp/vapid_public.txt").read().strip()
-assert len(public_key) == 87, public_key
-assert oct(os.stat("/tmp/vapid_private.pem").st_mode & 0o777) == "0o600"
-os.environ["VAPID_PRIVATE_KEY_FILE"] = "/tmp/vapid_private.pem"
+
+def run_sender():
+    query = urllib.parse.urlencode({"allow": PUSH_BASE + "/"})
+    with urllib.request.urlopen(f"{WEB_URL}/_test/send-reminders?{query}", timeout=30) as response:
+        counts = json.loads(response.read())
+    assert "error" not in counts, counts
+    return counts
+
+
+def unb64(text):
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def b64(raw):
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def check_vapid(headers):
+    """The Authorization header is a valid ES256 token for our push service."""
+    auth = headers["authorization"]
+    assert auth.startswith("vapid t="), auth
+    token, key = auth[len("vapid t="):].split(", k=")
+    header, claims, signature = token.split(".")
+    assert json.loads(unb64(header)) == {"typ": "JWT", "alg": "ES256"}, header
+    claims = json.loads(unb64(claims))
+    assert claims["aud"] == PUSH_BASE, claims
+    assert claims["sub"] == "https://osiris-ai.se", claims
+    public = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), unb64(key))
+    raw = unb64(signature)
+    assert len(raw) == 64, len(raw)
+    der = encode_dss_signature(int.from_bytes(raw[:32], "big"), int.from_bytes(raw[32:], "big"))
+    signed = token.rsplit(".", 1)[0]
+    public.verify(der, signed.encode(), ec.ECDSA(hashes.SHA256()))
+
+
+def decrypt(body):
+    return json.loads(http_ece.decrypt(body, private_key=browser_key, auth_secret=auth_secret, version="aes128gcm"))
+
 
 # A fake browser: its key pair and auth secret.
 browser_key = ec.generate_private_key(ec.SECP256R1())
 browser_public = browser_key.public_key().public_bytes(
     serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
-b64 = lambda raw: base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 auth_secret = os.urandom(16)
-
-# The real check refuses anything but real push services; the fake runs on
-# localhost over http, so allow it here (and test the check separately).
-assert send_reminders.is_push_service("https://fcm.googleapis.com/fcm/send/abc")
-assert send_reminders.is_push_service("https://web.push.apple.com/QGx")
-assert not send_reminders.is_push_service("https://evil.example.com/fcm.googleapis.com/")
-assert not send_reminders.is_push_service("http://fcm.googleapis.com/x")
-send_reminders.is_push_service = lambda endpoint: endpoint.startswith("http://127.0.0.1:8099/")
 
 with psycopg.connect(autocommit=True) as db:
     db.execute("DELETE FROM push_subscriptions; DELETE FROM daily_checkins")
@@ -82,39 +105,51 @@ with psycopg.connect(autocommit=True) as db:
         db.execute(
             "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, timezone, remind_hour) "
             "VALUES (%s, %s, %s, %s, 'UTC', 0)",
-            (user_id, "http://127.0.0.1:8099" + path, b64(browser_public), b64(auth_secret)))
-    # A subscription whose reminder hour hasn't come yet (23:00 in a zone
-    # where it's earlier) is checked by the hour rule below.
+            (user_id, PUSH_BASE + path, b64(browser_public), b64(auth_secret)))
+    # An address that is not a real push service (and not the test's) is
+    # never called, and the subscription is removed.
+    db.execute(
+        "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, timezone, remind_hour) "
+        "VALUES (%s, 'http://evil.example.com/x', %s, %s, 'UTC', 0)",
+        (with_goal, b64(browser_public), b64(auth_secret)))
 
-    assert send_reminders.main() == 0
+    counts = run_sender()
     paths = sorted(path for path, _, _ in received)
-    assert paths == ["/gone", "/ok"], paths  # user 2 has no goal: no reminder
+    assert paths == ["/gone", "/ok"], (paths, counts)  # user 2 has no goal: no reminder
+    assert counts == {"sent": 1, "removed": 2, "failed": 0}, counts
     path, headers, body = next(item for item in received if item[0] == "/ok")
-    assert headers["content-encoding"] == "aes128gcm"
-    assert headers["authorization"].startswith("vapid t=") and f"k={public_key}" in headers["authorization"]
-    message = json.loads(http_ece.decrypt(body, private_key=browser_key, auth_secret=auth_secret, version="aes128gcm"))
+    assert headers["content-encoding"] == "aes128gcm", headers
+    assert headers["ttl"] == "43200", headers
+    check_vapid(headers)
+    message = decrypt(body)
     assert message["title"] == "Your first check-in is waiting", message
     remaining = [row[0] for row in db.execute("SELECT endpoint FROM push_subscriptions ORDER BY id")]
-    assert remaining == ["http://127.0.0.1:8099/ok", "http://127.0.0.1:8099/nogoal"], remaining  # 410 removed
+    assert remaining == [PUSH_BASE + "/ok", PUSH_BASE + "/nogoal"], remaining  # 410 and evil removed
 
     # Second run the same day: nothing more is sent.
     received.clear()
-    assert send_reminders.main() == 0
+    run_sender()
     assert received == [], received
 
     # Next "day" with yesterday's check-in: the streak message.
     db.execute("UPDATE push_subscriptions SET last_sent_day = NULL")
     db.execute("INSERT INTO daily_checkins (user_id, day, note) VALUES (%s, (now() AT TIME ZONE 'UTC')::date - 1, 'x')", (with_goal,))
-    send_reminders.main()
-    _, _, body = received[-1]
-    message = json.loads(http_ece.decrypt(body, private_key=browser_key, auth_secret=auth_secret, version="aes128gcm"))
-    assert message["title"] == "Keep your streak alive", message
+    run_sender()
+    assert decrypt(received[-1][2])["title"] == "Keep your streak alive"
+
+    # A few days away: the "misses you" message.
+    received.clear()
+    db.execute("UPDATE push_subscriptions SET last_sent_day = NULL")
+    db.execute("UPDATE daily_checkins SET day = day - 3")
+    run_sender()
+    assert decrypt(received[-1][2])["title"] == "Your network misses you"
+    db.execute("UPDATE daily_checkins SET day = day + 3")
 
     # Checked in today: no reminder.
     received.clear()
     db.execute("UPDATE push_subscriptions SET last_sent_day = NULL")
     db.execute("INSERT INTO daily_checkins (user_id, day, note) VALUES (%s, (now() AT TIME ZONE 'UTC')::date, 'x')", (with_goal,))
-    send_reminders.main()
+    run_sender()
     assert received == [], received
 
     # Reminder hour not reached yet in the user's zone: no reminder.
@@ -122,9 +157,23 @@ with psycopg.connect(autocommit=True) as db:
     db.execute("""UPDATE push_subscriptions SET last_sent_day = NULL,
                   remind_hour = LEAST(23, extract(hour FROM now() AT TIME ZONE 'UTC')::int + 1)""")
     hour_now = db.execute("SELECT extract(hour FROM now() AT TIME ZONE 'UTC')::int").fetchone()[0]
-    send_reminders.main()
+    run_sender()
     if hour_now < 23:
         assert received == [], received
+
+    # A failed send (push service down) is tried again next run.
+    db.execute("UPDATE push_subscriptions SET last_sent_day = NULL, remind_hour = 0")
+    server.shutdown()
+    server.server_close()
+    counts = run_sender()
+    assert counts["failed"] == 1 and counts["sent"] == 0, counts
+    assert db.execute("SELECT last_sent_day FROM push_subscriptions WHERE endpoint = %s",
+                      (PUSH_BASE + "/ok",)).fetchone()[0] is None
+    server = HTTPServer(("0.0.0.0", 8099), FakePushService)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    received.clear()
+    run_sender()
+    assert [path for path, _, _ in received] == ["/ok"], received
 
     # A friend's nudge goes to every device of that friend, once.
     friend = db.execute("INSERT INTO auth_users (email, password_hash, profile_display_name) "
@@ -137,13 +186,13 @@ with psycopg.connect(autocommit=True) as db:
                "VALUES (%s, %s, %s, (now() AT TIME ZONE 'UTC')::date)", (tree_id, friend, with_goal))
     db.execute("UPDATE push_subscriptions SET last_sent_day = (now() AT TIME ZONE 'UTC')::date")
     received.clear()
-    send_reminders.main()
+    run_sender()
     assert [path for path, _, _ in received] == ["/ok"], received
-    message = json.loads(http_ece.decrypt(received[0][2], private_key=browser_key, auth_secret=auth_secret, version="aes128gcm"))
-    assert message["title"] == "Maja is waiting for you" and "Run every morning" in message["body"], message
+    message = decrypt(received[0][2])
+    assert message["title"] == "Maja is waiting for you" and "“Run every morning”" in message["body"], message
     assert message["tag"] == f"osiris-nudge-{tree_id}", message
     received.clear()
-    send_reminders.main()
+    run_sender()
     assert received == [], received  # sent once
 
 print("REMINDER_TESTS_OK")

@@ -57,8 +57,14 @@ else
     rm -f "$debug_email_file"
 fi
 
-# The public key for daily reminders (made once by reminders/setup.sh). The
-# site only offers reminders when this file exists.
+# The key pair that signs reminder push messages. Made once, the first time
+# this runs; an existing pair is always kept (a new one would break every
+# reminder people have turned on). The site only offers reminders when the
+# public key is in place.
+if ! sudo test -f /etc/mysite/vapid_private.pem; then
+    echo "Making the reminder key pair..."
+    sudo sh "$REPO/reminders/make_vapid_keys.sh" /etc/mysite
+fi
 vapid_public_file="$REPO/lua/vapid_public_key.txt"
 if [[ -r /etc/mysite/vapid_public.txt ]]; then
     install -m 644 /etc/mysite/vapid_public.txt "$vapid_public_file"
