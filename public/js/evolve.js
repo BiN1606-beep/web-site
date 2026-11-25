@@ -15,13 +15,22 @@ const evolveLabel = document.querySelector("#evolve-label");
 const evolveInput = document.querySelector("#evolve-input");
 const evolveSubmit = document.querySelector("#evolve-submit");
 const evolveStatus = document.querySelector("#evolve-status");
+const evolveSprout = document.querySelector("#evolve-sprout");
+const evolveSproutText = document.querySelector("#evolve-sprout-text");
+const evolveSproutDot = document.querySelector("#evolve-sprout-dot");
+const evolveSproutYes = document.querySelector("#evolve-sprout-yes");
+
+// The area the server suggested for a new branch, while we ask about it.
+let evolveNewArea = null;
 
 // Back to the first question, for the next time a goal is finished.
 const resetEvolve = () => {
   evolveChoice.hidden = false;
   evolveLater.hidden = true;
   evolveForm.hidden = true;
+  evolveSprout.hidden = true;
   evolveStatus.textContent = "";
+  evolveNewArea = null;
 };
 
 evolveYes.addEventListener("click", () => {
@@ -48,8 +57,10 @@ document.querySelector("#evolve-new-tree").addEventListener("click", () => {
 
 document.querySelector("#evolve-back").addEventListener("click", resetEvolve);
 
-evolveForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+// Sends the new goal. The server first checks if it fits the finished
+// goal's life area. If not, it answers with confirm_new_branch and we ask
+// "a new beginning will sprout?" before anything is built.
+const buildEvolvedRoadmap = async ({ confirmed = false } = {}) => {
   const dream = evolveInput.value.trim();
   if (dream.length < 3) {
     evolveStatus.textContent = "Tell your coach a little more about your goal.";
@@ -57,9 +68,25 @@ evolveForm.addEventListener("submit", async (event) => {
   }
   evolveSubmit.disabled = true;
   evolveInput.disabled = true;
-  evolveStatus.textContent = "Your coach is building your roadmap. This can take up to a minute...";
+  evolveSproutYes.disabled = true;
+  evolveStatus.textContent = confirmed
+    ? "Your new branch is sprouting. This can take up to a minute..."
+    : "Your coach is building your roadmap. This can take up to a minute...";
   try {
-    const result = await postProgressTree({ action: "evolve", dream });
+    const body = { action: "evolve", dream };
+    if (confirmed) Object.assign(body, { confirmed: true, area: evolveNewArea });
+    const result = await postProgressTree(body);
+    if (result.confirm_new_branch) {
+      evolveNewArea = result.area;
+      const from = result.finished_area;
+      evolveSproutText.textContent = `This sounds like a new direction (${result.area}), not ${from}. It will grow from the last step of your ${from} goal as a new branch with its own color.`;
+      evolveSproutDot.style.background = areaColor(result.area);
+      evolveStatus.textContent = "";
+      evolveForm.hidden = true;
+      evolveSprout.hidden = false;
+      evolveSproutYes.focus();
+      return;
+    }
     evolveInput.value = "";
     resetEvolve();
     // The new goal is now in focus; show its first step.
@@ -67,8 +94,32 @@ evolveForm.addEventListener("submit", async (event) => {
     treeStatus.textContent = result.reply || "Your new roadmap is ready. Your first step is waiting.";
   } catch (error) {
     evolveStatus.textContent = error.message;
+    if (confirmed) {
+      evolveSprout.hidden = true;
+      evolveForm.hidden = false;
+    }
   } finally {
     evolveSubmit.disabled = false;
     evolveInput.disabled = false;
+    evolveSproutYes.disabled = false;
   }
+};
+
+evolveForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  buildEvolvedRoadmap();
+});
+
+evolveSproutYes.addEventListener("click", () => {
+  evolveSprout.hidden = true;
+  evolveForm.hidden = false;
+  buildEvolvedRoadmap({ confirmed: true });
+});
+
+// Back to the text box to write a goal that fits better.
+document.querySelector("#evolve-sprout-no").addEventListener("click", () => {
+  evolveSprout.hidden = true;
+  evolveForm.hidden = false;
+  evolveNewArea = null;
+  evolveInput.focus();
 });

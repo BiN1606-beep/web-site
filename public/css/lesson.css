@@ -249,3 +249,38 @@ html.is-dark .game-button {
 .evolve-status:empty {
   display: none;
 }
+
+/* "A new beginning will sprout": the new goal is in another life area. */
+.evolve-sprout {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px dashed var(--sun);
+  border-radius: 1rem;
+  background: var(--panel);
+  animation: sprout-in 400ms ease-out both;
+}
+
+.evolve-sprout h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.evolve-sprout-dot {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 3px solid var(--sun);
+  border-radius: 50%;
+}
+
+@keyframes sprout-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evolve-sprout {
+    animation: none;
+  }
+}

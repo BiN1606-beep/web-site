@@ -177,6 +177,15 @@
                     <button class="save-button game-button" id="evolve-submit" type="submit">Build my roadmap</button>
                     <p class="evolve-status" id="evolve-status" role="status" aria-live="polite"></p>
                   </form>
+                  <!-- When the new goal is in a different life area, ask once:
+                       it becomes a new branch that sprouts from this goal. -->
+                  <div class="evolve-sprout" id="evolve-sprout" hidden>
+                    <span class="evolve-sprout-dot" id="evolve-sprout-dot" aria-hidden="true"></span>
+                    <h4>A new beginning will sprout</h4>
+                    <p id="evolve-sprout-text"></p>
+                    <button class="save-button game-button" id="evolve-sprout-yes" type="button">Let it sprout</button>
+                    <button class="profile-secondary-button" id="evolve-sprout-no" type="button">Change my answer</button>
+                  </div>
                 </section>
 
                 <!-- Daily check-in: one line a day keeps the streak alive.

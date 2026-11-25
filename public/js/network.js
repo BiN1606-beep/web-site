@@ -454,6 +454,10 @@ const renderNetworkDetails = () => {
     );
     treeNodeDetails.append(createElement("p", "",
       `${goal.completed.length} of ${goal.total_steps} steps done.${goal.finished ? " This goal is now a permanent star in your network." : ""}`));
+    const parent = goal.grows_from != null ? goalById(goal.grows_from) : null;
+    if (parent) {
+      treeNodeDetails.append(createElement("p", "", `It sprouted from the end of "${parent.goal}".`));
+    }
     const actions = createElement("div", "tree-actions");
     if (goal.active) {
       treeNodeDetails.append(createElement("p", "", "This is your focus goal: its current step is shown in the panel."));
@@ -554,7 +558,19 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
   if (shown.length === 0) {
     nodes.push(networkNode("seed", { kind: "seed", label: "Your first goal will grow here", r: 12, charge: -200 }));
   }
-  const areas = [...new Set(shown.map((goal) => goal.area))];
+  // A goal made with "Keep evolving" grows from the last step of the goal it
+  // came from (the gold milestone) instead of from a life-area hub. In a
+  // new area it keeps its own color, so it reads as a new branch.
+  const shownById = new Map(shown.map((goal) => [goal.id, goal]));
+  const sproutParent = (goal) => {
+    const parent = goal.grows_from != null ? shownById.get(goal.grows_from) : null;
+    return parent && parent.id !== goal.id ? parent : null;
+  };
+  const lastStepId = (goal) => {
+    const total = Math.max(Number(goal.total_steps) || 0, goal.completed.length + (goal.current_step ? 1 : 0));
+    return total > 0 ? `goal:${goal.id}:step:${total - 1}` : `goal:${goal.id}`;
+  };
+  const areas = [...new Set(shown.filter((goal) => !sproutParent(goal)).map((goal) => goal.area))];
   if (!network.focusOnly) {
     for (const area of areas) {
       nodes.push(networkNode(`area:${area}`, {
@@ -574,8 +590,13 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
       finished: goal.finished,
       r: goal.finished ? 20 : 15,
       charge: -350,
-    }, `area:${goal.area}`));
-    if (!network.focusOnly) links.push({ source: `area:${goal.area}`, target: goalId, kind: "area", distance: 90 });
+      sprouted: Boolean(sproutParent(goal)),
+    }, sproutParent(goal) ? lastStepId(sproutParent(goal)) : `area:${goal.area}`));
+    if (sproutParent(goal)) {
+      links.push({ source: lastStepId(sproutParent(goal)), target: goalId, kind: "sprout", distance: 60 });
+    } else if (!network.focusOnly) {
+      links.push({ source: `area:${goal.area}`, target: goalId, kind: "area", distance: 90 });
+    }
     const total = Math.max(Number(goal.total_steps) || 0, goal.completed.length + (goal.current_step ? 1 : 0));
     let previous = goalId;
     for (let index = 0; index < total; index += 1) {
@@ -773,7 +794,7 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
 
   // Legend: one entry per life area in the network.
   netLegend.replaceChildren();
-  for (const area of areas) {
+  for (const area of new Set(shown.map((goal) => goal.area))) {
     const swatch = createElement("b");
     swatch.style.background = areaColor(area);
     const entry = createElement("span");
