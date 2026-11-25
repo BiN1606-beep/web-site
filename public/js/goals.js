@@ -143,6 +143,7 @@ const renderProgressTree = (tree) => {
   confirmingUndo = false;
   treeUndoButton.textContent = "Undo last step";
   treeUndoButton.hidden = !(tree.completed_count > 0);
+  refreshLesson(tree);
 };
 
 const loadProgressTree = async () => {

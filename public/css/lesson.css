@@ -1,0 +1,196 @@
+/* Today's step as a game (public/js/lesson.js): a full-screen card on
+   phones, a centered card on bigger screens, a chunky progress bar on top
+   and a big button at the bottom. */
+
+/* Big, chunky buttons with a "pressable" edge underneath. */
+.game-button {
+  justify-self: stretch;
+  min-height: 3rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.9rem;
+  box-shadow: 0 4px 0 var(--accent-hover);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.game-button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--accent-hover);
+}
+
+html.is-dark .game-button {
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, black);
+}
+
+.step-task-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.lesson {
+  width: min(94vw, 34rem);
+  max-width: none;
+  min-height: min(34rem, 88vh);
+  padding: 1.25rem 1.5rem 1.5rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1.5rem;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 20px 45px var(--shadow);
+  overflow: hidden;
+}
+
+.lesson[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.lesson::backdrop {
+  background: var(--backdrop);
+}
+
+.lesson-top {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.lesson-close {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lesson-close:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.lesson-bar {
+  flex: 1;
+  height: 0.9rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.lesson-bar-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--leaf);
+  transition: width 400ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.lesson-card {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  gap: 0.85rem;
+  padding: 0.5rem 0.25rem;
+}
+
+.lesson-card.is-entering {
+  animation: lesson-in 260ms ease-out both;
+}
+
+@keyframes lesson-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lesson-label {
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.lesson-card h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 6vw, 2.2rem);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.lesson-text {
+  margin: 0;
+  max-width: none;
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1.55;
+}
+
+.lesson-cheer {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--leaf);
+  font-weight: 600;
+  text-align: center;
+}
+
+.lesson-cheer.is-showing {
+  animation: lesson-cheer 900ms ease-out both;
+}
+
+@keyframes lesson-cheer {
+  0% { opacity: 0; transform: scale(0.7); }
+  25% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.lesson-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+.lesson-actions:has(#lesson-secondary:not([hidden])) {
+  grid-template-columns: 1fr 2fr;
+}
+
+.lesson-actions .profile-secondary-button {
+  min-height: 3rem;
+  border-radius: 0.9rem;
+}
+
+/* Leaves from the celebration fly out of the middle of the lesson. */
+.lesson .tree-leaf-burst {
+  z-index: 1;
+}
+
+/* On phones the lesson takes the whole screen. */
+@media (max-width: 560px) {
+  .lesson {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-card.is-entering,
+  .lesson-cheer.is-showing {
+    animation: none;
+  }
+}

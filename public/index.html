@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="/css/steps.css">
     <link rel="stylesheet" href="/css/settings.css">
     <link rel="stylesheet" href="/css/tabs.css">
+    <link rel="stylesheet" href="/css/lesson.css">
   </head>
   <body>
     <div class="startup-screen" id="startup-screen">
@@ -131,29 +132,25 @@
                   </div>
                   <h3 id="tree-step-title"></h3>
                   <p id="tree-step-description"></p>
-                  <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
-                    <legend>Checklist</legend>
-                    <ul id="tree-step-tasks"></ul>
-                    <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
-                  </fieldset>
-                  <!-- The background for the step, folded away until wanted. -->
-                  <details class="step-more">
-                    <summary>Why, tips and how to do it</summary>
-                    <div>
-                      <span class="tree-step-label">Why it matters</span>
-                      <p id="tree-step-why"></p>
-                    </div>
-                    <div id="tree-step-tip-container">
-                      <span class="tree-step-label">A helpful tip</span>
-                      <p id="tree-step-tip"></p>
-                    </div>
-                    <div id="tree-step-how-container" hidden>
-                      <span class="tree-step-label">How to do it</span>
-                      <ol class="tree-step-how" id="tree-step-how"></ol>
-                    </div>
-                    <button class="profile-secondary-button" id="tree-step-guide" type="button">How do I do this?</button>
-                  </details>
-                  <button class="save-button" id="tree-complete" type="button">Complete step</button>
+                  <p class="step-task-count" id="step-task-count" hidden></p>
+                  <!-- One button opens the step as a short lesson, one card
+                       at a time (public/js/lesson.js). -->
+                  <button class="save-button game-button" id="lesson-start" type="button">Start</button>
+                  <!-- The step's details. Not shown here: the lesson reads
+                       them and the checkboxes still decide when the step can
+                       be completed. -->
+                  <div class="step-data" hidden>
+                    <fieldset class="tree-step-checklist" id="tree-step-checklist" hidden>
+                      <legend>Checklist</legend>
+                      <ul id="tree-step-tasks"></ul>
+                      <p class="tree-checklist-status" id="tree-checklist-status" role="status" aria-live="polite"></p>
+                    </fieldset>
+                    <p id="tree-step-why"></p>
+                    <div id="tree-step-tip-container"><p id="tree-step-tip"></p></div>
+                    <div id="tree-step-how-container" hidden><ol class="tree-step-how" id="tree-step-how"></ol></div>
+                    <button id="tree-step-guide" type="button">How do I do this?</button>
+                    <button id="tree-complete" type="button">Complete step</button>
+                  </div>
                 </article>
                 <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
 
@@ -466,6 +463,26 @@
         </form>
         <p id="groq-answer" aria-live="polite"></p>
       </dialog>
+      <!-- The step as a game: one card at a time with a progress bar,
+           like a language-learning app (public/js/lesson.js). -->
+      <dialog class="lesson" id="lesson" aria-labelledby="lesson-title">
+        <div class="lesson-top">
+          <button class="lesson-close" id="lesson-close" type="button" aria-label="Close and come back later">&times;</button>
+          <div class="lesson-bar" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="lesson-bar-fill" id="lesson-bar-fill"></div>
+          </div>
+        </div>
+        <div class="lesson-card" id="lesson-card">
+          <span class="lesson-label" id="lesson-label"></span>
+          <h2 id="lesson-title"></h2>
+          <p class="lesson-text" id="lesson-text"></p>
+        </div>
+        <p class="lesson-cheer" id="lesson-cheer" role="status" aria-live="polite"></p>
+        <div class="lesson-actions">
+          <button class="profile-secondary-button" id="lesson-secondary" type="button" hidden></button>
+          <button class="save-button game-button" id="lesson-next" type="button">Continue</button>
+        </div>
+      </dialog>
     </main>
     <!-- d3 (free, open source) runs the moving network graph: the physics
          that lets the dots float and settle, plus dragging and zooming.
@@ -481,6 +498,7 @@
     <script src="/js/tabs.js"></script>
     <script src="/js/streak.js"></script>
     <script src="/js/goals.js"></script>
+    <script src="/js/lesson.js"></script>
     <script src="/js/review.js"></script>
     <script src="/js/reminders.js"></script>
     <script src="/js/profile.js"></script>
