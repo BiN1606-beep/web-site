@@ -87,19 +87,31 @@ code=$(curl -sS -c $J2 -o /tmp/out -w '%{http_code}' -H 'Content-Type: applicati
 A_ID=$(psql -tAc "SELECT id FROM auth_users WHERE email='t@test.se'")
 B_ID=$(psql -tAc "SELECT id FROM auth_users WHERE email='friend@test.se'")
 
-[ "$(cget $J2 "action=profile&userId=$A_ID")" = 403 ] || { cat /tmp/out; fail "private profile visible"; }
-[ "$(cpost $J '{"action":"privacy","settings":{"profile_visibility":"public","show_goals":true,"show_progress":true,"show_activity":true,"allow_friend_requests":true,"show_in_search":true}}')" = 200 ] || { cat /tmp/out; fail privacy; }
-[ "$(cpost $J2 "{\"action\":\"request\",\"userId\":\"$A_ID\"}")" = 200 ] || { cat /tmp/out; fail "friend request"; }
+# Like TikTok: a private profile shows only its name and counts, and a
+# follow to it is a request until the owner accepts it.
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || { cat /tmp/out; fail "private profile header"; }
+jq -e '.profile.private == true and .profile.bio == "" and .profile.network == null and .profile.i_follow == "none"' /tmp/out >/dev/null || { cat /tmp/out; fail "private profile hides details"; }
+[ "$(cpost $J2 "{\"action\":\"follow\",\"userId\":\"$A_ID\"}")" = 200 ] || { cat /tmp/out; fail "follow request"; }
+jq -e '.i_follow == "pending" and .friends == false' /tmp/out >/dev/null || { cat /tmp/out; fail "follow to a private profile is a request"; }
+[ "$(cget $J action=summary)" = 200 ] || fail "summary"
+jq -e --argjson b "$B_ID" '(.requests | length == 1) and .requests[0].id == $b and (.followers | length == 0)' /tmp/out >/dev/null || { cat /tmp/out; fail "request in summary"; }
 [ "$(cpost $J "{\"action\":\"accept\",\"userId\":\"$B_ID\"}")" = 200 ] || { cat /tmp/out; fail "accept"; }
-[ "$(cpost $J2 "{\"action\":\"follow\",\"userId\":\"$A_ID\"}")" = 200 ] || { cat /tmp/out; fail "follow"; }
-echo "privacy, friend request, accept, follow ok"
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || { cat /tmp/out; fail "profile after accept"; }
+jq -e '.profile.private == false and .profile.i_follow == "accepted" and .profile.follower_count == 1' /tmp/out >/dev/null || { cat /tmp/out; fail "accepted follower sees the profile"; }
+[ "$(cpost $J '{"action":"privacy","settings":{"profile_visibility":"public","show_goals":true,"show_progress":true,"show_activity":true,"allow_friend_requests":true,"show_in_search":true}}')" = 200 ] || { cat /tmp/out; fail privacy; }
+# B's profile is private, but A can follow back right away: that makes friends.
+[ "$(cpost $J "{\"action\":\"follow\",\"userId\":\"$B_ID\"}")" = 200 ] || { cat /tmp/out; fail "follow back"; }
+jq -e '.i_follow == "accepted" and .friends == true' /tmp/out >/dev/null || { cat /tmp/out; fail "follow back makes friends"; }
+[ "$(cget $J action=summary)" = 200 ] || fail "summary after follow back"
+jq -e --argjson b "$B_ID" '(.friends | length == 1) and .friends[0].id == $b and .friends[0].follows_me == true and .friends[0].i_follow == "accepted"' /tmp/out >/dev/null || { cat /tmp/out; fail "friends list"; }
+echo "privacy, follow request, accept, follow back ok"
 
 [ "$(post "{\"action\":\"complete\",\"expectedStep\":0,\"day\":\"$TODAY\"}")" = 200 ] || { cat /tmp/out; fail "complete for feed"; }
 [ "$(cget $J2 action=feed)" = 200 ] || { cat /tmp/out; fail feed; }
 ACTIVITY=$(jq -r '[.activities[] | select(.activity_type == "milestone_completed")][0].id' /tmp/out)
 [ -n "$ACTIVITY" ] && [ "$ACTIVITY" != null ] || { cat /tmp/out; fail "milestone in feed"; }
 [ "$(cget $J2 action=notifications)" = 200 ] || fail notifications
-jq -e '[.notifications[].notification_type] | index("milestone_completed") != null and index("friend_accepted") != null' /tmp/out >/dev/null || { cat /tmp/out; fail "B notifications"; }
+jq -e '[.notifications[].notification_type] | index("milestone_completed") != null and index("follow_accepted") != null and index("new_friend") != null' /tmp/out >/dev/null || { cat /tmp/out; fail "B notifications"; }
 [ "$(cpost $J2 "{\"action\":\"react\",\"activityId\":\"$ACTIVITY\",\"reaction\":\"celebrate\"}")" = 200 ] || { cat /tmp/out; fail react; }
 [ "$(cget $J action=notifications)" = 200 ] || fail "A notifications"
 jq -e '[.notifications[].notification_type] | index("reaction") != null' /tmp/out >/dev/null || { cat /tmp/out; fail "reaction notification"; }
@@ -116,6 +128,61 @@ jq -e '.profile.network.goals[0].goal == "Goal 1"' /tmp/out >/dev/null || { cat 
 jq -e '.profile.network == null' /tmp/out >/dev/null || { cat /tmp/out; fail "network hidden without show_progress"; }
 echo "friend network ok"
 echo "feed, notifications, reactions, profile ok"
+
+# ---- Shared trees: grow only on days both friends water ----
+tpost() { cpost "$1" "{\"action\":\"$2\",\"treeId\":\"$TREE\",\"day\":\"$TODAY\",\"note\":\"$3\"}"; }
+[ "$(cpost $J "{\"action\":\"tree_plant\",\"userId\":\"$B_ID\",\"title\":\"Run together\"}")" = 201 ] || { cat /tmp/out; fail "plant"; }
+TREE=$(jq -r .id /tmp/out)
+[ "$(cpost $J2 "{\"action\":\"tree_plant\",\"userId\":\"$A_ID\",\"title\":\"Again\"}")" = 409 ] || { cat /tmp/out; fail "one tree per pair"; }
+[ "$(tpost $J tree_water "ran")" = 409 ] || { cat /tmp/out; fail "invited tree can't be watered"; }
+[ "$(tpost $J tree_accept "")" = 200 ] && fail "planter can't accept own invite" || true
+[ "$(tpost $J2 tree_accept "")" = 200 ] || { cat /tmp/out; fail "accept tree"; }
+[ "$(tpost $J tree_water "ran 3 km")" = 200 ] || { cat /tmp/out; fail "water"; }
+jq -e '.grew == false' /tmp/out >/dev/null || { cat /tmp/out; fail "one watering doesn't grow"; }
+[ "$(cget $J2 "action=trees&day=$TODAY")" = 200 ] || { cat /tmp/out; fail "trees"; }
+jq -e --arg t "$TODAY" '.trees[0].grown == 0 and .trees[0].status == "growing" and .trees[0].days[0].day == $t and .trees[0].days[0].partner == "ran 3 km" and .trees[0].days[0].me == null' /tmp/out >/dev/null || { cat /tmp/out; fail "tree waiting for B"; }
+# Side quest: A checked in, B hasn't. Not when yesterday was already saved.
+psql -q -c "INSERT INTO shared_tree_side_quests (tree_id, user_id, day, quest) VALUES ($TREE, $A_ID, '$TODAY'::date - 1, 'x')"
+[ "$(tpost $J tree_side_quest "")" = 409 ] || { cat /tmp/out; fail "no side quest two days in a row"; }
+psql -q -c "DELETE FROM shared_tree_side_quests WHERE tree_id = $TREE"
+[ "$(tpost $J2 tree_side_quest "")" = 409 ] || { cat /tmp/out; fail "side quest needs your own check-in"; }
+[ "$(tpost $J tree_side_quest "")" = 200 ] || { cat /tmp/out; fail "side quest"; }
+[ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees after side quest"
+jq -e '.trees[0].days[0].saved == "me" and (.trees[0].days[0].quest | length > 0) and .trees[0].grown == 0 and (.trees[0].side_quest | length > 0)' /tmp/out >/dev/null || { cat /tmp/out; fail "side quest saves but doesn't grow"; }
+# A nudges B, who hasn't checked in yet: once a day.
+[ "$(tpost $J tree_nudge "")" = 200 ] || { cat /tmp/out; fail "nudge"; }
+jq -e '.already == false' /tmp/out >/dev/null || { cat /tmp/out; fail "first nudge"; }
+[ "$(tpost $J tree_nudge "")" = 200 ] || { cat /tmp/out; fail "nudge again"; }
+jq -e '.already == true' /tmp/out >/dev/null || { cat /tmp/out; fail "second nudge is the same one"; }
+[ "$(cget $J "action=trees&day=$TODAY")" = 200 ] && jq -e '.trees[0].nudged_today == true' /tmp/out >/dev/null || { cat /tmp/out; fail "nudged_today"; }
+[ "$(psql -tAc "SELECT count(*) FROM user_notifications WHERE notification_type = 'tree_nudge' AND user_id = $B_ID")" = 1 ] || fail "one nudge notification"
+[ "$(psql -tAc "SELECT count(*) FROM shared_tree_nudges WHERE to_user = $B_ID AND pushed_at IS NULL")" = 1 ] || fail "nudge waits for the push sender"
+[ "$(tpost $J2 tree_water "did yoga")" = 200 ] || { cat /tmp/out; fail "water B"; }
+jq -e '.grew == true' /tmp/out >/dev/null || { cat /tmp/out; fail "both watered grows"; }
+# Both checked in: no nudge needed either way.
+[ "$(tpost $J2 tree_nudge "")" = 409 ] || { cat /tmp/out; fail "no nudge for someone who checked in"; }
+[ "$(tpost $J tree_nudge "")" = 409 ] || { cat /tmp/out; fail "no nudge after check-in"; }
+[ "$(tpost $J2 tree_water "did yoga twice")" = 200 ] || { cat /tmp/out; fail "edit watering"; }
+[ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees A"
+jq -e '.trees[0].grown == 1 and .trees[0].days[0].partner == "did yoga twice" and .trees[0].still_friends == true' /tmp/out >/dev/null || { cat /tmp/out; fail "tree grew"; }
+[ "$(cget $J action=notifications)" = 200 ] || fail "tree notifications"
+jq -e '[.notifications[].notification_type] | (index("tree_started") != null) and (index("tree_grew") != null)' /tmp/out >/dev/null || { cat /tmp/out; fail "tree notifications"; }
+[ "$(cget $J2 action=notifications)" = 200 ] || fail "B tree notifications"
+jq -e '[.notifications[].notification_type] | (index("tree_invite") != null) and (index("tree_watered") != null)' /tmp/out >/dev/null || { cat /tmp/out; fail "B tree notifications"; }
+# Unfollowing pauses the tree; following back lets it grow again.
+[ "$(cpost $J2 "{\"action\":\"unfollow\",\"userId\":\"$A_ID\"}")" = 200 ] || fail unfollow
+[ "$(tpost $J tree_water "again")" = 409 ] || { cat /tmp/out; fail "not friends can't water"; }
+[ "$(cpost $J2 "{\"action\":\"follow\",\"userId\":\"$A_ID\"}")" = 200 ] || fail "follow again"
+jq -e '.friends == true' /tmp/out >/dev/null || { cat /tmp/out; fail "friends again"; }
+[ "$(tpost $J tree_water "again")" = 200 ] || { cat /tmp/out; fail "water after follow back"; }
+[ "$(tpost $J tree_remove "")" = 200 ] || fail "remove tree"
+[ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees after remove"
+jq -e '.trees | length == 0' /tmp/out >/dev/null || { cat /tmp/out; fail "removed tree hidden"; }
+# Removing a follower: B stops following A.
+[ "$(cpost $J "{\"action\":\"remove_follower\",\"userId\":\"$B_ID\"}")" = 200 ] || fail "remove follower"
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || fail "profile after removal"
+jq -e '.profile.i_follow == "none"' /tmp/out >/dev/null || { cat /tmp/out; fail "removed follower no longer follows"; }
+echo "shared trees ok"
 
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"
 echo "ALL_API_TESTS_OK"

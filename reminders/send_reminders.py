@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Send Osiris's daily check-in reminders.
+"""Send Osiris's daily check-in reminders, and friends' nudges.
 
 Runs every 15 minutes (see osiris-reminders.timer). For every push
 subscription whose local time has reached its reminder hour, it sends one
 reminder per day, but only if the user has a goal and hasn't checked in
 today. "Today" is in each subscription's own time zone; PostgreSQL works it
-out with AT TIME ZONE.
+out with AT TIME ZONE. It also sends every new nudge from a friend ("hop
+on and check in!" on a shared goal, see lua/osiris/shared_trees.lua).
 
 Why Python and not Lua like the rest of the server: a push message must be
 encrypted for the receiving browser (RFC 8291) and signed with our VAPID key
@@ -75,6 +76,79 @@ def reminder_text(local_day, last_checkin):
     return "Your network misses you", "It's been a few days. One check-in today gets you back on track."
 
 
+# Nudges from a friend ("hop on and check in!") that have not reached the
+# phone yet. Older than 12 hours is too late to be useful, so those are
+# skipped (and marked, so they are never sent later).
+PENDING_NUDGES = """
+    SELECT nudge.tree_id, nudge.from_user, nudge.day, nudge.to_user,
+        COALESCE(NULLIF(sender.profile_display_name, ''), sender.profile_username, 'Your friend') AS sender_name,
+        tree.title,
+        nudge.created_at > now() - interval '12 hours' AS fresh
+    FROM public.shared_tree_nudges nudge
+    JOIN public.shared_trees tree ON tree.id = nudge.tree_id
+    JOIN public.auth_users sender ON sender.id = nudge.from_user
+    WHERE nudge.pushed_at IS NULL
+    ORDER BY nudge.created_at
+    LIMIT 500
+"""
+
+
+def send_push(connection, subscription_id, endpoint, p256dh, auth, private_key_file, subject, message):
+    """Sends one push message. Returns "sent", "removed" or "failed"."""
+    if not is_push_service(endpoint):
+        connection.execute("DELETE FROM public.push_subscriptions WHERE id = %s", (subscription_id,))
+        return "removed"
+    try:
+        webpush(
+            subscription_info={"endpoint": endpoint, "keys": {"p256dh": p256dh, "auth": auth}},
+            data=json.dumps(message),
+            vapid_private_key=private_key_file,
+            vapid_claims={"sub": subject},
+            # Drop the message if the phone stays offline for 12 hours.
+            ttl=12 * 60 * 60,
+            timeout=10,
+        )
+    except WebPushException as error:
+        status = error.response.status_code if error.response is not None else None
+        if status in (404, 410):
+            # The browser unsubscribed or the app was removed.
+            connection.execute("DELETE FROM public.push_subscriptions WHERE id = %s", (subscription_id,))
+            return "removed"
+        print(f"Push to subscription {subscription_id} failed: {status or error}", file=sys.stderr)
+        return "failed"
+    except Exception as error:  # network trouble: try again next run
+        print(f"Push to subscription {subscription_id} failed: {error}", file=sys.stderr)
+        return "failed"
+    return "sent"
+
+
+def send_nudges(connection, private_key_file, subject):
+    """Sends each new nudge to every device of the friend it is for."""
+    counts = {"sent": 0, "removed": 0, "failed": 0}
+    for tree_id, from_user, day, to_user, sender_name, title, fresh in connection.execute(PENDING_NUDGES).fetchall():
+        if fresh:
+            message = {
+                "title": f"{sender_name} is waiting for you",
+                "body": f"Hop on and check in on \u201c{title}\u201d so your network can grow today.",
+                "tag": f"osiris-nudge-{tree_id}",
+            }
+            subscriptions = connection.execute(
+                "SELECT id, endpoint, p256dh, auth FROM public.push_subscriptions WHERE user_id = %s",
+                (to_user,),
+            ).fetchall()
+            for subscription in subscriptions:
+                counts[send_push(connection, *subscription, private_key_file, subject, message)] += 1
+        # Marked even when the friend has no phone set up: the nudge is
+        # still in their inbox on the site.
+        connection.execute(
+            "UPDATE public.shared_tree_nudges SET pushed_at = now() "
+            "WHERE tree_id = %s AND from_user = %s AND day = %s",
+            (tree_id, from_user, day),
+        )
+        connection.commit()
+    return counts
+
+
 def main():
     private_key_file = os.environ.get("VAPID_PRIVATE_KEY_FILE", "/etc/mysite/vapid_private.pem")
     subject = os.environ.get("VAPID_SUBJECT", "https://osiris-ai.se")
@@ -87,33 +161,13 @@ def main():
     with psycopg.connect() as connection:
         rows = connection.execute(DUE_SUBSCRIPTIONS).fetchall()
         for subscription_id, endpoint, p256dh, auth, local_day, last_checkin in rows:
-            if not is_push_service(endpoint):
-                connection.execute("DELETE FROM public.push_subscriptions WHERE id = %s", (subscription_id,))
+            title, body = reminder_text(local_day, last_checkin)
+            result = send_push(connection, subscription_id, endpoint, p256dh, auth,
+                               private_key_file, subject, {"title": title, "body": body})
+            if result == "removed":
                 removed += 1
                 continue
-            title, body = reminder_text(local_day, last_checkin)
-            try:
-                webpush(
-                    subscription_info={"endpoint": endpoint, "keys": {"p256dh": p256dh, "auth": auth}},
-                    data=json.dumps({"title": title, "body": body}),
-                    vapid_private_key=private_key_file,
-                    vapid_claims={"sub": subject},
-                    # Drop the message if the phone stays offline for 12 hours.
-                    ttl=12 * 60 * 60,
-                    timeout=10,
-                )
-            except WebPushException as error:
-                status = error.response.status_code if error.response is not None else None
-                if status in (404, 410):
-                    # The browser unsubscribed or the app was removed.
-                    connection.execute("DELETE FROM public.push_subscriptions WHERE id = %s", (subscription_id,))
-                    removed += 1
-                else:
-                    print(f"Push to subscription {subscription_id} failed: {status or error}", file=sys.stderr)
-                    failed += 1
-                continue
-            except Exception as error:  # network trouble: try again next run
-                print(f"Push to subscription {subscription_id} failed: {error}", file=sys.stderr)
+            if result == "failed":
                 failed += 1
                 continue
             connection.execute(
@@ -123,7 +177,10 @@ def main():
             # Save after each one, so a crash halfway never sends twice.
             connection.commit()
             sent += 1
+        connection.commit()
+        nudges = send_nudges(connection, private_key_file, subject)
 
+    print(f"Nudges: {nudges['sent']} sent, {nudges['removed']} removed, {nudges['failed']} failed.")
     print(f"Reminders: {sent} sent, {removed} removed, {failed} failed.")
     return 0
 

@@ -44,10 +44,3 @@ debugSkipForm.addEventListener("submit", async (event) => {
   }
 });
 
-for (const tab of communityDialog.querySelectorAll("[data-community-view]")) {
-  tab.addEventListener("click", () => {
-    loadCommunitySection(tab.dataset.communityView).catch((error) => {
-      communityStatus.textContent = error.message;
-    });
-  });
-}

@@ -1,4 +1,4 @@
--- The /api/community endpoint: search, friends, follows, blocks, reports, the feed, reactions, notifications and profiles.
+-- The /api/community endpoint: search, follows and friends, shared trees, blocks, reports, the feed, reactions, notifications and profiles.
 --
 -- Part of the server code that auth.lua used to hold in one file. Each
 -- module returns a table M with its functions; the names a module
@@ -7,6 +7,7 @@
 local M = {}
 local common = require "osiris.common"
 local goals = require "osiris.goals"
+local shared_trees = require "osiris.shared_trees"
 
 local respond = common.respond
 local database_query = common.database_query
@@ -76,114 +77,107 @@ local function ensure_social_settings(user_id)
     ]], user_id) ~= nil
 end
 
+-- Every list of people has the same columns: who they are, what they
+-- share with you, and how the two of you are connected:
+--   i_follow    'none', 'pending' (you asked to follow a private profile)
+--               or 'accepted' (you follow them)
+--   follows_me  true when they follow you. Both together means friends.
+-- A bio and goal only show when the profile is public or you follow them.
+-- The query must name the person "person" and pass your own id as $1.
+local PERSON_COLUMNS = [[
+    person.id, person.profile_username,
+    COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
+    person.profile_picture,
+    CASE WHEN can_see.visible THEN person.profile_bio ELSE '' END AS profile_bio,
+    CASE WHEN can_see.visible AND COALESCE(settings.show_goals, false)
+        THEN person.profile_goals ELSE '' END AS profile_goals,
+    COALESCE(mine.status, 'none') AS i_follow,
+    COALESCE(theirs.status = 'accepted', false) AS follows_me
+]]
+local PERSON_JOINS = [[
+    LEFT JOIN public.user_social_settings settings ON settings.user_id = person.id
+    LEFT JOIN public.user_follows mine ON mine.follower_id = $1 AND mine.followed_id = person.id
+    LEFT JOIN public.user_follows theirs ON theirs.follower_id = person.id AND theirs.followed_id = $1
+    CROSS JOIN LATERAL (
+        SELECT COALESCE(settings.profile_visibility, 'private') = 'public'
+            OR COALESCE(mine.status = 'accepted', false) AS visible
+    ) can_see
+]]
+
+-- The people lists in Community. relation is one of:
+--   friends    you follow each other
+--   following  people you follow, and your open follow requests
+--   followers  people who follow you
+--   requests   people asking to follow you (your profile is private)
+--   blocked    people you blocked
 local function social_person_rows(user_id, relation)
-    local query
+    local from_where
     if relation == "friends" then
-        query = [[
-            SELECT person.id, person.profile_username,
-                COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
-                person.profile_picture, person.profile_bio,
-                CASE WHEN COALESCE(settings.show_goals, false)
-                    THEN person.profile_goals ELSE '' END AS profile_goals,
-                EXISTS (SELECT 1 FROM public.user_follows f
-                    WHERE f.follower_id = $1 AND f.followed_id = person.id) AS following
-            FROM public.user_friendships friendship
-            JOIN public.auth_users person
-              ON person.id = CASE WHEN friendship.user_low = $1 THEN friendship.user_high ELSE friendship.user_low END
-            LEFT JOIN public.user_social_settings settings ON settings.user_id = person.id
-            WHERE (friendship.user_low = $1 OR friendship.user_high = $1)
-              AND friendship.status = 'accepted'
+        from_where = [[
+            FROM public.user_friends friend
+            JOIN public.auth_users person ON person.id = friend.friend_id
+            ]] .. PERSON_JOINS .. [[
+            WHERE friend.user_id = $1
             ORDER BY display_name, person.id
-            LIMIT 100
         ]]
-    elseif relation == "following" or relation == "followers" then
-        local id_column = relation == "following" and "followed_id" or "follower_id"
-        local filter_column = relation == "following" and "follower_id" or "followed_id"
-        query = [[
-            SELECT person.id, person.profile_username,
-                COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
-                person.profile_picture,
-                CASE WHEN COALESCE(settings.profile_visibility, 'private') = 'public'
-                    THEN person.profile_bio ELSE '' END AS profile_bio,
-                CASE WHEN COALESCE(settings.profile_visibility, 'private') = 'public'
-                          AND COALESCE(settings.show_goals, false)
-                    THEN person.profile_goals ELSE '' END AS profile_goals,
-                EXISTS (SELECT 1 FROM public.user_follows f
-                    WHERE f.follower_id = $1 AND f.followed_id = person.id) AS following
+    elseif relation == "following" then
+        from_where = [[
             FROM public.user_follows relation
-            JOIN public.auth_users person ON person.id = relation.]] .. id_column .. [[
-            LEFT JOIN public.user_social_settings settings ON settings.user_id = person.id
-            WHERE relation.]] .. filter_column .. [=[ = $1
-            ORDER BY display_name, person.id
-            LIMIT 100
-        ]=]
-    else
-        if relation == "blocked" then
-            query = [[
-                SELECT person.id, person.profile_username,
-                    COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
-                    person.profile_picture, '' AS profile_bio, '' AS profile_goals,
-                    false AS following
-                FROM public.user_blocks blocks
-                JOIN public.auth_users person ON person.id = blocks.blocked_id
-                WHERE blocks.blocker_id = $1
-                ORDER BY display_name, person.id
-                LIMIT 100
-            ]]
-            return database_query(query, user_id)
-        end
-        local incoming = relation == "incoming"
-        query = [[
+            JOIN public.auth_users person ON person.id = relation.followed_id
+            ]] .. PERSON_JOINS .. [[
+            WHERE relation.follower_id = $1
+            ORDER BY relation.status, display_name, person.id
+        ]]
+    elseif relation == "followers" or relation == "requests" then
+        from_where = [[
+            FROM public.user_follows relation
+            JOIN public.auth_users person ON person.id = relation.follower_id
+            ]] .. PERSON_JOINS .. [[
+            WHERE relation.followed_id = $1
+              AND relation.status = ]] .. (relation == "followers" and "'accepted'" or "'pending'") .. [[
+            ORDER BY relation.created_at DESC, person.id
+        ]]
+    elseif relation == "blocked" then
+        return database_query([[
             SELECT person.id, person.profile_username,
                 COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
                 person.profile_picture, '' AS profile_bio, '' AS profile_goals,
-                EXISTS (SELECT 1 FROM public.user_follows f
-                    WHERE f.follower_id = $1 AND f.followed_id = person.id) AS following,
-                friendship.status, friendship.requested_by
-            FROM public.user_friendships friendship
-            JOIN public.auth_users person
-              ON person.id = CASE WHEN friendship.user_low = $1 THEN friendship.user_high ELSE friendship.user_low END
-            WHERE (friendship.user_low = $1 OR friendship.user_high = $1)
-              AND friendship.status = 'pending'
-              AND friendship.requested_by ]] .. (incoming and "<>" or "=") .. [[ $1
-            ORDER BY friendship.created_at DESC
+                'none' AS i_follow, false AS follows_me
+            FROM public.user_blocks blocks
+            JOIN public.auth_users person ON person.id = blocks.blocked_id
+            WHERE blocks.blocker_id = $1
+            ORDER BY display_name, person.id
             LIMIT 100
-        ]]
+        ]], user_id)
+    else
+        return nil
     end
-    return database_query(query, user_id)
+    return database_query("SELECT " .. PERSON_COLUMNS .. from_where .. " LIMIT 200", user_id)
 end
 
 local function database_boolean(value)
     return value == true or value == "t" or value == "true"
 end
 
+-- A member's profile, as you see it. Like on TikTok, a private profile you
+-- don't follow still shows who they are, their counts and the follow
+-- button, but nothing else (private = true).
 local function social_profile(user_id, target_id)
     local access = database_query([[
-        SELECT target.id,
-            COALESCE(settings.profile_visibility, 'private') = 'public'
-                OR EXISTS (
-                    SELECT 1 FROM public.user_friendships f
-                    WHERE f.status = 'accepted'
-                      AND ((f.user_low = $1 AND f.user_high = target.id)
-                        OR (f.user_high = $1 AND f.user_low = target.id))
-                ) AS can_view,
-            EXISTS (SELECT 1 FROM public.user_follows f
-                WHERE f.follower_id = $1 AND f.followed_id = target.id) AS following,
-            friendship.status AS friendship_status,
-            friendship.requested_by,
+        SELECT person.id,
+            can_see.visible AS can_view,
+            COALESCE(mine.status, 'none') AS i_follow,
+            COALESCE(theirs.status = 'accepted', false) AS follows_me,
             COALESCE(settings.show_goals, false) AS show_goals,
             COALESCE(settings.show_progress, false) AS show_progress
-        FROM public.auth_users target
-        LEFT JOIN public.user_social_settings settings ON settings.user_id = target.id
-        LEFT JOIN public.user_friendships friendship
-          ON friendship.user_low = LEAST($1::bigint, target.id)
-         AND friendship.user_high = GREATEST($1::bigint, target.id)
-        WHERE target.id = $2
-          AND target.id <> $1
+        FROM public.auth_users person
+        ]] .. PERSON_JOINS .. [[
+        WHERE person.id = $2
+          AND person.id <> $1
           AND NOT EXISTS (
               SELECT 1 FROM public.user_blocks b
-              WHERE (b.blocker_id = $1 AND b.blocked_id = target.id)
-                 OR (b.blocker_id = target.id AND b.blocked_id = $1)
+              WHERE (b.blocker_id = $1 AND b.blocked_id = person.id)
+                 OR (b.blocker_id = person.id AND b.blocked_id = $1)
           )
     ]], user_id, target_id)
     if not access then
@@ -192,14 +186,17 @@ local function social_profile(user_id, target_id)
     if not access[1] then
         return nil, "missing"
     end
-    if not database_boolean(access[1].can_view) then
-        return nil, "private"
-    end
+    local can_view = database_boolean(access[1].can_view)
     local rows = database_query([[
         SELECT person.id, person.profile_username,
             COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
             person.profile_picture, person.profile_bio, person.profile_gender,
-            person.profile_goals
+            person.profile_goals,
+            (SELECT count(*) FROM public.user_friends f WHERE f.user_id = person.id) AS friend_count,
+            (SELECT count(*) FROM public.user_follows f
+             WHERE f.followed_id = person.id AND f.status = 'accepted') AS follower_count,
+            (SELECT count(*) FROM public.user_follows f
+             WHERE f.follower_id = person.id AND f.status = 'accepted') AS following_count
         FROM public.auth_users person
         WHERE person.id = $1
     ]], target_id)
@@ -207,32 +204,21 @@ local function social_profile(user_id, target_id)
         return nil, "database"
     end
     local person = rows[1]
-    local count_rows = database_query([[
-        SELECT
-            (SELECT count(*) FROM public.user_friendships f
-             WHERE f.status = 'accepted'
-               AND (f.user_low = $1 OR f.user_high = $1)) AS friend_count,
-            (SELECT count(*) FROM public.user_follows f WHERE f.followed_id = $1) AS follower_count,
-            (SELECT count(*) FROM public.user_follows f WHERE f.follower_id = $1) AS following_count
-    ]], target_id)
-    if not count_rows or not count_rows[1] then
-        return nil, "database"
-    end
     local result = {
         id = person.id,
         username = person.profile_username,
         display_name = person.display_name,
         picture = person.profile_picture,
-        bio = person.profile_bio,
-        goal = database_boolean(access[1].show_goals) and person.profile_goals or "",
-        friend_count = tonumber(count_rows[1].friend_count) or 0,
-        follower_count = tonumber(count_rows[1].follower_count) or 0,
-        following_count = tonumber(count_rows[1].following_count) or 0,
-        following = database_boolean(access[1].following),
-        friend_status = access[1].friendship_status or "none",
-        friend_requested_by = access[1].requested_by,
+        bio = can_view and person.profile_bio or "",
+        goal = can_view and database_boolean(access[1].show_goals) and person.profile_goals or "",
+        friend_count = tonumber(person.friend_count) or 0,
+        follower_count = tonumber(person.follower_count) or 0,
+        following_count = tonumber(person.following_count) or 0,
+        i_follow = access[1].i_follow,
+        follows_me = database_boolean(access[1].follows_me),
+        private = not can_view,
     }
-    if database_boolean(access[1].show_progress) then
+    if can_view and database_boolean(access[1].show_progress) then
         local tree_rows = database_query([[
             SELECT id, tree_data, completed_count, conversation, ai_memory
             FROM public.user_progress_trees
@@ -289,24 +275,9 @@ local function handle_community()
                 return respond(ngx.HTTP_OK, { people = {} })
             end
             local id_query = query:match("^#?(%d+)$")
-            local rows = database_query([[
-                SELECT person.id, person.profile_username,
-                    COALESCE(NULLIF(person.profile_display_name, ''), person.profile_username) AS display_name,
-                    person.profile_picture,
-                    CASE WHEN COALESCE(settings.profile_visibility, 'private') = 'public'
-                        THEN person.profile_bio ELSE '' END AS bio,
-                    CASE WHEN COALESCE(settings.profile_visibility, 'private') = 'public'
-                              AND COALESCE(settings.show_goals, false)
-                        THEN person.profile_goals ELSE '' END AS goals,
-                    EXISTS (SELECT 1 FROM public.user_follows f
-                        WHERE f.follower_id = $1 AND f.followed_id = person.id) AS following,
-                    COALESCE(friendship.status, 'none') AS friend_status,
-                    friendship.requested_by
+            local rows = database_query("SELECT " .. PERSON_COLUMNS .. [[
                 FROM public.auth_users person
-                LEFT JOIN public.user_social_settings settings ON settings.user_id = person.id
-                LEFT JOIN public.user_friendships friendship
-                  ON friendship.user_low = LEAST($1::bigint, person.id)
-                 AND friendship.user_high = GREATEST($1::bigint, person.id)
+                ]] .. PERSON_JOINS .. [[
                 WHERE person.id <> $1
                   AND COALESCE(settings.show_in_search, true)
                   AND NOT EXISTS (
@@ -388,11 +359,8 @@ local function handle_community()
                   AND settings.show_activity
                   AND (
                     EXISTS (SELECT 1 FROM public.user_follows f
-                        WHERE f.follower_id = $1 AND f.followed_id = actor.id)
-                    OR EXISTS (SELECT 1 FROM public.user_friendships friendship
-                        WHERE friendship.status = 'accepted'
-                          AND ((friendship.user_low = $1 AND friendship.user_high = actor.id)
-                            OR (friendship.user_high = $1 AND friendship.user_low = actor.id)))
+                        WHERE f.follower_id = $1 AND f.followed_id = actor.id
+                          AND f.status = 'accepted')
                   )
                   AND NOT EXISTS (
                       SELECT 1 FROM public.user_blocks b
@@ -406,9 +374,14 @@ local function handle_community()
                 return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load the activity feed." })
             end
             return respond(ngx.HTTP_OK, { activities = rows })
+        elseif action == "trees" then
+            local trees = shared_trees.list_trees(user.id, args.day)
+            if not trees then
+                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your shared trees." })
+            end
+            return respond(ngx.HTTP_OK, { trees = trees })
         elseif action == "summary" then
-            local incoming = social_person_rows(user.id, "incoming")
-            local outgoing = social_person_rows(user.id, "outgoing")
+            local requests = social_person_rows(user.id, "requests")
             local friends = social_person_rows(user.id, "friends")
             local following = social_person_rows(user.id, "following")
             local followers = social_person_rows(user.id, "followers")
@@ -422,14 +395,13 @@ local function handle_community()
                 SELECT count(*) FILTER (WHERE read_at IS NULL) AS unread
                 FROM public.user_notifications WHERE user_id = $1
             ]], user.id)
-            if not incoming or not outgoing or not friends or not following or not followers or not blocked
+            if not requests or not friends or not following or not followers or not blocked
                 or not settings or not settings[1] or not counts or not counts[1] then
                 return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not load your community." })
             end
             return respond(ngx.HTTP_OK, {
                 user_id = user.id,
-                incoming = incoming,
-                outgoing = outgoing,
+                requests = requests,
                 friends = friends,
                 following = following,
                 followers = followers,
@@ -450,6 +422,15 @@ local function handle_community()
     end
     local action = body.action
     local target_id = valid_social_user_id(body.userId)
+
+    -- tree_plant, tree_accept, tree_remove and tree_water live in
+    -- shared_trees.lua. It answers them and returns false for the rest.
+    if action:sub(1, 5) == "tree_" then
+        if shared_trees.handle_action(user, body) == false then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Unknown tree action." })
+        end
+        return
+    end
 
     if action == "privacy" then
         local settings = body.settings
@@ -486,140 +467,127 @@ local function handle_community()
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not mark notifications as read." })
         end
         return respond(ngx.HTTP_OK, { ok = true })
-    elseif action == "request" then
+    elseif action == "follow" then
+        -- Like TikTok: a public profile is followed right away; a private
+        -- one gets a follow request. Following back someone who already
+        -- follows you never needs a request, and makes you friends.
         if not target_id or target_id == tonumber(user.id) then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose another community member." })
         end
         local rows = database_query([[
-            WITH permitted AS (
-                SELECT target.id FROM public.auth_users target
-                JOIN public.user_social_settings settings ON settings.user_id = target.id
-                WHERE target.id = $2 AND settings.allow_friend_requests
+            WITH target AS (
+                SELECT person.id,
+                    EXISTS (SELECT 1 FROM public.user_follows f
+                        WHERE f.follower_id = person.id AND f.followed_id = $1
+                          AND f.status = 'accepted') AS follows_me,
+                    COALESCE(settings.profile_visibility, 'private') = 'public' AS is_public,
+                    COALESCE(settings.allow_friend_requests, true) AS open_to_follows
+                FROM public.auth_users person
+                LEFT JOIN public.user_social_settings settings ON settings.user_id = person.id
+                WHERE person.id = $2
                   AND NOT EXISTS (
                       SELECT 1 FROM public.user_blocks b
-                      WHERE (b.blocker_id = $1 AND b.blocked_id = target.id)
-                         OR (b.blocker_id = target.id AND b.blocked_id = $1)
+                      WHERE (b.blocker_id = $1 AND b.blocked_id = person.id)
+                         OR (b.blocker_id = person.id AND b.blocked_id = $1)
                   )
             ),
             changed AS (
-                INSERT INTO public.user_friendships AS existing (user_low, user_high, requested_by, status)
-                SELECT LEAST($1::bigint, permitted.id), GREATEST($1::bigint, permitted.id), $1, 'pending'
-                FROM permitted
-                ON CONFLICT (user_low, user_high) DO UPDATE
-                    SET requested_by = EXCLUDED.requested_by, status = 'pending', updated_at = now()
-                    WHERE existing.status = 'declined'
-                RETURNING user_low
+                INSERT INTO public.user_follows (follower_id, followed_id, status)
+                SELECT $1, id, CASE WHEN is_public OR follows_me THEN 'accepted' ELSE 'pending' END
+                FROM target
+                WHERE open_to_follows OR follows_me
+                ON CONFLICT (follower_id, followed_id) DO NOTHING
+                RETURNING followed_id, status
             ),
             notified AS (
                 INSERT INTO public.user_notifications (user_id, actor_id, notification_type)
-                SELECT $2, $1, 'friend_request' FROM changed
+                SELECT changed.followed_id, $1,
+                    CASE WHEN changed.status = 'pending' THEN 'follow_request'
+                         WHEN target.follows_me THEN 'new_friend'
+                         ELSE 'new_follower' END
+                FROM changed JOIN target ON target.id = changed.followed_id
                 RETURNING id
             )
-            SELECT user_low FROM changed
+            SELECT COALESCE(
+                    (SELECT status FROM changed),
+                    (SELECT status FROM public.user_follows
+                     WHERE follower_id = $1 AND followed_id = $2)
+                ) AS status,
+                (SELECT follows_me FROM target) AS follows_me
         ]], user.id, target_id)
-        if not rows then
-            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not send the friend request." })
+        if not rows or not rows[1] then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not follow that member." })
         end
-        if not rows[1] then
-            return respond(ngx.HTTP_CONFLICT, { error = "A request already exists, friend requests are disabled, or this profile is unavailable." })
+        local status = rows[1].status
+        if status ~= "pending" and status ~= "accepted" then
+            return respond(ngx.HTTP_CONFLICT, { error = "This member isn't taking new followers right now." })
         end
-        return respond(ngx.HTTP_OK, { ok = true, status = "pending" })
-    elseif action == "accept" or action == "decline" then
-        if not target_id then
-            return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid request sender is required." })
-        end
-        local accepted = action == "accept"
-        local sql = accepted and [[
-            WITH changed AS (
-                UPDATE public.user_friendships
-                SET status = 'accepted', updated_at = now()
-                WHERE user_low = LEAST($1::bigint, $2::bigint)
-                  AND user_high = GREATEST($1::bigint, $2::bigint)
-                  AND requested_by = $2 AND status = 'pending'
-                RETURNING requested_by
-            ),
-            notified AS (
-                INSERT INTO public.user_notifications (user_id, actor_id, notification_type)
-                SELECT $2, $1, 'friend_accepted' FROM changed
-                RETURNING id
-            )
-            SELECT requested_by FROM changed
-        ]] or [[
-            UPDATE public.user_friendships
-            SET status = 'declined', updated_at = now()
-            WHERE user_low = LEAST($1::bigint, $2::bigint)
-              AND user_high = GREATEST($1::bigint, $2::bigint)
-              AND requested_by = $2 AND status = 'pending'
-            RETURNING requested_by
-        ]]
-        local rows = database_query(sql, user.id, target_id)
-        if not rows then
-            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not update the friend request." })
-        end
-        if not rows[1] then
-            return respond(ngx.HTTP_CONFLICT, { error = "That friend request is no longer available." })
-        end
-        return respond(ngx.HTTP_OK, { ok = true })
-    elseif action == "cancel" or action == "remove_friend" then
+        local follows_me = database_boolean(rows[1].follows_me)
+        return respond(ngx.HTTP_OK, {
+            ok = true,
+            i_follow = status,
+            follows_me = follows_me,
+            friends = status == "accepted" and follows_me,
+        })
+    elseif action == "unfollow" then
+        -- Also takes back a follow request that is still waiting.
         if not target_id then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid user ID is required." })
         end
-        local status = action == "cancel" and "pending" or "accepted"
         local rows = database_query([[
-            DELETE FROM public.user_friendships
-            WHERE user_low = LEAST($1::bigint, $2::bigint)
-              AND user_high = GREATEST($1::bigint, $2::bigint)
-              AND requested_by = CASE WHEN $3 = 'pending' THEN $1 ELSE requested_by END
-              AND status = $3
-            RETURNING user_low
-        ]], user.id, target_id, status)
+            DELETE FROM public.user_follows
+            WHERE follower_id = $1 AND followed_id = $2
+            RETURNING followed_id
+        ]], user.id, target_id)
         if not rows then
-            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not update that friendship." })
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not unfollow that member." })
+        end
+        return respond(ngx.HTTP_OK, { ok = true, i_follow = "none" })
+    elseif action == "remove_follower" then
+        -- Stops someone from following you (they are not told).
+        if not target_id then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid user ID is required." })
+        end
+        local rows = database_query([[
+            DELETE FROM public.user_follows
+            WHERE follower_id = $2 AND followed_id = $1
+            RETURNING follower_id
+        ]], user.id, target_id)
+        if not rows then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not remove that follower." })
         end
         return respond(ngx.HTTP_OK, { ok = true })
-    elseif action == "follow" or action == "unfollow" then
-        if not target_id or target_id == tonumber(user.id) then
-            return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose another community member." })
+    elseif action == "accept" or action == "decline" then
+        -- Answers a follow request to your private profile.
+        if not target_id then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid request sender is required." })
         end
-        if action == "follow" then
-            local rows = database_query([[
-                WITH changed AS (
-                    INSERT INTO public.user_follows (follower_id, followed_id)
-                    SELECT $1, target.id
-                    FROM public.auth_users target
-                    WHERE target.id = $2
-                      AND NOT EXISTS (
-                          SELECT 1 FROM public.user_blocks b
-                          WHERE (b.blocker_id = $1 AND b.blocked_id = target.id)
-                             OR (b.blocker_id = target.id AND b.blocked_id = $1)
-                      )
-                    ON CONFLICT (follower_id, followed_id) DO NOTHING
-                    RETURNING followed_id
-                ),
-                notified AS (
-                    INSERT INTO public.user_notifications (user_id, actor_id, notification_type)
-                    SELECT followed_id, $1, 'new_follower' FROM changed
-                    RETURNING id
-                )
-                SELECT followed_id FROM changed
-            ]], user.id, target_id)
-            if not rows then
-                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not follow that member." })
-            end
-            if not rows[1] then
-                return respond(ngx.HTTP_CONFLICT, { error = "That member is unavailable or already followed." })
-            end
-        else
-            local rows = database_query([[
-                DELETE FROM public.user_follows
-                WHERE follower_id = $1 AND followed_id = $2
-                RETURNING followed_id
-            ]], user.id, target_id)
-            if not rows then
-                return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not unfollow that member." })
-            end
+        local sql = action == "accept" and [[
+            WITH changed AS (
+                UPDATE public.user_follows
+                SET status = 'accepted'
+                WHERE follower_id = $2 AND followed_id = $1 AND status = 'pending'
+                RETURNING follower_id
+            ),
+            notified AS (
+                INSERT INTO public.user_notifications (user_id, actor_id, notification_type)
+                SELECT follower_id, $1, 'follow_accepted' FROM changed
+                RETURNING id
+            )
+            SELECT follower_id FROM changed
+        ]] or [[
+            DELETE FROM public.user_follows
+            WHERE follower_id = $2 AND followed_id = $1 AND status = 'pending'
+            RETURNING follower_id
+        ]]
+        local rows = database_query(sql, user.id, target_id)
+        if not rows then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not answer the follow request." })
         end
-        return respond(ngx.HTTP_OK, { ok = true, following = action == "follow" })
+        if not rows[1] then
+            return respond(ngx.HTTP_CONFLICT, { error = "That follow request is no longer available." })
+        end
+        return respond(ngx.HTTP_OK, { ok = true })
     elseif action == "block" or action == "unblock" then
         if not target_id or target_id == tonumber(user.id) then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose another community member." })
@@ -636,11 +604,13 @@ local function handle_community()
                     ON CONFLICT DO NOTHING
                     RETURNING blocked_id
                 ),
-                friendships AS (
-                    DELETE FROM public.user_friendships
+                trees AS (
+                    UPDATE public.shared_trees
+                    SET status = 'ended', ended_at = now()
                     WHERE user_low = LEAST($1::bigint, $2::bigint)
                       AND user_high = GREATEST($1::bigint, $2::bigint)
-                    RETURNING user_low
+                      AND status <> 'ended'
+                    RETURNING id
                 ),
                 follows AS (
                     DELETE FROM public.user_follows
@@ -692,11 +662,8 @@ local function handle_community()
                   AND activity.actor_id <> $1
                   AND (
                     EXISTS (SELECT 1 FROM public.user_follows f
-                        WHERE f.follower_id = $1 AND f.followed_id = activity.actor_id)
-                    OR EXISTS (SELECT 1 FROM public.user_friendships friendship
-                        WHERE friendship.status = 'accepted'
-                          AND ((friendship.user_low = $1 AND friendship.user_high = activity.actor_id)
-                            OR (friendship.user_high = $1 AND friendship.user_low = activity.actor_id)))
+                        WHERE f.follower_id = $1 AND f.followed_id = activity.actor_id
+                          AND f.status = 'accepted')
                   )
                   AND NOT EXISTS (
                     SELECT 1 FROM public.user_blocks b

@@ -1,6 +1,7 @@
 // Osiris service worker.
 //
-// It only does two things: show the daily reminder that the server pushes,
+// It only does two things: show the daily reminder (or a friend's nudge)
+// that the server pushes,
 // and open Osiris when the reminder is clicked. It does not cache pages, so
 // the site always loads fresh from the server.
 
@@ -25,8 +26,9 @@ self.addEventListener("push", (event) => {
     body: data.body || "Time for today's check-in.",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    // A newer reminder replaces an older one instead of piling up.
-    tag: "osiris-daily-reminder",
+    // A newer reminder replaces an older one instead of piling up. Nudges
+    // from friends bring their own tag, so they don't replace the reminder.
+    tag: data.tag || "osiris-daily-reminder",
     renotify: true,
     data: { url: "/" },
   }));
