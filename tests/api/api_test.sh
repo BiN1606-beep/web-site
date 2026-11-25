@@ -199,5 +199,22 @@ curl -sS -b $J -o /tmp/out $B/api/network-style
 jq -e '.style == null' /tmp/out >/dev/null || { cat /tmp/out; fail "style after reset"; }
 echo "network style ok"
 
+# ---- Appearance (theme and fonts): saved per account the same way ----
+look() { curl -sS -b $J -H 'Content-Type: application/json' -o /tmp/out -w '%{http_code}' -X POST "$B/api/appearance" -d "$1"; }
+[ "$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' $B/api/appearance -d '{"style":{}}')" = 401 ] || fail "appearance signed out"
+[ "$(look '{"nope":1}')" = 400 ] || fail "appearance without style"
+[ "$(look '{"style":{"theme":"mocha","heading_font":"press-start","text_font":"jetbrains-mono-nerd","evil":"<b>"}}')" = 200 ] || { cat /tmp/out; fail "save appearance"; }
+curl -sS -b $J -o /tmp/out $B/api/progress-tree
+jq -e '.appearance.theme == "mocha" and .appearance.heading_font == "press-start" and .appearance.text_font == "jetbrains-mono-nerd" and (.appearance | has("evil") | not)' /tmp/out >/dev/null || { cat /tmp/out; fail "appearance in progress tree"; }
+# The network style is a separate choice and stays as it was.
+jq -e '.network_style == null' /tmp/out >/dev/null || { cat /tmp/out; fail "appearance changed network style"; }
+# Playful heading-only fonts and unknown themes are dropped.
+[ "$(look '{"style":{"theme":"neon","text_font":"press-start"}}')" = 200 ] || fail "unknown appearance"
+jq -e '.style | has("theme") or has("text_font") | not' /tmp/out >/dev/null || { cat /tmp/out; fail "unknown appearance kept"; }
+[ "$(look '{"reset":true}')" = 200 ] || fail "reset appearance"
+curl -sS -b $J -o /tmp/out $B/api/appearance
+jq -e '.style == null' /tmp/out >/dev/null || { cat /tmp/out; fail "appearance after reset"; }
+echo "appearance ok"
+
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"
 echo "ALL_API_TESTS_OK"
