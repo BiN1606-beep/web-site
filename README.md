@@ -142,7 +142,7 @@ remains disabled.
 
 ## Daily reminders
 
-Users can turn on a daily reminder in the streak card. On days they haven't
+Users can turn on a daily reminder under Settings → Daily reminder. On days they haven't
 checked in, their phone or computer gets a notification at the hour they
 chose. It uses the browsers' free web push services; nothing is paid.
 
