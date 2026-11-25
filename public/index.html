@@ -152,7 +152,30 @@
                     <button id="tree-complete" type="button">Complete step</button>
                   </div>
                 </article>
-                <p id="tree-finished" hidden>You've reached the end of this path. Celebrate how far you've grown!</p>
+                <!-- Shown when every step is done: keep evolving with a
+                     bigger goal (public/js/evolve.js). -->
+                <section class="evolve-card" id="tree-finished" aria-labelledby="evolve-title" hidden>
+                  <h3 id="evolve-title">You finished this goal!</h3>
+                  <p>Want to keep evolving? Tell your coach what you're really aiming for, and you'll get a roadmap built to make it happen.</p>
+                  <div class="evolve-choice" id="evolve-choice">
+                    <button class="save-button game-button" id="evolve-yes" type="button">Yes, keep evolving</button>
+                    <button class="profile-secondary-button" id="evolve-no" type="button">Not now</button>
+                  </div>
+                  <!-- "Not now": start a brand-new tree instead. The finished
+                       goal stays in the network and can be focused again. -->
+                  <div class="evolve-choice" id="evolve-later" hidden>
+                    <p>No problem. Want to grow something completely different? Your finished tree stays in your network, and you can go back to it anytime.</p>
+                    <button class="save-button game-button" id="evolve-new-tree" type="button">Start a new tree</button>
+                    <button class="profile-secondary-button" id="evolve-back" type="button">Back</button>
+                  </div>
+                  <form class="evolve-form" id="evolve-form" hidden>
+                    <label for="evolve-input" id="evolve-label">What is your actual goal?</label>
+                    <textarea id="evolve-input" maxlength="1000" required
+                      placeholder="Dream big and be specific. For example: run a marathon under 4 hours next autumn"></textarea>
+                    <button class="save-button game-button" id="evolve-submit" type="submit">Build my roadmap</button>
+                    <p class="evolve-status" id="evolve-status" role="status" aria-live="polite"></p>
+                  </form>
+                </section>
 
                 <!-- Daily check-in: one line a day keeps the streak alive.
                      The full streak (week dots, freezes) is on the Progress tab. -->
@@ -499,6 +522,7 @@
     <script src="/js/streak.js"></script>
     <script src="/js/goals.js"></script>
     <script src="/js/lesson.js"></script>
+    <script src="/js/evolve.js"></script>
     <script src="/js/review.js"></script>
     <script src="/js/reminders.js"></script>
     <script src="/js/profile.js"></script>

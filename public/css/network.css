@@ -176,6 +176,17 @@
   opacity: 1;
 }
 
+/* The milestone (last step of a finished goal) keeps its name visible. */
+.tree-growth .net-node.is-milestone text {
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* Its gold halo pulses slowly, calmer than today's step. */
+.tree-growth .is-milestone .tree-pulse {
+  animation-duration: 3.4s;
+}
+
 .tree-growth .net-node.is-seed text {
   fill: var(--muted);
   opacity: 1;
