@@ -440,42 +440,61 @@
         <h1 id="community-title">Community</h1>
         <p id="community-status" class="community-status" role="status" aria-live="polite"></p>
         <form class="community-search" id="community-search-form" role="search">
-          <label class="sr-only" for="community-search-input">Find people by email, name, username, or user ID</label>
-          <input id="community-search-input" type="search" maxlength="320" placeholder="Search people by email, username, name, or user ID" autocomplete="off">
-          <button class="save-button" type="submit">Search</button>
+          <svg class="community-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+          <label class="sr-only" for="community-search-input">Find people by name, username, email or user ID</label>
+          <input id="community-search-input" type="search" maxlength="320" placeholder="Find people" autocomplete="off">
+          <button class="sr-only" type="submit">Search</button>
         </form>
-        <nav class="community-tabs" aria-label="Community sections">
-          <button class="community-tab" type="button" data-community-view="discover" aria-selected="true">Discover People</button>
-          <button class="community-tab" type="button" data-community-view="friends" aria-selected="false">My Friends</button>
-          <button class="community-tab" type="button" data-community-view="requests" aria-selected="false">Friend Requests</button>
-          <button class="community-tab" type="button" data-community-view="following" aria-selected="false">Following</button>
-          <button class="community-tab" type="button" data-community-view="followers" aria-selected="false">Followers</button>
-          <button class="community-tab" type="button" data-community-view="feed" aria-selected="false">Activity</button>
-          <button class="community-tab" type="button" data-community-view="notifications" aria-selected="false">Notifications</button>
-          <button class="community-tab" type="button" data-community-view="privacy" aria-selected="false">Privacy</button>
-          <button class="community-tab" type="button" data-community-view="blocked" aria-selected="false">Blocked</button>
+        <!-- Like a TikTok profile: tap a number to see those people. -->
+        <nav class="community-counts" aria-label="Your people">
+          <button class="community-count" type="button" data-community-view="friends" aria-selected="true"><strong data-community-count="friends">0</strong><span>Friends</span></button>
+          <button class="community-count" type="button" data-community-view="following" aria-selected="false"><strong data-community-count="following">0</strong><span>Following</span></button>
+          <button class="community-count" type="button" data-community-view="followers" aria-selected="false"><strong data-community-count="followers">0</strong><span>Followers</span></button>
         </nav>
-        <h2 id="community-view-title">Discover People</h2>
+        <nav class="community-tabs" aria-label="Community sections">
+          <button class="community-tab" type="button" data-community-view="trees" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a4.5 4.5 0 0 0-4.4 3.6A4 4 0 0 0 7.5 15h9a4 4 0 0 0-.1-8.4A4.5 4.5 0 0 0 12 3Z"></path><path d="M12 21v-9m0 4-2.5-2.5M12 14l2-2"></path></svg>
+            Trees<span class="community-tab-badge" data-community-badge="trees" hidden></span>
+          </button>
+          <button class="community-tab" type="button" data-community-view="feed" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"></path></svg>
+            Activity
+          </button>
+          <button class="community-tab" type="button" data-community-view="notifications" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Zm4 4h4"></path></svg>
+            Inbox<span class="community-tab-badge" data-community-badge="inbox" hidden></span>
+          </button>
+          <button class="community-tab community-tab-icon" type="button" data-community-view="privacy" aria-selected="false" aria-label="Privacy">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path></svg>
+          </button>
+        </nav>
+        <button class="community-requests" id="community-requests" type="button" data-community-view="requests" hidden>
+          <span class="community-requests-faces" id="community-requests-faces"></span>
+          <span class="community-requests-text"><strong>Follow requests</strong><span id="community-requests-count"></span></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+        </button>
+        <h2 id="community-view-title">Friends</h2>
         <section class="community-profile" id="community-profile" hidden></section>
         <section class="community-privacy" id="community-privacy" aria-label="Community privacy settings" hidden>
           <label for="community-profile-visibility">Profile visibility</label>
           <select id="community-profile-visibility">
-            <option value="private">Private (friends only)</option>
+            <option value="private">Private (you accept who follows you)</option>
             <option value="public">Public</option>
           </select>
           <label><input id="community-show-goals" type="checkbox"> Show my main goal</label>
           <label><input id="community-show-progress" type="checkbox"> Share my progress tree (only completed steps and the current step)</label>
           <label><input id="community-show-activity" type="checkbox"> Show my milestones in the activity feed</label>
-          <label><input id="community-allow-requests" type="checkbox"> Allow friend requests</label>
-          <label><input id="community-show-search" type="checkbox"> Show me in Discover search</label>
-          <button class="save-button" id="community-save-privacy" type="button">Save Privacy Settings</button>
+          <label><input id="community-allow-requests" type="checkbox"> Let new people follow me</label>
+          <label><input id="community-show-search" type="checkbox"> Show me when people search</label>
+          <button class="save-button" id="community-save-privacy" type="button">Save privacy settings</button>
+          <button class="profile-secondary-button" type="button" data-community-view="blocked">Blocked members</button>
         </section>
         <section class="community-list" id="community-list" aria-live="polite"></section>
         <form class="community-report" id="community-report" hidden>
           <label for="community-report-reason">Why are you reporting this member?</label>
           <textarea id="community-report-reason" maxlength="1000" required></textarea>
           <div class="community-actions">
-            <button class="save-button" type="submit">Submit Report</button>
+            <button class="save-button" type="submit">Send report</button>
             <button class="profile-secondary-button" id="community-report-cancel" type="button">Cancel</button>
           </div>
         </form>
@@ -559,6 +578,7 @@
     <script src="/js/api.js"></script>
     <script src="/js/community.js"></script>
     <script src="/js/friend-network.js"></script>
+    <script src="/js/shared-tree.js"></script>
     <script src="/js/network.js"></script>
     <script src="/js/tabs.js"></script>
     <script src="/js/streak.js"></script>

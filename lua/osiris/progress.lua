@@ -342,13 +342,8 @@ local function handle_progress_tree()
                 FROM activity
                 JOIN changed ON changed.user_id = activity.actor_id
                 JOIN (
-                    SELECT f.user_high AS user_id FROM public.user_friendships f
-                    WHERE f.status = 'accepted' AND f.user_low = $1
-                    UNION
-                    SELECT f.user_low AS user_id FROM public.user_friendships f
-                    WHERE f.status = 'accepted' AND f.user_high = $1
-                    UNION
-                    SELECT f.follower_id AS user_id FROM public.user_follows f WHERE f.followed_id = $1
+                    SELECT f.follower_id AS user_id FROM public.user_follows f
+                    WHERE f.followed_id = $1 AND f.status = 'accepted'
                 ) audience ON true
                 JOIN public.user_social_settings settings ON settings.user_id = activity.actor_id
                 WHERE settings.show_activity
