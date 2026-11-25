@@ -719,6 +719,15 @@
   stroke-width: 1;
 }
 
+.shared-bud-glow {
+  fill: var(--sun);
+  opacity: 0.25;
+}
+
+.shared-bud-core {
+  fill: var(--sun);
+}
+
 .shared-tree-invite,
 .shared-tree-note {
   margin: 0;
@@ -1094,6 +1103,15 @@
     border-radius: 50%;
     background: var(--accent);
     animation: shared-pulse 1.2s ease-in-out infinite;
+  }
+
+  .shared-bud-glow {
+    animation: shared-glow 1.6s ease-in-out infinite;
+  }
+
+  @keyframes shared-glow {
+    0%, 100% { opacity: 0.12; scale: 0.8; }
+    50% { opacity: 0.4; scale: 1.25; }
   }
 
   @keyframes shared-pulse {

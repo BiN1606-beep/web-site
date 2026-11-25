@@ -543,6 +543,20 @@ local function handle_community()
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not unfollow that member." })
         end
         return respond(ngx.HTTP_OK, { ok = true, i_follow = "none" })
+    elseif action == "remove_follower" then
+        -- Stops someone from following you (they are not told).
+        if not target_id then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid user ID is required." })
+        end
+        local rows = database_query([[
+            DELETE FROM public.user_follows
+            WHERE follower_id = $2 AND followed_id = $1
+            RETURNING follower_id
+        ]], user.id, target_id)
+        if not rows then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not remove that follower." })
+        end
+        return respond(ngx.HTTP_OK, { ok = true })
     elseif action == "accept" or action == "decline" then
         -- Answers a follow request to your private profile.
         if not target_id then

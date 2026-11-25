@@ -159,6 +159,10 @@ jq -e '.friends == true' /tmp/out >/dev/null || { cat /tmp/out; fail "friends ag
 [ "$(tpost $J tree_remove "")" = 200 ] || fail "remove tree"
 [ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees after remove"
 jq -e '.trees | length == 0' /tmp/out >/dev/null || { cat /tmp/out; fail "removed tree hidden"; }
+# Removing a follower: B stops following A.
+[ "$(cpost $J "{\"action\":\"remove_follower\",\"userId\":\"$B_ID\"}")" = 200 ] || fail "remove follower"
+[ "$(cget $J2 "action=profile&userId=$A_ID")" = 200 ] || fail "profile after removal"
+jq -e '.profile.i_follow == "none"' /tmp/out >/dev/null || { cat /tmp/out; fail "removed follower no longer follows"; }
 echo "shared trees ok"
 
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"

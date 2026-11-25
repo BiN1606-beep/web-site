@@ -95,6 +95,16 @@ const drawSharedTree = (svg, tree, animateFrom = null) => {
   // The ground: a soft hill both of you stand on.
   svg.append(svgElement("ellipse", { class: "shared-ground", cx: 120, cy: 204, rx: 92, ry: 12 }));
 
+  // When only one of you watered today, a bud glows where tomorrow's
+  // growth will come out. It opens when the other one waters too.
+  const drawBud = (x, y) => {
+    if (!tree.waiting) return;
+    const bud = svgElement("g", { class: "shared-bud", transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` });
+    bud.append(svgElement("circle", { class: "shared-bud-glow", r: 9 }));
+    bud.append(svgElement("ellipse", { class: "shared-bud-core", rx: 3.2, ry: 4.4 }));
+    svg.append(bud);
+  };
+
   if (grown === 0) {
     // Not grown yet: a seed in the soil with a tiny shoot once it's planted.
     svg.append(svgElement("ellipse", { class: "shared-seed", cx: 120, cy: 196, rx: 9, ry: 6 }));
@@ -103,6 +113,7 @@ const drawSharedTree = (svg, tree, animateFrom = null) => {
       svg.append(svgElement("ellipse", { class: "shared-leaf leaf-you", cx: 117, cy: 177, rx: 5, ry: 2.6, transform: "rotate(-30 117 177)" }));
       svg.append(svgElement("ellipse", { class: "shared-leaf leaf-friend", cx: 126, cy: 175, rx: 5, ry: 2.6, transform: "rotate(25 126 175)" }));
     }
+    drawBud(122, 172);
     return;
   }
 
@@ -200,6 +211,8 @@ const drawSharedTree = (svg, tree, animateFrom = null) => {
     }));
     svg.append(holder);
   }
+  const top = tips.reduce((best, tip) => (!best || tip.endY < best.endY ? tip : best), null) || segments[0];
+  drawBud(top.endX, top.endY - 4);
 };
 
 // The day as "YYYY-MM-DD" in the user's own time zone.

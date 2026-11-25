@@ -475,7 +475,8 @@ const renderNotifications = (notifications) => {
 
 const loadCommunityTrees = async () => {
   const result = await communityGet("trees", { day: sharedTreeToday() });
-  communityTrees = result.trees || [];
+  // An empty list can arrive as {} from the server's JSON encoder.
+  communityTrees = (result.trees || []).map((tree) => ({ ...tree, days: Array.isArray(tree.days) ? tree.days : [] }));
   // The Trees badge counts what needs you: invites to answer, and trees
   // your friend watered today while you haven't.
   const needsYou = communityTrees.filter((tree) => {
@@ -600,7 +601,10 @@ const sharedTreeCard = (tree) => {
   picture.setAttribute("aria-label", `${tree.title}: ${sharedTreeStage(tree.grown).name.toLowerCase()}, grown ${tree.grown} days`);
   const before = communityTreeSizes.get(tree.id);
   const animateFrom = before === undefined ? 0 : before < tree.grown ? before : null;
-  drawSharedTree(picture, tree, communityReduceMotion() ? null : animateFrom);
+  // One of you watered today but not the other: a glowing bud waits.
+  const todayEntry = (tree.days || []).find((day) => day.day === tree.today) || {};
+  const waiting = tree.status === "growing" && Boolean(todayEntry.me) !== Boolean(todayEntry.partner);
+  drawSharedTree(picture, { ...tree, waiting }, communityReduceMotion() ? null : animateFrom);
   communityTreeSizes.set(tree.id, tree.grown);
   card.append(picture);
 
@@ -875,7 +879,17 @@ const openCommunityProfile = async (userId) => {
         treeButton.append(communityIcon(COMMUNITY_ICONS.tree), document.createTextNode(tree ? "Our tree" : "Grow a tree"));
         actions.append(treeButton);
       }
+      const followerButtons = communityBool(person.follows_me) ? [
+        communityButton("Remove follower", "profile-secondary-button", async () => {
+          if (!confirm(`Remove ${profile.display_name} as a follower?`)) return;
+          await communityPost({ action: "remove_follower", userId: String(profile.id) });
+          person.follows_me = false;
+          refreshCommunityCounts();
+          rerenderActions(person);
+        }),
+      ] : [];
       const more = communityMenu("More options", [
+        ...followerButtons,
         communityButton("Block", "profile-secondary-button", async () => {
           if (!confirm(`Block ${profile.display_name}? They will no longer find or contact you here.`)) return;
           await communityPost({ action: "block", userId: String(profile.id) });
