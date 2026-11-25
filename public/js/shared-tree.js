@@ -1,27 +1,27 @@
-// Drawing a shared tree: the picture that grows when two friends both
-// water it on the same day (see lua/osiris/shared_trees.lua).
+// Drawing a shared network: the picture that grows when two friends both
+// check in on the same day (see lua/osiris/shared_trees.lua, where it is
+// still called a "tree").
 //
-// The tree is drawn from a seeded random number generator, so the same
-// tree always gets the same shape: every new day only adds to it. Its
-// size follows "grown", the number of days you both watered:
-//   * the trunk is two strands twisted together, one in your color and
-//     one in your friend's,
-//   * it branches one level deeper at 1, 3, 7, 15, 31 and 63 days,
-//   * every day adds two leaves, one for each of you,
-//   * every 10th day hangs a golden fruit.
+// It looks like your own progress network. In the middle is your shared
+// goal, with you on one side and your friend on the other. Every week
+// together is a branch from the goal (like a goal in your own network),
+// and every day you BOTH checked in adds one dot for you and one for your
+// friend on that branch, joined by a dashed line. Every 10th day is a bigger gold dot, and every 30 days puts a
+// gold ring around the goal. When only one of you has checked in today,
+// a glowing dot waits at the end of that person's chain.
 //
 // Loaded as a plain script (see the list at the end of index.html); all
 // these files share one set of top-level names, so the order matters.
 
 const SHARED_TREE_STAGES = [
-  [0, "Seed"],
-  [1, "Sprout"],
-  [3, "Seedling"],
-  [7, "Sapling"],
-  [14, "Young tree"],
-  [30, "Tree"],
-  [60, "Big tree"],
-  [100, "Giant tree"],
+  [0, "Spark"],
+  [1, "First link"],
+  [3, "Small web"],
+  [7, "Network"],
+  [14, "Growing network"],
+  [30, "Big network"],
+  [60, "Huge network"],
+  [100, "Giant network"],
 ];
 
 // The stage for a size, and how many days are left until the next one.
@@ -36,19 +36,6 @@ const sharedTreeStage = (grown) => {
   };
 };
 
-// mulberry32: a tiny random number generator that gives the same numbers
-// for the same seed.
-const sharedTreeRandom = (seed) => {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-};
-
 const SVG_NS = "http://www.w3.org/2000/svg";
 const svgElement = (tag, attributes = {}) => {
   const element = document.createElementNS(SVG_NS, tag);
@@ -56,163 +43,162 @@ const svgElement = (tag, attributes = {}) => {
   return element;
 };
 
-// Builds the branches as a list of segments. Each segment knows its level
-// (0 is the trunk) so the leaves can sit on the outer branches.
-const sharedTreeBranches = (random, depth, trunkLength) => {
-  const segments = [];
-  const grow = (x, y, angle, length, width, level) => {
-    const endX = x + Math.cos(angle) * length;
-    const endY = y + Math.sin(angle) * length;
-    // A slight bend makes the branches look grown, not drawn with a ruler.
-    const bend = (random() - 0.5) * length * 0.35;
-    const midX = (x + endX) / 2 + Math.cos(angle + Math.PI / 2) * bend;
-    const midY = (y + endY) / 2 + Math.sin(angle + Math.PI / 2) * bend;
-    segments.push({ x, y, midX, midY, endX, endY, angle, width, level, length });
-    if (level + 1 >= depth) return;
-    const spread = 0.32 + random() * 0.22;
-    const shrink = 0.7 + random() * 0.08;
-    grow(endX, endY, angle - spread, length * shrink, width * 0.68, level + 1);
-    grow(endX, endY, angle + spread * (0.85 + random() * 0.3), length * shrink, width * 0.68, level + 1);
-    // Big trees get an extra middle branch now and then, so they look full.
-    if (level >= 1 && level < depth - 2 && random() < 0.35) {
-      grow(endX, endY, angle + (random() - 0.5) * 0.3, length * shrink * 0.85, width * 0.6, level + 1);
+// The most days drawn as dots; older days still count, they just aren't
+// drawn one by one (the gold rings show them).
+const SHARED_MAX_DOTS = 150;
+
+// Builds the dots and lines for a shared network.
+const sharedNetworkGraph = (tree) => {
+  const grown = Math.max(0, Number(tree.grown) || 0);
+  const shown = Math.min(grown, SHARED_MAX_DOTS);
+  const nodes = [
+    { id: "goal", kind: "goal", r: 10 + Math.min(6, grown / 15) },
+    { id: "you", kind: "person", side: "you", r: 7 },
+    { id: "friend", kind: "person", side: "friend", r: 7 },
+  ];
+  const links = [
+    { source: "goal", target: "you", kind: tree.status === "growing" ? "chain" : "pending" },
+    { source: "goal", target: "friend", kind: tree.status === "growing" ? "chain" : "pending" },
+  ];
+  // Each week of days together is its own branch from the goal, like the
+  // goals in your own network, so a big network spreads out all around.
+  const last = { you: "you", friend: "friend" };
+  for (let day = 0; day < shown; day += 1) {
+    if (day % 7 === 0) {
+      const week = `week${day / 7}`;
+      nodes.push({ id: week, kind: "week", day, r: 5.5 });
+      links.push({ source: "goal", target: week, kind: "chain" });
+      last.you = week;
+      last.friend = week;
     }
-  };
-  grow(120, 196, -Math.PI / 2, trunkLength, 5 + depth * 1.3, 0);
-  return segments;
+    const milestone = (day + 1) % 10 === 0;
+    for (const side of ["you", "friend"]) {
+      const id = `${side}${day}`;
+      nodes.push({ id, kind: "day", side, day, milestone, r: milestone ? 6 : 3.8 });
+      links.push({ source: last[side], target: id, kind: "chain" });
+      last[side] = id;
+    }
+    links.push({ source: `you${day}`, target: `friend${day}`, kind: "pair" });
+  }
+  if (tree.waitingSide) {
+    nodes.push({ id: "waiting", kind: "waiting", side: tree.waitingSide, r: 4.5 });
+    links.push({ source: last[tree.waitingSide], target: "waiting", kind: "pending" });
+  }
+  return { nodes, links, rings: Math.min(Math.floor(grown / 30), 6) };
 };
 
-// Draws the tree into an <svg>. tree has id, grown and status. When
-// animateFrom is a number, the leaves after that count pop in (the new
-// growth); the first time a tree is shown, everything grows in.
-const drawSharedTree = (svg, tree, animateFrom = null) => {
-  const grown = Math.max(0, Number(tree.grown) || 0);
-  const random = sharedTreeRandom((Number(tree.id) || 1) * 9973);
-  svg.replaceChildren();
-  svg.setAttribute("viewBox", "0 0 240 220");
-  svg.classList.toggle("is-animated", animateFrom !== null);
-
-  // The ground: a soft hill both of you stand on.
-  svg.append(svgElement("ellipse", { class: "shared-ground", cx: 120, cy: 204, rx: 92, ry: 12 }));
-
-  // When only one of you watered today, a bud glows where tomorrow's
-  // growth will come out. It opens when the other one waters too.
-  const drawBud = (x, y) => {
-    if (!tree.waiting) return;
-    const bud = svgElement("g", { class: "shared-bud", transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` });
-    bud.append(svgElement("circle", { class: "shared-bud-glow", r: 9 }));
-    bud.append(svgElement("ellipse", { class: "shared-bud-core", rx: 3.2, ry: 4.4 }));
-    svg.append(bud);
-  };
-
-  if (grown === 0) {
-    // Not grown yet: a seed in the soil with a tiny shoot once it's planted.
-    svg.append(svgElement("ellipse", { class: "shared-seed", cx: 120, cy: 196, rx: 9, ry: 6 }));
-    if (tree.status === "growing") {
-      svg.append(svgElement("path", { class: "shared-shoot", d: "M120 192 q-2 -10 2 -16" }));
-      svg.append(svgElement("ellipse", { class: "shared-leaf leaf-you", cx: 117, cy: 177, rx: 5, ry: 2.6, transform: "rotate(-30 117 177)" }));
-      svg.append(svgElement("ellipse", { class: "shared-leaf leaf-friend", cx: 126, cy: 175, rx: 5, ry: 2.6, transform: "rotate(25 126 175)" }));
+// Places the dots. With d3 (loaded for the main network) the same physics
+// as your own network settles them; without it they sit on two spirals.
+const sharedNetworkLayout = (nodes, links) => {
+  if (window.d3) {
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id((node) => node.id)
+        .distance((link) => (link.kind === "pair" ? 12 : link.source.kind === "goal" || link.source.id === "goal" ? 26 : 14))
+        .strength((link) => (link.kind === "pair" ? 0.5 : 1)))
+      .force("charge", d3.forceManyBody().strength(-38))
+      .force("collide", d3.forceCollide((node) => node.r + 2.5))
+      .force("x", d3.forceX(0).strength(0.05))
+      .force("y", d3.forceY(0).strength(0.05))
+      .stop();
+    // The goal stays in the middle; you start on the left, your friend on the right.
+    nodes[0].fx = 0;
+    nodes[0].fy = 0;
+    for (const node of nodes) {
+      if (node.kind === "goal") continue;
+      if (node.kind === "person") {
+        node.x = node.side === "you" ? -24 : 24;
+        node.y = 0;
+        continue;
+      }
+      // Weeks start out spread around the goal like the hours on a clock.
+      const day = node.day ?? 0;
+      const angle = Math.floor(day / 7) * 2.4 + 0.8;
+      const distance = 30 + (day % 7) * 12 + (node.side === "friend" ? 6 : 0);
+      node.x = Math.cos(angle) * distance;
+      node.y = Math.sin(angle) * distance;
     }
-    drawBud(122, 172);
+    for (let tick = 0; tick < 300; tick += 1) simulation.tick();
     return;
   }
+  for (const node of nodes) {
+    if (node.kind === "goal") { node.x = 0; node.y = 0; continue; }
+    const day = node.kind === "person" ? 0 : node.kind === "waiting" ? SHARED_MAX_DOTS : node.day;
+    const angle = Math.floor(day / 7) * 2.4 + 0.8 + (node.side === "friend" ? 0.12 : 0);
+    const radius = (node.kind === "person" ? 22 : 30) + (day % 7) * 11;
+    node.x = Math.cos(angle) * radius;
+    node.y = Math.sin(angle) * radius;
+  }
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  for (const link of links) {
+    link.source = byId.get(link.source) || link.source;
+    link.target = byId.get(link.target) || link.target;
+  }
+};
 
-  // Size grows fast at first and slower later, so day 1 already shows a
-  // little tree and day 100 fills the picture.
-  const progress = Math.min(1, Math.log(grown + 1) / Math.log(101));
-  const depth = Math.min(7, 1 + Math.floor(Math.log2(grown + 1)));
-  const trunkLength = 20 + 34 * progress;
-  const segments = sharedTreeBranches(random, depth, trunkLength);
+// Draws the shared network into an <svg>. tree has grown, status and
+// optionally waitingSide ("you" or "friend"). When animateFrom is a
+// number, the days after it pop in (the new growth).
+const drawSharedTree = (svg, tree, animateFrom = null) => {
+  const { nodes, links, rings } = sharedNetworkGraph(tree);
+  sharedNetworkLayout(nodes, links);
+  svg.replaceChildren();
 
-  // Branches, thickest first. The trunk is two strands twisted together.
-  const branches = svgElement("g", { class: "shared-branches" });
-  segments.forEach((segment, index) => {
-    const path = `M${segment.x.toFixed(1)} ${segment.y.toFixed(1)} Q${segment.midX.toFixed(1)} ${segment.midY.toFixed(1)} ${segment.endX.toFixed(1)} ${segment.endY.toFixed(1)}`;
-    if (segment.level === 0) {
-      const twist = segment.width * 0.45;
-      for (const [side, className] of [[-1, "strand-you"], [1, "strand-friend"]]) {
-        branches.append(svgElement("path", {
-          class: `shared-strand ${className}`,
-          d: `M${(segment.x + side * twist).toFixed(1)} ${segment.y.toFixed(1)} C${(segment.x - side * twist * 1.6).toFixed(1)} ${(segment.y - segment.length * 0.35).toFixed(1)} ${(segment.endX + side * twist * 1.6).toFixed(1)} ${(segment.endY + segment.length * 0.35).toFixed(1)} ${(segment.endX - side * twist * 0.4).toFixed(1)} ${segment.endY.toFixed(1)}`,
-          "stroke-width": (segment.width * 0.7).toFixed(2),
-          style: `--delay: 0ms`,
-        }));
-      }
-      return;
-    }
-    branches.append(svgElement("path", {
-      class: "shared-branch",
-      d: path,
-      "stroke-width": Math.max(0.8, segment.width).toFixed(2),
-      pathLength: 1,
-      style: `--delay: ${Math.min(600, segment.level * 90 + (index % 7) * 6)}ms`,
+  // Fit the picture around the dots, never smaller than a small square.
+  const pad = 18;
+  const xs = nodes.map((node) => node.x);
+  const ys = nodes.map((node) => node.y);
+  const width = Math.max(Math.max(...xs) - Math.min(...xs) + pad * 2, 150);
+  const height = Math.max(Math.max(...ys) - Math.min(...ys) + pad * 2, 120);
+  const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
+  const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
+  svg.setAttribute("viewBox", `${(centerX - width / 2).toFixed(1)} ${(centerY - height / 2).toFixed(1)} ${width.toFixed(1)} ${height.toFixed(1)}`);
+
+  const isNew = (node) => animateFrom !== null && (node.kind === "day" || node.kind === "week") && node.day >= animateFrom;
+  const delay = (node) => (isNew(node) ? Math.min(900, 150 + (node.day - animateFrom) * 30) : 0);
+
+  const lines = svgElement("g", { class: "shared-links" });
+  for (const link of links) {
+    const fresh = isNew(link.target);
+    lines.append(svgElement("line", {
+      class: `shared-link is-${link.kind}${fresh ? " is-new-line" : ""}`,
+      x1: link.source.x.toFixed(1),
+      y1: link.source.y.toFixed(1),
+      x2: link.target.x.toFixed(1),
+      y2: link.target.y.toFixed(1),
+      style: `--delay: ${delay(link.target)}ms`,
     }));
-  });
-  svg.append(branches);
+  }
+  svg.append(lines);
 
-  // A soft crown behind the leaves, so a big tree looks full.
-  const tips = segments.filter((segment) => segment.level === depth - 1);
-  if (depth >= 3) {
-    const crown = svgElement("g", { class: "shared-crown" });
-    for (const tip of tips) {
-      crown.append(svgElement("circle", {
-        cx: tip.endX.toFixed(1),
-        cy: tip.endY.toFixed(1),
-        r: (5 + 9 * progress).toFixed(1),
+  const dots = svgElement("g", { class: "shared-dots" });
+  for (const node of nodes) {
+    const holder = svgElement("g", { transform: `translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})` });
+    if (node.kind === "goal") {
+      for (let ring = 0; ring < rings; ring += 1) {
+        holder.append(svgElement("circle", { class: "shared-ring", r: (node.r + 5 + ring * 3).toFixed(1) }));
+      }
+      // The goal is half yours and half your friend's.
+      const r = node.r;
+      holder.append(svgElement("path", { class: "shared-node is-you", d: `M0 ${-r} A${r} ${r} 0 0 0 0 ${r} Z` }));
+      holder.append(svgElement("path", { class: "shared-node is-friend", d: `M0 ${-r} A${r} ${r} 0 0 1 0 ${r} Z` }));
+    } else if (node.kind === "week") {
+      const r = node.r;
+      const fresh = isNew(node) ? " is-new" : "";
+      holder.append(svgElement("path", { class: `shared-node is-you is-week${fresh}`, d: `M0 ${-r} A${r} ${r} 0 0 0 0 ${r} Z`, style: `--delay: ${delay(node)}ms` }));
+      holder.append(svgElement("path", { class: `shared-node is-friend is-week${fresh}`, d: `M0 ${-r} A${r} ${r} 0 0 1 0 ${r} Z`, style: `--delay: ${delay(node)}ms` }));
+    } else if (node.kind === "waiting") {
+      holder.append(svgElement("circle", { class: "shared-bud-glow", r: 10 }));
+      holder.append(svgElement("circle", { class: `shared-node is-${node.side} is-waiting`, r: node.r }));
+    } else {
+      holder.append(svgElement("circle", {
+        class: `shared-node is-${node.side}${node.kind === "person" ? " is-person" : ""}${node.milestone ? " is-milestone" : ""}${isNew(node) ? " is-new" : ""}`,
+        r: node.r,
+        style: `--delay: ${delay(node)}ms`,
       }));
     }
-    svg.insertBefore(crown, branches);
+    dots.append(holder);
   }
-
-  // Leaves: two per day, on the outer branches. They are placed in order,
-  // so tomorrow's leaves are added and today's stay where they are. Each
-  // leaf sits in its own group that moves and turns it, so the leaf itself
-  // can pop from its own middle.
-  const outer = segments.filter((segment) => segment.level >= Math.max(1, depth - 2) || depth <= 2);
-  const leaves = svgElement("g", { class: "shared-leaves" });
-  const leafCount = Math.min(grown * 2, 260);
-  for (let index = 0; index < leafCount; index += 1) {
-    const segment = outer[Math.floor(random() * outer.length)];
-    const along = 0.45 + random() * 0.55;
-    const inverse = 1 - along;
-    // A point on the curved branch (a quadratic Bézier curve).
-    const x = inverse * inverse * segment.x + 2 * inverse * along * segment.midX + along * along * segment.endX;
-    const y = inverse * inverse * segment.y + 2 * inverse * along * segment.midY + along * along * segment.endY;
-    const offset = (random() - 0.5) * 10;
-    const leafX = x + Math.cos(segment.angle + Math.PI / 2) * offset;
-    const leafY = y + Math.sin(segment.angle + Math.PI / 2) * offset;
-    const turn = (segment.angle * 180) / Math.PI + (random() - 0.5) * 120;
-    const size = 4.6 + random() * 2.2 + progress * 1.6;
-    const isNew = animateFrom !== null && index >= animateFrom * 2;
-    const holder = svgElement("g", { transform: `translate(${leafX.toFixed(1)} ${leafY.toFixed(1)}) rotate(${turn.toFixed(0)})` });
-    holder.append(svgElement("ellipse", {
-      class: `shared-leaf ${index % 2 ? "leaf-friend" : "leaf-you"}${isNew ? " is-new" : ""}`,
-      rx: size.toFixed(1),
-      ry: (size * 0.5).toFixed(1),
-      style: `--delay: ${isNew ? Math.min(900, 250 + (index - animateFrom * 2) * 25) : 0}ms`,
-    }));
-    leaves.append(holder);
-  }
-  svg.append(leaves);
-
-  // A golden fruit for every 10 days, at the branch tips.
-  const fruitCount = Math.min(Math.floor(grown / 10), 40);
-  const fruitRandom = sharedTreeRandom((Number(tree.id) || 1) * 31337);
-  for (let index = 0; index < fruitCount && tips.length; index += 1) {
-    const tip = tips[Math.floor(fruitRandom() * tips.length)];
-    const isNew = animateFrom !== null && index >= Math.floor(animateFrom / 10);
-    const holder = svgElement("g", {
-      transform: `translate(${(tip.endX + (fruitRandom() - 0.5) * 6).toFixed(1)} ${(tip.endY + 3 + fruitRandom() * 4).toFixed(1)})`,
-    });
-    holder.append(svgElement("circle", {
-      class: `shared-fruit${isNew ? " is-new" : ""}`,
-      r: 3.4,
-      style: `--delay: ${isNew ? 900 : 0}ms`,
-    }));
-    svg.append(holder);
-  }
-  const top = tips.reduce((best, tip) => (!best || tip.endY < best.endY ? tip : best), null) || segments[0];
-  drawBud(top.endX, top.endY - 4);
+  svg.append(dots);
 };
 
 // The day as "YYYY-MM-DD" in the user's own time zone.

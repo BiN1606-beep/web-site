@@ -5,8 +5,8 @@
 //   * Follow someone. A public profile is followed right away; a private
 //     one gets a follow request that they accept or decline.
 //   * When you follow each other you are friends.
-//   * Friends can plant a shared tree. It only grows on the days you BOTH
-//     water it (shared-tree.js draws it, lua/osiris/shared_trees.lua
+//   * Friends can grow a shared network. It only grows on the days you
+//     BOTH check in (shared-tree.js draws it, lua/osiris/shared_trees.lua
 //     keeps it).
 //
 // Loaded as a plain script (see the list at the end of index.html); all
@@ -61,8 +61,8 @@ const COMMUNITY_ICONS = {
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"></path>',
   close: '<path d="M6 6l12 12M18 6 6 18"></path>',
   friends: '<path d="M7 9h11l-3-3M17 15H6l3 3"></path>',
-  drop: '<path d="M12 3.5c3 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-10Z"></path>',
-  tree: '<path d="M12 3a4.5 4.5 0 0 0-4.4 3.6A4 4 0 0 0 7.5 15h9a4 4 0 0 0-.1-8.4A4.5 4.5 0 0 0 12 3Z"></path><path d="M12 21v-9m0 4-2.5-2.5M12 14l2-2"></path>',
+  drop: '<circle cx="12" cy="12" r="3.5"></circle><circle cx="12" cy="12" r="8"></circle>',
+  tree: '<circle cx="12" cy="12" r="2.6"></circle><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="6" r="2"></circle><circle cx="5" cy="18.5" r="2"></circle><circle cx="19" cy="18.5" r="2"></circle><path d="m6.6 7.3 3.4 3m4-0 3.4-3m-10.8 9.9 3.4-3m4 0 3.4 3"></path>',
   more: '<circle cx="5" cy="12" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="19" cy="12" r="1.3"></circle>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path>',
   back: '<path d="m15 6-6 6 6 6"></path>',
@@ -217,7 +217,7 @@ const communityFollowButton = (person, onChange = null, size = "") => {
         person.follows_me = result.follows_me;
         if (result.friends) {
           communityCelebrate(button);
-          communityToast(`You and ${person.display_name} are friends now.`, "Grow a tree", () => openPlantForm(person.id));
+          communityToast(`You and ${person.display_name} are friends now.`, "Grow together", () => openPlantForm(person.id));
         } else if (result.i_follow === "pending") {
           communityToast("Request sent. They'll see it in their Community.");
         }
@@ -359,8 +359,8 @@ const communityPersonRow = (person, mode) => {
         else openPlantForm(person.id);
       });
       treeButton.append(communityIcon(COMMUNITY_ICONS.tree));
-      treeButton.setAttribute("aria-label", tree ? `Your tree with ${person.display_name}` : `Grow a tree with ${person.display_name}`);
-      treeButton.title = tree ? "Your shared tree" : "Grow a tree together";
+      treeButton.setAttribute("aria-label", tree ? `Your network with ${person.display_name}` : `Grow together with ${person.display_name}`);
+      treeButton.title = tree ? "Your shared network" : "Grow together";
       actions.prepend(treeButton);
     }
   }
@@ -433,10 +433,10 @@ const NOTIFICATION_TEXTS = {
   new_friend: "followed you back. You're friends now.",
   milestone_completed: "finished a step.",
   reaction: "cheered on your progress.",
-  tree_invite: "wants to grow a tree with you.",
-  tree_started: "said yes. Your shared tree is planted.",
-  tree_watered: "watered your tree. Your turn!",
-  tree_grew: "watered too. Your tree grew!",
+  tree_invite: "wants to grow together with you.",
+  tree_started: "said yes. Your shared network has started.",
+  tree_watered: "checked in on your shared goal. Your turn!",
+  tree_grew: "checked in too. Your network grew!",
 };
 const NOTIFICATION_VIEWS = {
   follow_request: "requests",
@@ -464,7 +464,7 @@ const renderNotifications = (notifications) => {
     const view = NOTIFICATION_VIEWS[notification.notification_type];
     if (view) {
       const actions = communityElement("div", "community-actions");
-      actions.append(communityButton(view === "requests" ? "See" : "Open tree", "profile-secondary-button", () => loadCommunitySection(view)));
+      actions.append(communityButton(view === "requests" ? "See" : "Open", "profile-secondary-button", () => loadCommunitySection(view)));
       card.append(actions);
     }
     communityList.append(card);
@@ -494,7 +494,7 @@ const PLANT_IDEAS = ["Move every day", "Read every day", "Study together", "Slee
 const communityPlantCard = (friend) => {
   const card = communityElement("form", "shared-plant");
   const heading = communityElement("div", "shared-plant-head");
-  heading.append(communityAvatar(friend, "small"), communityElement("strong", "", `Grow a tree with ${friend.display_name}`));
+  heading.append(communityAvatar(friend, "small"), communityElement("strong", "", `Grow together with ${friend.display_name}`));
   const input = communityElement("input");
   input.type = "text";
   input.maxLength = 80;
@@ -511,9 +511,9 @@ const communityPlantCard = (friend) => {
     });
     ideas.append(chip);
   }
-  const rule = communityElement("p", "community-muted", "It only grows on days you both water it.");
+  const rule = communityElement("p", "community-muted", "It only grows on days you both check in.");
   const actions = communityElement("div", "community-actions");
-  const submit = communityElement("button", "save-button", "Plant");
+  const submit = communityElement("button", "save-button", "Start");
   submit.type = "submit";
   const cancel = communityElement("button", "profile-secondary-button", "Cancel");
   cancel.type = "button";
@@ -531,7 +531,7 @@ const communityPlantCard = (friend) => {
       communityPlantFor = null;
       await loadCommunityTrees();
       renderTrees();
-      communityToast(`Seed planted. ${friend.display_name} needs to say yes.`);
+      communityToast(`Invite sent. ${friend.display_name} needs to say yes.`);
     } catch (error) {
       communityStatus.textContent = error.message;
     } finally {
@@ -555,7 +555,7 @@ const sharedTreeWeek = (tree) => {
     const dot = communityElement("span", `shared-week-day${both ? " is-both" : one ? " is-one" : ""}`);
     const name = new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", { weekday: "narrow" });
     dot.append(communityElement("i"), communityElement("small", "", name));
-    dot.title = both ? "You both watered" : one ? "Only one of you watered" : "Not watered";
+    dot.title = both ? "You both checked in" : one ? "Only one of you checked in" : "No check-in";
     week.append(dot);
   }
   return week;
@@ -586,8 +586,8 @@ const sharedTreeCard = (tree) => {
   withLine.append(communityProfileButton(partner));
   titles.append(withLine);
   head.append(titles);
-  const menu = communityMenu("Tree options", [communityButton(tree.status === "invited" ? "Remove invite" : "Remove tree", "profile-secondary-button", async () => {
-    if (tree.status === "growing" && !confirm(`Remove "${tree.title}"? It stops growing for both of you.`)) return;
+  const menu = communityMenu("Options", [communityButton(tree.status === "invited" ? "Remove invite" : "Remove", "profile-secondary-button", async () => {
+    if (tree.status === "growing" && !confirm(`Remove "${tree.title}"? It is removed for both of you.`)) return;
     await communityPost({ action: "tree_remove", treeId: String(tree.id) });
     await loadCommunityTrees();
     renderTrees();
@@ -601,10 +601,12 @@ const sharedTreeCard = (tree) => {
   picture.setAttribute("aria-label", `${tree.title}: ${sharedTreeStage(tree.grown).name.toLowerCase()}, grown ${tree.grown} days`);
   const before = communityTreeSizes.get(tree.id);
   const animateFrom = before === undefined ? 0 : before < tree.grown ? before : null;
-  // One of you watered today but not the other: a glowing bud waits.
+  // One of you checked in today but not the other: a glowing dot waits.
   const todayEntry = (tree.days || []).find((day) => day.day === tree.today) || {};
-  const waiting = tree.status === "growing" && Boolean(todayEntry.me) !== Boolean(todayEntry.partner);
-  drawSharedTree(picture, { ...tree, waiting }, communityReduceMotion() ? null : animateFrom);
+  const waitingSide = tree.status !== "growing" || Boolean(todayEntry.me) === Boolean(todayEntry.partner)
+    ? null
+    : todayEntry.me ? "you" : "friend";
+  drawSharedTree(picture, { ...tree, waitingSide }, communityReduceMotion() ? null : animateFrom);
   communityTreeSizes.set(tree.id, tree.grown);
   card.append(picture);
 
@@ -621,7 +623,7 @@ const sharedTreeCard = (tree) => {
           await loadCommunityTrees();
           renderTrees();
         }),
-        communityButton("Plant it", "save-button", async (button) => {
+        communityButton("Start", "save-button", async (button) => {
           await communityPost({ action: "tree_accept", treeId: String(tree.id) });
           communityCelebrate(button);
           await loadCommunityTrees();
@@ -666,7 +668,7 @@ const sharedTreeCard = (tree) => {
     input.setAttribute("aria-label", "What did you do today?");
     const water = communityElement("button", "save-button shared-water-button");
     water.type = "submit";
-    water.append(communityIcon(COMMUNITY_ICONS.drop), document.createTextNode("Water"));
+    water.append(communityIcon(COMMUNITY_ICONS.drop), document.createTextNode("Check in"));
     form.append(input, water);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -683,10 +685,10 @@ const sharedTreeCard = (tree) => {
         const fresh = communityList.querySelector(`[data-tree-id="${tree.id}"] .shared-tree-picture`);
         if (result.grew) {
           communityCelebrate(fresh, 26);
-          communityToast("You both watered. Your tree grew!");
+          communityToast("You both checked in. Your network grew!");
         } else {
           communityList.querySelector(`[data-tree-id="${tree.id}"] .shared-person.is-watered`)?.classList.add("is-splash");
-          communityToast(`Watered. It grows when ${tree.partner_name} waters too.`);
+          communityToast(`Checked in. It grows when ${tree.partner_name} checks in too.`);
         }
       } catch (error) {
         communityStatus.textContent = error.message;
@@ -698,7 +700,7 @@ const sharedTreeCard = (tree) => {
   } else if (!today.partner) {
     card.append(communityElement("p", "shared-tree-note is-waiting", `Waiting for ${tree.partner_name}.`));
   } else {
-    card.append(communityElement("p", "shared-tree-note is-done", "You both watered today. It grew."));
+    card.append(communityElement("p", "shared-tree-note is-done", "You both checked in today. It grew."));
   }
   card.append(sharedTreeWeek(tree));
   return card;
@@ -721,18 +723,18 @@ const renderTrees = () => {
     seed.classList.add("shared-tree-picture", "is-small");
     drawSharedTree(seed, { id: 7, grown: 0, status: "growing" });
     empty.append(seed, communityElement("p", "", friends.length
-      ? "Plant a tree with a friend. It only grows on days you both water it."
-      : "Follow each other to become friends. Then you can grow a tree together."));
+      ? "Pick a friend and a goal. Your network only grows on days you both check in."
+      : "Follow each other to become friends. Then you can grow together."));
     communityList.append(empty);
   }
   if (free.length) {
     const section = communityElement("section", "shared-free");
-    section.append(communityElement("h3", "", communityTrees.length ? "Plant another" : "Pick a friend"));
+    section.append(communityElement("h3", "", communityTrees.length ? "Start another" : "Pick a friend"));
     for (const friend of free) {
       const row = communityElement("div", "shared-free-row");
       row.append(communityAvatar(friend, "small"), communityElement("span", "", friend.display_name));
       const plant = communityButton("", "community-icon-button is-tree", () => openPlantForm(friend.id));
-      plant.append(communityIcon(COMMUNITY_ICONS.tree), document.createTextNode("Plant"));
+      plant.append(communityIcon(COMMUNITY_ICONS.tree), document.createTextNode("Start"));
       row.append(plant);
       section.append(row);
     }
@@ -753,7 +755,7 @@ const COMMUNITY_VIEW_NAMES = {
   following: "Following",
   followers: "Followers",
   requests: "Follow requests",
-  trees: "Shared trees",
+  trees: "Grow together",
   feed: "Activity",
   notifications: "Inbox",
   privacy: "Privacy",
@@ -876,7 +878,7 @@ const openCommunityProfile = async (userId) => {
           if (tree) await loadCommunitySection("trees");
           else await openPlantForm(person.id);
         });
-        treeButton.append(communityIcon(COMMUNITY_ICONS.tree), document.createTextNode(tree ? "Our tree" : "Grow a tree"));
+        treeButton.append(communityIcon(COMMUNITY_ICONS.tree), document.createTextNode(tree ? "Our network" : "Grow together"));
         actions.append(treeButton);
       }
       const followerButtons = communityBool(person.follows_me) ? [

@@ -630,7 +630,7 @@
   width: 100%;
   height: clamp(220px, 42vw, 320px);
   border-radius: 0.9rem;
-  background: radial-gradient(ellipse at 50% 85%, var(--accent-soft), transparent 70%), var(--surface);
+  background: radial-gradient(ellipse at 50% 45%, var(--base), var(--surface) 80%);
 }
 
 .shared-tree-picture.is-small {
@@ -639,7 +639,7 @@
   justify-self: center;
 }
 
-/* An invite is a small card: a seed waiting to be planted. */
+/* An invite is a small card waiting for a yes. */
 .shared-tree-card.is-invited {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
@@ -651,8 +651,8 @@
 }
 
 .shared-tree-card.is-invited .shared-tree-picture {
-  width: 96px;
-  height: 80px;
+  width: 110px;
+  height: 84px;
 }
 
 .shared-tree-card.is-invited .shared-tree-invite {
@@ -663,69 +663,52 @@
   justify-content: flex-end;
 }
 
-.shared-ground {
-  fill: var(--panel-border);
-  opacity: 0.7;
+/* The shared network (public/js/shared-tree.js): your dots in green, your
+   friend's in gold, like two goals in your own network. */
+.shared-link {
+  stroke: var(--panel-border);
+  stroke-width: 1.4;
 }
 
-.shared-seed {
-  fill: #8a6a48;
-}
-
-.shared-shoot {
-  fill: none;
-  stroke: var(--leaf);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.shared-strand {
-  fill: none;
-  stroke-linecap: round;
-}
-
-/* The trunk: two strands, one tinted with each person's color. */
-.strand-you {
-  stroke: color-mix(in srgb, var(--accent) 55%, #8a6a48);
-}
-
-.strand-friend {
-  stroke: color-mix(in srgb, var(--sun) 60%, #8a6a48);
-}
-
-.shared-crown {
-  fill: var(--leaf);
-  opacity: 0.16;
-}
-
-.shared-branch {
-  fill: none;
-  stroke: #8a6a48;
-  stroke-linecap: round;
-}
-
-.shared-leaf.leaf-you {
-  fill: var(--leaf);
-}
-
-.shared-leaf.leaf-friend {
-  fill: var(--accent);
-  opacity: 0.85;
-}
-
-.shared-fruit {
-  fill: var(--sun);
-  stroke: var(--panel);
+.shared-link.is-pair {
+  stroke-dasharray: 2 2.5;
   stroke-width: 1;
+}
+
+.shared-link.is-pending {
+  stroke-dasharray: 3 3;
+}
+
+.shared-node.is-you {
+  fill: var(--accent);
+}
+
+.shared-node.is-friend {
+  fill: var(--sun);
+}
+
+.shared-node.is-person,
+.shared-node.is-milestone {
+  stroke: var(--panel);
+  stroke-width: 1.5;
+}
+
+.shared-node.is-waiting {
+  fill: var(--base);
+  stroke: var(--sun);
+  stroke-width: 1.5;
+}
+
+.shared-ring {
+  fill: none;
+  stroke: var(--sun);
+  stroke-width: 0.8;
+  opacity: 0.6;
 }
 
 .shared-bud-glow {
   fill: var(--sun);
   opacity: 0.25;
-}
-
-.shared-bud-core {
-  fill: var(--sun);
 }
 
 .shared-tree-invite,
@@ -1049,32 +1032,15 @@
     to { opacity: 1; transform: none; }
   }
 
-  /* The tree grows in: branches draw themselves, leaves pop out. */
-  .shared-tree-picture.is-animated .shared-branch {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: shared-draw 600ms ease-out forwards;
-    animation-delay: var(--delay, 0ms);
-  }
-
-  .shared-tree-picture.is-animated .shared-strand {
-    animation: shared-rise 500ms ease-out both;
-    transform-origin: 50% 100%;
-    transform-box: fill-box;
-  }
-
+  /* New days pop in, and their lines fade in with them. */
   .shared-tree-picture .is-new {
     animation: shared-pop 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
     animation-delay: var(--delay, 0ms);
   }
 
-  @keyframes shared-draw {
-    to { stroke-dashoffset: 0; }
-  }
-
-  @keyframes shared-rise {
-    from { transform: scaleY(0); }
-    to { transform: scaleY(1); }
+  .shared-tree-picture .is-new-line {
+    animation: motion-fade 400ms ease-out both;
+    animation-delay: var(--delay, 0ms);
   }
 
   @keyframes shared-pop {
@@ -1082,16 +1048,14 @@
     to { scale: 1; }
   }
 
-  /* The tree sways a little, all the time. */
-  .shared-tree-card.is-growing .shared-leaves {
-    transform-box: view-box;
-    transform-origin: 50% 90%;
-    animation: shared-sway 5s ease-in-out infinite alternate;
+  /* The network floats a little, like your own. */
+  .shared-tree-card.is-growing .shared-tree-picture > g {
+    animation: shared-float 6s ease-in-out infinite alternate;
   }
 
-  @keyframes shared-sway {
-    from { transform: rotate(-0.8deg); }
-    to { transform: rotate(0.8deg); }
+  @keyframes shared-float {
+    from { translate: 0 -1px; }
+    to { translate: 0 1.5px; }
   }
 
   .shared-tree-note.is-waiting::after {
