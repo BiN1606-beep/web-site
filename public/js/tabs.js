@@ -11,9 +11,25 @@
 const panelTabs = [...document.querySelectorAll(".panel-tab")];
 const PANEL_TAB_STORAGE = "osiris-panel-tab";
 
+const panelTabList = document.querySelector(".panel-tabs");
+// The sliding pill behind the chosen tab (css/motion.css) is drawn by the
+// tab list itself; the tabs only say where it should be.
+panelTabList?.classList.add("has-pill");
+
 const showPanelTab = (name, { focus = false } = {}) => {
+  panelTabs.forEach((tab, index) => {
+    if (tab.dataset.tab === name) panelTabList?.style.setProperty("--tab-index", String(index));
+  });
   for (const tab of panelTabs) {
     const selected = tab.dataset.tab === name;
+    const page = document.getElementById(tab.getAttribute("aria-controls"));
+    // The newly shown page's cards rise in (only on a real switch).
+    if (selected && page.hidden) {
+      page.classList.remove("is-entering");
+      void page.offsetWidth;
+      page.classList.add("is-entering");
+      window.setTimeout(() => page.classList.remove("is-entering"), 900);
+    }
     tab.setAttribute("aria-selected", String(selected));
     // Only the selected tab is reached with Tab; arrow keys move between them.
     tab.tabIndex = selected ? 0 : -1;

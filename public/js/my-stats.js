@@ -108,9 +108,30 @@ document.querySelector("#my-stats-open").addEventListener("click", () => {
   renderMyStats();
 });
 
-document.querySelector("#my-stats-close").addEventListener("click", () => myStatsDialog.close());
+// Closing plays a short animation first (css/motion.css), then closes.
+const closeMyStats = () => {
+  if (!myStatsDialog.open || myStatsDialog.classList.contains("is-closing")) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) {
+    myStatsDialog.close();
+    return;
+  }
+  myStatsDialog.classList.add("is-closing");
+  window.setTimeout(() => {
+    myStatsDialog.classList.remove("is-closing");
+    myStatsDialog.close();
+  }, 190);
+};
+
+document.querySelector("#my-stats-close").addEventListener("click", closeMyStats);
 
 // A click on the dark area around the card closes it too.
 myStatsDialog.addEventListener("click", (event) => {
-  if (event.target === myStatsDialog) myStatsDialog.close();
+  if (event.target === myStatsDialog) closeMyStats();
+});
+
+// Escape closes with the same animation.
+myStatsDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeMyStats();
 });

@@ -108,6 +108,13 @@ const renderStreak = (tree) => {
   // A dot on the Today tab until you've checked in today.
   setPanelTabDot("today", !streak.checkedInToday);
 
+  // The number gives a little bump when the streak grows.
+  if (Number(streakCount.textContent) < streak.current && streakCount.dataset.shown) {
+    streakCount.classList.remove("is-bumping");
+    void streakCount.offsetWidth;
+    streakCount.classList.add("is-bumping");
+  }
+  streakCount.dataset.shown = "true";
   streakCount.textContent = String(streak.current);
   streakCountLabel.textContent = "day streak";
   todayStreak.textContent = String(streak.current);
