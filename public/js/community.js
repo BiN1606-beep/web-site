@@ -479,7 +479,7 @@ const renderNotifications = (notifications) => {
 const loadCommunityTrees = async () => {
   const result = await communityGet("trees", { day: sharedTreeToday() });
   // An empty list can arrive as {} from the server's JSON encoder.
-  communityTrees = (result.trees || []).map((tree) => ({ ...tree, days: Array.isArray(tree.days) ? tree.days : [] }));
+  communityTrees = communityArray(result.trees).map((tree) => ({ ...tree, days: Array.isArray(tree.days) ? tree.days : [] }));
   // The Trees badge counts what needs you: invites to answer, and trees
   // your friend watered today while you haven't.
   const needsYou = communityTrees.filter((tree) => {
@@ -816,8 +816,15 @@ const COMMUNITY_VIEW_NAMES = {
   search: "Search",
 };
 
+// The server sends an empty list as {} (an empty Lua table), so every
+// list is turned back into a real array before it is used.
+const communityArray = (value) => (Array.isArray(value) ? value : []);
+
 const loadCommunitySummary = async () => {
   const result = await communityGet("summary");
+  for (const name of ["requests", "friends", "following", "followers", "blocked"]) {
+    result[name] = communityArray(result[name]);
+  }
   communityState = result;
   updateCommunityBadge(Number(result.unread) || 0);
   if (result.settings) {
@@ -852,10 +859,10 @@ const loadCommunitySection = async (view) => {
   if (!communityState) await loadCommunitySummary();
   if (view === "feed") {
     const result = await communityGet("feed");
-    renderActivityFeed(result.activities);
+    renderActivityFeed(communityArray(result.activities));
   } else if (view === "notifications") {
     const result = await communityGet("notifications");
-    renderNotifications(result.notifications);
+    renderNotifications(communityArray(result.notifications));
     await communityPost({ action: "mark_read" });
     updateCommunityBadge(0);
   } else if (view === "trees") {
@@ -879,7 +886,7 @@ const searchCommunity = async (query) => {
   try {
     const result = await communityGet("search", { q: query });
     if (sequence !== communitySearchSequence) return;
-    renderPeople(result.people, "search");
+    renderPeople(communityArray(result.people), "search");
     communityStatus.textContent = "";
   } catch (error) {
     if (sequence !== communitySearchSequence) return;
