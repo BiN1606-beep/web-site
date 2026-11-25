@@ -84,6 +84,13 @@ SELECT json_build_object(
             LIMIT 500
         ) m
     ),
+    -- When each member joined (seconds since 1970, oldest first), for the
+    -- "members over time" line chart. The page groups them by hour, day or
+    -- month itself, so one list covers today, the week, month, year and all time.
+    'join_times', (
+        SELECT COALESCE(json_agg(extract(epoch FROM created_at)::bigint ORDER BY created_at), '[]'::json)
+        FROM public.auth_users
+    ),
     'ai_today', (SELECT COALESCE(sum(request_count), 0) FROM public.groq_daily_usage WHERE usage_date = CURRENT_DATE),
     'daily', (
         SELECT json_agg(json_build_object(
