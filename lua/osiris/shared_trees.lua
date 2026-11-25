@@ -6,7 +6,7 @@
 --
 -- The /api/community endpoint (community.lua) hands its tree actions to
 -- this module: GET ?action=trees, and POST tree_plant, tree_accept,
--- tree_remove, tree_water and tree_nudge.
+-- tree_remove, tree_water, tree_nudge and tree_side_quest.
 
 local M = {}
 local common = require "osiris.common"
@@ -44,6 +44,31 @@ local function valid_tree_id(value)
     return tonumber(id)
 end
 
+-- Small side quests that save the streak when your friend doesn't show up.
+-- Easy on purpose: a minute or two. Which one you get depends on the goal
+-- and the day, so it changes every day and both of you see the same one.
+local SIDE_QUESTS = {
+    "Do 10 squats",
+    "Drink a big glass of water",
+    "Take a 5-minute walk",
+    "Read 2 pages of a book",
+    "Tidy your desk for 3 minutes",
+    "Stretch for 2 minutes",
+    "Write down one thing you're grateful for",
+    "Do 10 push-ups (knees are fine)",
+    "Put your phone away for 15 minutes",
+    "Plan tomorrow in 3 bullet points",
+    "Take 10 slow, deep breaths",
+    "Send someone a kind message",
+}
+
+-- The side quest for a goal on a day ("YYYY-MM-DD").
+local function side_quest_for(tree_id, day)
+    local year, month, date = day:match("^(%d+)%-(%d+)%-(%d+)$")
+    local number = tonumber(year) * 372 + tonumber(month) * 31 + tonumber(date) + tonumber(tree_id) * 7
+    return SIDE_QUESTS[number % #SIDE_QUESTS + 1]
+end
+
 -- Every tree you are part of that has not been removed, with your friend,
 -- how big it has grown, and the last 60 days of waterings (who watered,
 -- and what they wrote). "today" is the browser's own date, so the "did we
@@ -73,7 +98,12 @@ function M.list_trees(user_id, today)
                 SELECT jsonb_agg(jsonb_build_object(
                     'day', day_rows.day::text,
                     'me', day_rows.my_note,
-                    'partner', day_rows.partner_note
+                    'partner', day_rows.partner_note,
+                    'saved', (SELECT CASE WHEN quest.user_id = $1 THEN 'me' ELSE 'partner' END
+                        FROM public.shared_tree_side_quests quest
+                        WHERE quest.tree_id = tree.id AND quest.day = day_rows.day),
+                    'quest', (SELECT quest.quest FROM public.shared_tree_side_quests quest
+                        WHERE quest.tree_id = tree.id AND quest.day = day_rows.day)
                 ) ORDER BY day_rows.day DESC)
                 FROM (
                     SELECT watering.day,
@@ -99,6 +129,7 @@ function M.list_trees(user_id, today)
         row.grown = tonumber(row.grown) or 0
         row.days = common.decode_json_value(row.days, {})
         row.today = today
+        row.side_quest = side_quest_for(row.id, today)
     end
     return rows
 end
@@ -258,6 +289,58 @@ local function handle_water(user, tree_id, body)
     return respond(ngx.HTTP_OK, { ok = true, grew = grew })
 end
 
+-- A side quest: saves today's streak when you checked in and your friend
+-- didn't. Not allowed when yesterday was already saved by a side quest:
+-- then it's your friend's turn.
+local function handle_side_quest(user, tree_id, body)
+    if not valid_checkin_day(body.day) then
+        return respond(ngx.HTTP_BAD_REQUEST, { error = "A valid day is required." })
+    end
+    local rows = database_query([[
+        WITH tree AS (
+            SELECT tree.id,
+                CASE WHEN tree.user_low = $1 THEN tree.user_high ELSE tree.user_low END AS partner_id
+            FROM public.shared_trees tree
+            WHERE tree.id = $2 AND tree.status = 'growing'
+              AND (tree.user_low = $1 OR tree.user_high = $1)
+              AND $3::date BETWEEN (now() AT TIME ZONE 'UTC')::date - 1
+                               AND (now() AT TIME ZONE 'UTC')::date + 1
+        ),
+        allowed AS (
+            SELECT tree.* FROM tree
+            JOIN public.user_friends friend
+              ON friend.user_id = $1 AND friend.friend_id = tree.partner_id
+            WHERE EXISTS (
+                SELECT 1 FROM public.shared_tree_waterings mine
+                WHERE mine.tree_id = tree.id AND mine.user_id = $1 AND mine.day = $3::date
+            )
+              AND NOT EXISTS (
+                SELECT 1 FROM public.shared_tree_waterings theirs
+                WHERE theirs.tree_id = tree.id AND theirs.user_id = tree.partner_id
+                  AND theirs.day = $3::date
+            )
+              AND NOT EXISTS (
+                SELECT 1 FROM public.shared_tree_side_quests yesterday
+                WHERE yesterday.tree_id = tree.id AND yesterday.day = $3::date - 1
+            )
+        ),
+        saved AS (
+            INSERT INTO public.shared_tree_side_quests (tree_id, user_id, day, quest)
+            SELECT id, $1, $3::date, $4 FROM allowed
+            ON CONFLICT (tree_id, day) DO NOTHING
+            RETURNING tree_id
+        )
+        SELECT (SELECT count(*) FROM allowed) AS allowed
+    ]], user.id, tree_id, body.day, side_quest_for(tree_id, body.day))
+    if not rows or not rows[1] then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save the side quest." })
+    end
+    if tonumber(rows[1].allowed) == 0 then
+        return respond(ngx.HTTP_CONFLICT, { error = "A side quest can't save today. Check in first, and it only works one day in a row." })
+    end
+    return respond(ngx.HTTP_OK, { ok = true })
+end
+
 -- A nudge: reminds your friend to check in today. Only on a growing
 -- tree, only while you follow each other, only when they haven't checked
 -- in yet that day, and only once a day.
@@ -316,7 +399,7 @@ function M.handle_action(user, body)
         return handle_plant(user, body)
     end
     if action ~= "tree_accept" and action ~= "tree_remove" and action ~= "tree_water"
-        and action ~= "tree_nudge" then
+        and action ~= "tree_nudge" and action ~= "tree_side_quest" then
         return false
     end
     local tree_id = valid_tree_id(body.treeId)
@@ -329,6 +412,8 @@ function M.handle_action(user, body)
         return handle_remove(user, tree_id)
     elseif action == "tree_nudge" then
         return handle_nudge(user, tree_id, body)
+    elseif action == "tree_side_quest" then
+        return handle_side_quest(user, tree_id, body)
     end
     return handle_water(user, tree_id, body)
 end

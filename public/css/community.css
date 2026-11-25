@@ -815,6 +815,72 @@
   height: 0.95rem;
 }
 
+/* Side quest: a small task that saves the streak for a day. */
+.shared-quest {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: start;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed var(--accent);
+  border-radius: 0.9rem;
+}
+
+.shared-quest p {
+  margin: 0;
+}
+
+.shared-quest strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.shared-quest-label {
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shared-quest .save-button {
+  margin-top: 0.3rem;
+}
+
+.shared-quest.is-done {
+  border-style: solid;
+  background: var(--accent-soft);
+}
+
+.shared-quest.is-locked {
+  border-color: var(--panel-border);
+  color: var(--muted);
+}
+
+.shared-quest.is-locked .shared-quest-label {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.shared-node.is-save {
+  fill: var(--base);
+  stroke-width: 1.4;
+}
+
+.shared-node.is-save.is-you {
+  stroke: var(--accent);
+}
+
+.shared-node.is-save.is-friend {
+  stroke: var(--sun);
+}
+
+.shared-week-day.is-saved i {
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--sun);
+}
+
 /* The nudge button in your friend's box. */
 .shared-nudge {
   display: inline-flex;

@@ -80,6 +80,15 @@ const sharedNetworkGraph = (tree) => {
     }
     links.push({ source: `you${day}`, target: `friend${day}`, kind: "pair" });
   }
+  // Side quests: small hollow dots off your own side (or your friend's).
+  // They kept the streak alive but didn't grow the network.
+  const saves = (tree.days || []).filter((day) => day.saved).slice(0, 12);
+  saves.forEach((day, index) => {
+    const side = day.saved === "me" ? "you" : "friend";
+    const id = `save${index}`;
+    nodes.push({ id, kind: "save", side, r: 3 });
+    links.push({ source: side, target: id, kind: "pending" });
+  });
   if (tree.waitingSide) {
     nodes.push({ id: "waiting", kind: "waiting", side: tree.waitingSide, r: 4.5 });
     links.push({ source: last[tree.waitingSide], target: "waiting", kind: "pending" });
@@ -186,6 +195,8 @@ const drawSharedTree = (svg, tree, animateFrom = null) => {
       const fresh = isNew(node) ? " is-new" : "";
       holder.append(svgElement("path", { class: `shared-node is-you is-week${fresh}`, d: `M0 ${-r} A${r} ${r} 0 0 0 0 ${r} Z`, style: `--delay: ${delay(node)}ms` }));
       holder.append(svgElement("path", { class: `shared-node is-friend is-week${fresh}`, d: `M0 ${-r} A${r} ${r} 0 0 1 0 ${r} Z`, style: `--delay: ${delay(node)}ms` }));
+    } else if (node.kind === "save") {
+      holder.append(svgElement("circle", { class: `shared-node is-${node.side} is-save`, r: node.r }));
     } else if (node.kind === "waiting") {
       holder.append(svgElement("circle", { class: "shared-bud-glow", r: 10 }));
       holder.append(svgElement("circle", { class: `shared-node is-${node.side} is-waiting`, r: node.r }));
@@ -204,14 +215,15 @@ const drawSharedTree = (svg, tree, animateFrom = null) => {
 // The day as "YYYY-MM-DD" in the user's own time zone.
 const sharedTreeToday = () => chartLastDays(1)[0];
 
-// Days in a row that you both watered, counting back from today (or from
-// yesterday when today isn't done yet, so the streak doesn't look lost
-// in the morning). days comes from the server, newest first.
+// Days in a row that count: days you both checked in, and days one of
+// you saved with a side quest. Counted back from today (or from yesterday
+// when today isn't done yet, so the streak doesn't look lost in the
+// morning). days comes from the server, newest first.
 const sharedTreeStreak = (days, today) => {
-  const both = new Set(days.filter((day) => day.me && day.partner).map((day) => day.day));
+  const counted = new Set(days.filter((day) => (day.me && day.partner) || day.saved).map((day) => day.day));
   const calendar = chartLastDays(61, new Date(`${today}T12:00:00`)).reverse();
-  const start = both.has(calendar[0]) ? 0 : 1;
+  const start = counted.has(calendar[0]) ? 0 : 1;
   let streak = 0;
-  for (let index = start; index < calendar.length && both.has(calendar[index]); index += 1) streak += 1;
+  for (let index = start; index < calendar.length && counted.has(calendar[index]); index += 1) streak += 1;
   return streak;
 };

@@ -141,6 +141,14 @@ TREE=$(jq -r .id /tmp/out)
 jq -e '.grew == false' /tmp/out >/dev/null || { cat /tmp/out; fail "one watering doesn't grow"; }
 [ "$(cget $J2 "action=trees&day=$TODAY")" = 200 ] || { cat /tmp/out; fail "trees"; }
 jq -e --arg t "$TODAY" '.trees[0].grown == 0 and .trees[0].status == "growing" and .trees[0].days[0].day == $t and .trees[0].days[0].partner == "ran 3 km" and .trees[0].days[0].me == null' /tmp/out >/dev/null || { cat /tmp/out; fail "tree waiting for B"; }
+# Side quest: A checked in, B hasn't. Not when yesterday was already saved.
+psql -q -c "INSERT INTO shared_tree_side_quests (tree_id, user_id, day, quest) VALUES ($TREE, $A_ID, '$TODAY'::date - 1, 'x')"
+[ "$(tpost $J tree_side_quest "")" = 409 ] || { cat /tmp/out; fail "no side quest two days in a row"; }
+psql -q -c "DELETE FROM shared_tree_side_quests WHERE tree_id = $TREE"
+[ "$(tpost $J2 tree_side_quest "")" = 409 ] || { cat /tmp/out; fail "side quest needs your own check-in"; }
+[ "$(tpost $J tree_side_quest "")" = 200 ] || { cat /tmp/out; fail "side quest"; }
+[ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees after side quest"
+jq -e '.trees[0].days[0].saved == "me" and (.trees[0].days[0].quest | length > 0) and .trees[0].grown == 0 and (.trees[0].side_quest | length > 0)' /tmp/out >/dev/null || { cat /tmp/out; fail "side quest saves but doesn't grow"; }
 # A nudges B, who hasn't checked in yet: once a day.
 [ "$(tpost $J tree_nudge "")" = 200 ] || { cat /tmp/out; fail "nudge"; }
 jq -e '.already == false' /tmp/out >/dev/null || { cat /tmp/out; fail "first nudge"; }

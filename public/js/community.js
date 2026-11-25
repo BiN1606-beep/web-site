@@ -555,10 +555,11 @@ const sharedTreeWeek = (tree) => {
     const entry = byDay.get(day);
     const both = Boolean(entry?.me && entry?.partner);
     const one = Boolean(entry?.me || entry?.partner);
-    const dot = communityElement("span", `shared-week-day${both ? " is-both" : one ? " is-one" : ""}`);
+    const saved = Boolean(entry?.saved);
+    const dot = communityElement("span", `shared-week-day${both ? " is-both" : one ? " is-one" : ""}${saved ? " is-saved" : ""}`);
     const name = new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", { weekday: "narrow" });
     dot.append(communityElement("i"), communityElement("small", "", name));
-    dot.title = both ? "You both checked in" : one ? "Only one of you checked in" : "No check-in";
+    dot.title = both ? "You both checked in" : saved ? "Saved with a side quest" : one ? "Only one of you checked in" : "No check-in";
     week.append(dot);
   }
   return week;
@@ -575,6 +576,36 @@ const sharedTreePerson = (person, label, watered, note) => {
   mark.append(communityIcon(watered ? COMMUNITY_ICONS.check : COMMUNITY_ICONS.drop));
   pill.append(mark);
   return pill;
+};
+
+// The side quest box, shown when you checked in today and your friend
+// hasn't: one small task keeps the streak alive, once in a row.
+const sharedSideQuest = (tree, today) => {
+  const box = communityElement("div", "shared-quest");
+  const yesterday = chartLastDays(2, new Date(`${tree.today}T12:00:00`))[0];
+  const savedYesterday = (tree.days || []).some((day) => day.day === yesterday && day.saved);
+  const label = communityElement("span", "shared-quest-label", "Side quest");
+  if (today.saved) {
+    box.classList.add("is-done");
+    box.append(label, communityElement("strong", "", today.quest || tree.side_quest),
+      communityElement("p", "community-muted", `Streak saved. The network grows when ${tree.partner_name} checks in.`));
+    return box;
+  }
+  if (savedYesterday) {
+    box.classList.add("is-locked");
+    box.append(label, communityElement("p", "", `A side quest saved yesterday. Today it's up to ${tree.partner_name}: it's teamwork.`));
+    return box;
+  }
+  box.append(label, communityElement("strong", "", tree.side_quest),
+    communityElement("p", "community-muted", `${tree.partner_name} hasn't shown up? Do this to keep your streak alive.`));
+  box.append(communityButton("Done", "save-button", async (button) => {
+    await communityPost({ action: "tree_side_quest", treeId: String(tree.id), day: sharedTreeToday() });
+    communityCelebrate(button, 14);
+    await loadCommunityTrees();
+    renderTrees();
+    communityToast("Streak saved!");
+  }));
+  return box;
 };
 
 const sharedTreeCard = (tree) => {
@@ -720,6 +751,7 @@ const sharedTreeCard = (tree) => {
     card.append(form);
   } else if (!today.partner) {
     card.append(communityElement("p", "shared-tree-note is-waiting", `Waiting for ${tree.partner_name}.`));
+    card.append(sharedSideQuest(tree, today));
   } else {
     card.append(communityElement("p", "shared-tree-note is-done", "You both checked in today. It grew."));
   }

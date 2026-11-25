@@ -97,6 +97,20 @@ CREATE TABLE public.shared_tree_waterings (
     PRIMARY KEY (tree_id, user_id, day)
 );
 
+-- A side quest saves the streak on a day your friend didn't show up: you
+-- checked in, they didn't, so you do one small extra task instead. It
+-- keeps the streak alive but does not grow the network. It can't save two
+-- days in a row, because growing together is teamwork. One per goal and
+-- day.
+CREATE TABLE public.shared_tree_side_quests (
+    tree_id bigint NOT NULL REFERENCES public.shared_trees(id) ON DELETE CASCADE,
+    user_id bigint NOT NULL REFERENCES public.auth_users(id) ON DELETE CASCADE,
+    day date NOT NULL,
+    quest text NOT NULL CHECK (length(quest) BETWEEN 1 AND 120),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (tree_id, day)
+);
+
 -- A nudge: "hop on and check in!" sent to a friend who hasn't checked in
 -- on your shared goal today. One per person, tree and day. It shows in the
 -- friend's inbox right away, and reminders/send_reminders.py also sends it
