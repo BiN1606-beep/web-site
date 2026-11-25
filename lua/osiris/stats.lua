@@ -2,8 +2,9 @@
 -- owner's stats page (public/stats.html).
 --
 -- Only accounts listed in lua/debug_menu_email.txt (the same list as the
--- debug menu) can read it. It returns totals and counts only, never anyone's
--- email, notes or goals, so even the owner sees no private details.
+-- debug menu) can read it. Besides totals it lists the members (name, email,
+-- when they joined and were last active, and how much they have done), but
+-- never their notes, goals or anything else they wrote.
 --
 -- "Active" means the person did something real that day: a daily check-in or
 -- a finished step. Opening the page alone does not count.
@@ -68,6 +69,20 @@ SELECT json_build_object(
     'goals', (SELECT count(*) FROM goals),
     'goals_finished', (SELECT count(*) FROM goals WHERE total_steps > 0 AND completed_count >= total_steps),
     'at_limit', (SELECT count(*) FROM (SELECT 1 FROM goals GROUP BY user_id HAVING count(*) >= $1) g),
+    'member_list', (
+        SELECT COALESCE(json_agg(m ORDER BY m.last_active DESC NULLS LAST, m.joined DESC), '[]'::json)
+        FROM (
+            SELECT u.profile_display_name AS name, u.email, users.joined,
+                   (SELECT max(day) FROM activity a WHERE a.user_id = u.id) AS last_active,
+                   (SELECT count(*) FROM goals g WHERE g.user_id = u.id) AS goals,
+                   (SELECT count(*) FROM public.step_completions s WHERE s.user_id = u.id) AS steps,
+                   (SELECT count(*) FROM public.daily_checkins c WHERE c.user_id = u.id) AS checkins
+            FROM public.auth_users u
+            JOIN users ON users.id = u.id
+            ORDER BY u.id DESC
+            LIMIT 500
+        ) m
+    ),
     'ai_today', (SELECT COALESCE(sum(request_count), 0) FROM public.groq_daily_usage WHERE usage_date = CURRENT_DATE),
     'daily', (
         SELECT json_agg(json_build_object(
