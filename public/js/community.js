@@ -66,6 +66,7 @@ const COMMUNITY_ICONS = {
   more: '<circle cx="5" cy="12" r="1.3"></circle><circle cx="12" cy="12" r="1.3"></circle><circle cx="19" cy="12" r="1.3"></circle>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path>',
   back: '<path d="m15 6-6 6 6 6"></path>',
+  expand: '<path d="M14 5h5v5M10 19H5v-5M19 5l-6 6M5 19l6-6"></path>',
   bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Zm4 4h4"></path>',
 };
 
@@ -608,6 +609,81 @@ const sharedSideQuest = (tree, today) => {
   return box;
 };
 
+// One of you checked in today but not the other: that side is waiting.
+const sharedWaitingSide = (tree) => {
+  const today = (tree.days || []).find((day) => day.day === tree.today) || {};
+  if (tree.status !== "growing" || Boolean(today.me) === Boolean(today.partner)) return null;
+  return today.me ? "you" : "friend";
+};
+
+// The shared network on a card: drawn like your own network (with your
+// sky from Customize), a line that shows what a tapped dot is, and a
+// button that opens it big.
+const sharedNetworkStage = (tree, animateFrom = null) => {
+  const stage = communityElement("div", "shared-stage net-stage");
+  if (typeof networkStyle !== "undefined") stage.dataset.sky = networkStyle.sky;
+  const picture = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  picture.classList.add("shared-tree-picture");
+  picture.setAttribute("role", "img");
+  picture.setAttribute("aria-label", `${tree.title}: ${sharedTreeStage(tree.grown).name.toLowerCase()}, grown ${tree.grown} days`);
+  const details = communityElement("p", "shared-details");
+  details.hidden = true;
+  const showDetails = (lines) => {
+    details.hidden = !lines;
+    details.replaceChildren(...(lines || []).map((line, index) => communityElement(index ? "span" : "strong", "", line)));
+  };
+  stage.append(picture, details);
+  const drawn = { ...tree, waitingSide: sharedWaitingSide(tree) };
+  if (tree.status === "growing") {
+    const expand = communityButton("", "shared-expand", () => openSharedNetwork(drawn));
+    expand.append(communityIcon(COMMUNITY_ICONS.expand));
+    expand.setAttribute("aria-label", `Open ${tree.title} big`);
+    expand.title = "Open big";
+    stage.append(expand);
+  }
+  drawSharedTree(picture, drawn, { animateFrom, onSelect: showDetails });
+  return stage;
+};
+
+// The shared network big, over the whole screen, where you can also zoom
+// and pan like in your own network.
+const openSharedNetwork = (tree) => {
+  const dialog = communityElement("dialog", "shared-big");
+  dialog.setAttribute("aria-label", tree.title);
+  const head = communityElement("header", "shared-big-head");
+  const titles = communityElement("div");
+  titles.append(communityElement("h2", "", tree.title), communityElement("p", "community-muted", `with ${tree.partner_name} · ${tree.grown} ${tree.grown === 1 ? "day" : "days"} together`));
+  const close = communityButton("", "shared-big-close", () => dialog.close());
+  close.append(communityIcon(COMMUNITY_ICONS.close));
+  close.setAttribute("aria-label", "Close");
+  head.append(titles, close);
+  const stage = communityElement("div", "shared-stage net-stage is-big");
+  if (typeof networkStyle !== "undefined") stage.dataset.sky = networkStyle.sky;
+  const picture = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  picture.classList.add("shared-tree-picture");
+  const details = communityElement("p", "shared-details");
+  details.hidden = true;
+  stage.append(picture, details);
+  const hint = communityElement("p", "shared-big-hint", "Hover to see days · drag · scroll to zoom");
+  dialog.append(head, stage, hint);
+  dialog.addEventListener("close", () => {
+    picture.sharedSimulation?.stop();
+    dialog.remove();
+  });
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  document.body.append(dialog);
+  dialog.showModal();
+  drawSharedTree(picture, tree, {
+    zoom: true,
+    onSelect: (lines) => {
+      details.hidden = !lines;
+      details.replaceChildren(...(lines || []).map((line, index) => communityElement(index ? "span" : "strong", "", line)));
+    },
+  });
+};
+
 const sharedTreeCard = (tree) => {
   const partner = { id: tree.partner_id, display_name: tree.partner_name, picture: tree.partner_picture };
   const card = communityElement("article", `shared-tree-card is-${tree.status}`);
@@ -629,20 +705,10 @@ const sharedTreeCard = (tree) => {
   head.append(menu);
   card.append(head);
 
-  const picture = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  picture.classList.add("shared-tree-picture");
-  picture.setAttribute("role", "img");
-  picture.setAttribute("aria-label", `${tree.title}: ${sharedTreeStage(tree.grown).name.toLowerCase()}, grown ${tree.grown} days`);
   const before = communityTreeSizes.get(tree.id);
   const animateFrom = before === undefined ? 0 : before < tree.grown ? before : null;
-  // One of you checked in today but not the other: a glowing dot waits.
-  const todayEntry = (tree.days || []).find((day) => day.day === tree.today) || {};
-  const waitingSide = tree.status !== "growing" || Boolean(todayEntry.me) === Boolean(todayEntry.partner)
-    ? null
-    : todayEntry.me ? "you" : "friend";
-  drawSharedTree(picture, { ...tree, waitingSide }, communityReduceMotion() ? null : animateFrom);
+  card.append(sharedNetworkStage(tree, communityReduceMotion() ? null : animateFrom));
   communityTreeSizes.set(tree.id, tree.grown);
-  card.append(picture);
 
   if (tree.status === "invited") {
     const plantedByMe = communityBool(tree.planted_by_me);
@@ -774,7 +840,7 @@ const renderTrees = () => {
     const empty = communityElement("div", "shared-empty");
     const seed = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     seed.classList.add("shared-tree-picture", "is-small");
-    drawSharedTree(seed, { id: 7, grown: 0, status: "growing" });
+    drawSharedTree(seed, { title: "", partner_name: plantFriend?.display_name, grown: 0, status: "invited" });
     empty.append(seed, communityElement("p", "", friends.length
       ? "Pick a friend and a goal. Your network only grows on days you both check in."
       : "Follow each other to become friends. Then you can grow together."));

@@ -626,17 +626,177 @@
   font-weight: 600;
 }
 
-.shared-tree-picture {
-  width: 100%;
-  height: clamp(220px, 42vw, 320px);
+/* The shared network is drawn like your own (public/js/shared-tree.js
+   uses the same classes as js/network.js, styled in css/network.css), on
+   the same background and sky. */
+.shared-stage.net-stage {
+  position: relative;
+  min-height: 0;
+  height: auto;
   border-radius: 0.9rem;
-  background: radial-gradient(ellipse at 50% 45%, var(--base), var(--surface) 80%);
+}
+
+/* An invite shows a small picture next to its text. */
+.shared-tree-card.is-invited .shared-stage.net-stage {
+  align-self: center;
+}
+
+.shared-stage .shared-tree-picture.tree-growth {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: clamp(240px, 46vw, 340px);
+  cursor: grab;
 }
 
 .shared-tree-picture.is-small {
   width: 180px;
   height: 140px;
   justify-self: center;
+  border-radius: 0.9rem;
+  background: radial-gradient(ellipse at 50% 45%, var(--surface), var(--base) 70%);
+}
+
+/* The card shows the whole network smaller than your own, so its names
+   are set a little bigger to read the same. */
+.shared-tree-card .shared-growth .net-node text {
+  font-size: 15px;
+}
+
+.shared-tree-card .shared-growth .net-node.is-goal text {
+  font-size: 17px;
+}
+
+.shared-tree-card .shared-growth .net-node.is-area text {
+  font-size: 18px;
+}
+
+.shared-growth .net-link.is-area.is-friend.is-grown {
+  stroke: var(--sun);
+}
+
+/* What a tapped dot is: its day and what you both wrote. */
+.shared-details {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  max-width: min(22rem, calc(100% - 3.6rem));
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.7rem;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.shared-details strong {
+  color: var(--text);
+}
+
+.shared-expand {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.shared-expand:hover {
+  color: var(--accent);
+}
+
+.shared-expand svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Open big: the shared network over the whole screen. */
+.shared-big {
+  width: min(1100px, calc(100vw - 2rem));
+  max-width: none;
+  height: min(820px, calc(100dvh - 2rem));
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 1.2rem;
+  background: var(--panel);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.shared-big[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.shared-big::backdrop {
+  background: rgba(20, 18, 14, 0.45);
+}
+
+.shared-big-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem 0.6rem;
+}
+
+.shared-big-head h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.shared-big-head p {
+  margin: 0.15rem 0 0;
+}
+
+.shared-big-close {
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.shared-big svg:not(.shared-tree-picture) {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.shared-big .shared-stage.net-stage {
+  height: 100%;
+  margin: 0 0.8rem;
+}
+
+.shared-big .shared-stage .shared-tree-picture.tree-growth {
+  height: 100%;
+}
+
+.shared-big-hint {
+  margin: 0;
+  padding: 0.5rem 1.2rem 0.8rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
 }
 
 /* An invite is a small card waiting for a yes. */
@@ -650,9 +810,9 @@
   grid-column: 1 / -1;
 }
 
-.shared-tree-card.is-invited .shared-tree-picture {
-  width: 110px;
-  height: 84px;
+.shared-tree-card.is-invited .shared-stage .shared-tree-picture.tree-growth {
+  width: 130px;
+  height: 96px;
 }
 
 .shared-tree-card.is-invited .shared-tree-invite {
@@ -661,58 +821,6 @@
 
 .shared-tree-card.is-invited .shared-tree-actions {
   justify-content: flex-end;
-}
-
-/* The shared network (public/js/shared-tree.js): your dots in green, your
-   friend's in gold, like two goals in your own network. */
-.shared-link {
-  stroke: var(--panel-border);
-  stroke-width: 1.4;
-}
-
-.shared-link.is-pair {
-  stroke-dasharray: 2 2.5;
-  stroke-width: 1;
-}
-
-.shared-link.is-pending {
-  stroke-dasharray: 3 3;
-}
-
-.shared-node.is-you {
-  fill: var(--accent);
-}
-
-.shared-node.is-friend {
-  fill: var(--sun);
-}
-
-.shared-node.is-person,
-.shared-node.is-milestone {
-  stroke: var(--panel);
-  stroke-width: 1.5;
-}
-
-.shared-node.is-waiting {
-  fill: var(--base);
-  stroke: var(--sun);
-  stroke-width: 1.5;
-}
-
-.shared-node.is-waiting.is-you {
-  stroke: var(--accent);
-}
-
-.shared-ring {
-  fill: none;
-  stroke: var(--sun);
-  stroke-width: 0.8;
-  opacity: 0.6;
-}
-
-.shared-bud-glow {
-  fill: var(--sun);
-  opacity: 0.25;
 }
 
 .shared-tree-invite,
@@ -862,19 +970,6 @@
 .shared-quest.is-locked .shared-quest-label {
   background: var(--surface);
   color: var(--muted);
-}
-
-.shared-node.is-save {
-  fill: var(--base);
-  stroke-width: 1.4;
-}
-
-.shared-node.is-save.is-you {
-  stroke: var(--accent);
-}
-
-.shared-node.is-save.is-friend {
-  stroke: var(--sun);
 }
 
 .shared-week-day.is-saved i {
@@ -1131,31 +1226,7 @@
     to { opacity: 1; transform: none; }
   }
 
-  /* New days pop in, and their lines fade in with them. */
-  .shared-tree-picture .is-new {
-    animation: shared-pop 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
-    animation-delay: var(--delay, 0ms);
-  }
 
-  .shared-tree-picture .is-new-line {
-    animation: motion-fade 400ms ease-out both;
-    animation-delay: var(--delay, 0ms);
-  }
-
-  @keyframes shared-pop {
-    from { scale: 0; }
-    to { scale: 1; }
-  }
-
-  /* The network floats a little, like your own. */
-  .shared-tree-card.is-growing .shared-tree-picture > g {
-    animation: shared-float 6s ease-in-out infinite alternate;
-  }
-
-  @keyframes shared-float {
-    from { translate: 0 -1px; }
-    to { translate: 0 1.5px; }
-  }
 
   .shared-tree-note.is-waiting::after {
     content: "";
@@ -1166,15 +1237,6 @@
     border-radius: 50%;
     background: var(--accent);
     animation: shared-pulse 1.2s ease-in-out infinite;
-  }
-
-  .shared-bud-glow {
-    animation: shared-glow 1.6s ease-in-out infinite;
-  }
-
-  @keyframes shared-glow {
-    0%, 100% { opacity: 0.12; scale: 0.8; }
-    50% { opacity: 0.4; scale: 1.25; }
   }
 
   @keyframes shared-pulse {
