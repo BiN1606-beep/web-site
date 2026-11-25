@@ -459,6 +459,9 @@ local function handle_progress_tree()
     if body.action == "step_guide" then
         return coach.step_guide(user, row, body)
     end
+    if body.action == "evolve" then
+        return coach.evolve(user, row, body, MAX_GOALS)
+    end
     if body.action == "weekly_review" then
         return coach.weekly_review(user, row, body)
     end
