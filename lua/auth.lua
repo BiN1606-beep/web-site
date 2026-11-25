@@ -7,6 +7,7 @@ local common = require "osiris.common"
 local accounts = require "osiris.accounts"
 local progress = require "osiris.progress"
 local community = require "osiris.community"
+local stats = require "osiris.stats"
 
 local respond = common.respond
 local current_user = common.current_user
@@ -87,6 +88,8 @@ function M.handle_request()
         return handle_progress_tree()
     elseif path == "/api/community" then
         return handle_community()
+    elseif path == "/api/stats" then
+        return stats.handle_stats()
     elseif path == "/api/auth/google" then
         return handle_google_start()
     elseif path == "/api/auth/google/callback" then

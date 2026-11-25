@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="robots" content="noindex">
+    <title>Site stats | Osiris</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+    <script>
+      // Same light/dark choice as the main page (the cookie set by theme.js).
+      if (document.cookie.split(";").some((cookie) => cookie.trim() === "background-theme=dark")) {
+        document.documentElement.classList.add("is-dark");
+      }
+    </script>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/stats.css">
+  </head>
+  <body class="stats-page">
+    <!-- The owner's view of how Osiris is used. Filled in by js/stats.js
+         from /api/stats (lua/osiris/stats.lua). Totals only, no personal data. -->
+    <header class="stats-header">
+      <a class="stats-back" href="/">&larr; Back to Osiris</a>
+      <h1>Site stats</h1>
+      <p class="stats-updated" id="stats-updated">Loading...</p>
+    </header>
+
+    <main class="stats-main" id="stats-main" hidden>
+      <section aria-labelledby="stats-overview-title">
+        <h2 id="stats-overview-title">The big numbers</h2>
+        <div class="stats-tiles" id="stats-tiles"></div>
+      </section>
+
+      <section aria-labelledby="stats-trend-title">
+        <div class="stats-section-head">
+          <h2 id="stats-trend-title">Last 30 days</h2>
+          <div class="stats-switch" id="stats-switch" role="group" aria-label="Which number to show"></div>
+        </div>
+        <div class="stats-chart" id="stats-chart"></div>
+        <p class="stats-note" id="stats-chart-note"></p>
+      </section>
+
+      <section aria-labelledby="stats-funnel-title">
+        <h2 id="stats-funnel-title">From sign-up to habit</h2>
+        <p class="stats-note">How far people get. The biggest drop is where to improve the site first.</p>
+        <ol class="stats-funnel" id="stats-funnel"></ol>
+      </section>
+
+      <div class="stats-columns">
+        <section aria-labelledby="stats-goals-title">
+          <h2 id="stats-goals-title">Goals</h2>
+          <dl class="stats-list" id="stats-goals"></dl>
+          <h3>Goals by life area</h3>
+          <ul class="stats-areas" id="stats-areas"></ul>
+        </section>
+
+        <section aria-labelledby="stats-more-title">
+          <h2 id="stats-more-title">Features and costs</h2>
+          <dl class="stats-list" id="stats-more"></dl>
+        </section>
+      </div>
+
+      <section aria-labelledby="stats-help-title" class="stats-help">
+        <h2 id="stats-help-title">What the numbers mean</h2>
+        <dl>
+          <dt>Active</dt>
+          <dd>Someone did a daily check-in or finished a step that day. Just opening the site does not count.</dd>
+          <dt>Week 2 return rate</dt>
+          <dd>Of the people who joined 2 to 6 weeks ago, how many were still active in their second week. Above 30% is good for a habit app.</dd>
+          <dt>Stickiness</dt>
+          <dd>Active today divided by active this month. 20% or more means people come back often.</dd>
+          <dt>At the goal limit</dt>
+          <dd>People who use all their goal slots. A sign of who might pay for Osiris Plus one day.</dd>
+          <dt>AI requests</dt>
+          <dd>Calls to the free Groq AI. Watch this to stay inside the free limit.</dd>
+        </dl>
+      </section>
+    </main>
+
+    <script src="/js/stats.js"></script>
+  </body>
+</html>

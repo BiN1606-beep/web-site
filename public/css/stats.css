@@ -1,0 +1,264 @@
+/* The owner's stats page (public/stats.html). Uses the colors and fonts
+   from base.css so it looks like the rest of Osiris. */
+
+.stats-page {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--base);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.stats-header,
+.stats-main {
+  width: min(100% - 2rem, 62rem);
+  margin: 0 auto;
+}
+
+.stats-header {
+  padding: 1.5rem 0 0.5rem;
+}
+
+.stats-back {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.stats-back:hover {
+  color: var(--accent);
+}
+
+.stats-header h1 {
+  margin: 0.6rem 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 2.6rem);
+}
+
+.stats-updated,
+.stats-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stats-main {
+  display: grid;
+  gap: 2rem;
+  padding: 1rem 0 3rem;
+}
+
+.stats-main section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stats-main h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.stats-main h3 {
+  margin: 0.75rem 0 0;
+  font-size: 1rem;
+}
+
+/* Tiles */
+.stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.stats-tile {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  background: var(--panel);
+}
+
+.stats-tile-label,
+.stats-tile-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stats-tile-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chart */
+.stats-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.stats-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.stats-switch-button {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.stats-switch-button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.stats-chart {
+  position: relative;
+  padding: 1.75rem 1rem 0.5rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  background: var(--panel);
+}
+
+.stats-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.stats-chart-max {
+  position: absolute;
+  top: 0.5rem;
+  left: 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.stats-chart-grid {
+  stroke: var(--panel-border);
+  stroke-dasharray: 4 4;
+}
+
+.stats-bar {
+  fill: var(--accent);
+  opacity: 0.55;
+}
+
+.stats-bar.is-today,
+.stats-bar:hover {
+  opacity: 1;
+}
+
+.stats-chart-label {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+/* Funnel and area bars */
+.stats-funnel,
+.stats-areas {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-funnel-row,
+.stats-area {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.stats-funnel-bar,
+.stats-area-bar {
+  height: 0.85rem;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.stats-funnel-value,
+.stats-area-count {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Two columns of lists on wide screens */
+.stats-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 2rem;
+}
+
+.stats-list {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0;
+  margin: 0;
+}
+
+.stats-list dt,
+.stats-list dd {
+  margin: 0;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.stats-list dt {
+  color: var(--muted);
+}
+
+.stats-list dd {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-help dl {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.stats-help dt {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.stats-help dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .stats-funnel-row,
+  .stats-area {
+    grid-template-columns: 1fr auto;
+  }
+
+  .stats-funnel-bar,
+  .stats-area-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
