@@ -8,7 +8,7 @@
    1. a warm glow rises behind the logo, like the sun coming up
    2. the ten stripes of the sun fly in from both sides and click together
    3. a ring of light pulses out once the sun is whole
-   4. the wordmark wipes in from the left
+   4. the wordmark wipes in from the left, then a shine runs over the letters
    5. a thin bar along the bottom shows it is loading
    6. on the way out the logo grows a little and the screen fades away */
 
@@ -176,12 +176,17 @@ html.is-dark .startup-logo {
 }
 
 /* ---- 4. The wordmark wipes in ---- */
-.startup-wordmark {
-  display: block;
+.startup-wordmark-wrap {
+  position: relative;
   flex: 0 0 min(52vw, 430px);
   width: min(52vw, 430px);
-  height: auto;
   margin-left: clamp(-28px, -3vw, -10px);
+}
+
+.startup-wordmark {
+  display: block;
+  width: 100%;
+  height: auto;
   -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
   mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
   -webkit-mask-size: 260% 100%;
@@ -201,6 +206,28 @@ html.is-dark .startup-wordmark-bright {
 
 html.is-dark .startup-wordmark-dark {
   display: block;
+}
+
+/* A shine sweeps across the letters once they are in. The wordmark image
+   itself is the mask, so only the letters light up, not the space around. */
+.startup-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.7) 50%, transparent 65%) no-repeat;
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  -webkit-mask: url("/arvid-wordmark-bright.png") center / contain no-repeat;
+  mask: url("/arvid-wordmark-bright.png") center / contain no-repeat;
+  mix-blend-mode: normal;
+  animation: startup-shine 900ms ease-in-out 1.85s both;
+  pointer-events: none;
+}
+
+html.is-dark .startup-shine {
+  -webkit-mask-image: url("/arvid-wordmark.png");
+  mask-image: url("/arvid-wordmark.png");
+  mix-blend-mode: normal;
+  background-image: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
 }
 
 /* ---- 5. The loading bar ---- */
@@ -299,6 +326,11 @@ html.is-dark .startup-wordmark-dark {
     mask-position: 0 0;
     transform: none;
   }
+}
+
+@keyframes startup-shine {
+  from { background-position: 120% 0; }
+  to { background-position: -20% 0; }
 }
 
 @keyframes startup-load {
