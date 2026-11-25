@@ -161,7 +161,13 @@
                     <button class="save-button game-button" id="evolve-yes" type="button">Yes, keep evolving</button>
                     <button class="profile-secondary-button" id="evolve-no" type="button">Not now</button>
                   </div>
-                  <p class="evolve-later" id="evolve-later" hidden>No rush. You can add a new goal anytime from the Progress tab.</p>
+                  <!-- "Not now": start a brand-new tree instead. The finished
+                       goal stays in the network and can be focused again. -->
+                  <div class="evolve-choice" id="evolve-later" hidden>
+                    <p>No problem. Want to grow something completely different? Your finished tree stays in your network, and you can go back to it anytime.</p>
+                    <button class="save-button game-button" id="evolve-new-tree" type="button">Start a new tree</button>
+                    <button class="profile-secondary-button" id="evolve-back" type="button">Back</button>
+                  </div>
                   <form class="evolve-form" id="evolve-form" hidden>
                     <label for="evolve-input" id="evolve-label">What is your actual goal?</label>
                     <textarea id="evolve-input" maxlength="1000" required

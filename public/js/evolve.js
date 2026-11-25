@@ -39,6 +39,15 @@ evolveNo.addEventListener("click", () => {
   evolveLater.hidden = false;
 });
 
+// A new tree for a different goal: the same as "+ Add a new goal". The
+// finished goal stays in the network and the new one becomes the focus.
+document.querySelector("#evolve-new-tree").addEventListener("click", () => {
+  resetEvolve();
+  startNewProgressTree();
+});
+
+document.querySelector("#evolve-back").addEventListener("click", resetEvolve);
+
 evolveForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const dream = evolveInput.value.trim();
