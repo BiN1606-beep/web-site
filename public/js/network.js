@@ -512,8 +512,11 @@ const renderNetworkDetails = () => {
     }
     return;
   }
-  heading.append(createElement("span", "tree-step-label", `${position} · done`), createElement("h2", "", node.label));
+  heading.append(createElement("span", "tree-step-label", node.milestone ? `${position} · goal reached` : `${position} · done`), createElement("h2", "", node.label));
   treeNodeDetails.append(goalChip);
+  if (node.milestone) {
+    treeNodeDetails.append(createElement("p", "", "The step that finished this goal. This is where your next journey began."));
+  }
   if (node.completedAt !== null) {
     treeNodeDetails.append(createElement("p", "", `Completed on ${formatCompletedDate(node.completedAt)}.`));
   }
@@ -592,7 +595,11 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
         skills,
         completedAt: isDone ? completedTime(step) : null,
         recent: isDone && isRecentStep(goal, index),
-        r: isCurrent ? 8 : isDone ? 6.5 : 4.5,
+        // The last step of a finished goal is the "milestone": the moment
+        // the goal was reached and the next journey could begin. It is a
+        // little bigger and glows gold so you can find it again later.
+        milestone: goal.finished && isDone && index === total - 1,
+        r: goal.finished && isDone && index === total - 1 ? 9 : isCurrent ? 8 : isDone ? 6.5 : 4.5,
         charge: -120,
       }, previous));
       links.push({ source: previous, target: id, kind: "chain", grown: isDone || isCurrent, distance: index === 0 ? 46 : 30 });
@@ -685,6 +692,7 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
     "net-node",
     `is-${node.kind}`,
     node.status ? `is-${node.status}` : "",
+    node.milestone ? "is-milestone" : "",
     node.isNew ? "net-bloom" : "",
   ].join(" "));
   nodeGroups.select(".net-hit")
@@ -693,9 +701,9 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
   nodeGroups.select(".tree-pulse")
     .attr("r", (node) => node.r)
     .attr("fill", "none")
-    .attr("stroke", (node) => (node.kind === "goal" ? "#e8b65a" : "var(--accent)"))
+    .attr("stroke", (node) => (node.kind === "goal" || node.milestone ? "#e8b65a" : "var(--accent)"))
     .attr("stroke-width", 2)
-    .attr("display", (node) => (node.status === "current" || (node.kind === "goal" && node.finished) ? null : "none"));
+    .attr("display", (node) => (node.status === "current" || node.milestone || (node.kind === "goal" && node.finished) ? null : "none"));
   nodeGroups.select(".net-core")
     .attr("r", (node) => node.r)
     .attr("fill", (node) => {
@@ -711,12 +719,13 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
       if (node.kind === "seed") return "var(--muted)";
       if (node.kind === "skill" || node.status === "current") return "var(--accent)";
       if (node.status === "locked") return "var(--muted)";
+      if (node.milestone) return "var(--sun)";
       return "none";
     })
-    .attr("stroke-width", (node) => (node.kind === "area" || node.status === "current" ? 3 : node.kind === "goal" ? 2 : 1.8))
+    .attr("stroke-width", (node) => (node.kind === "area" || node.status === "current" || node.milestone ? 3 : node.kind === "goal" ? 2 : 1.8))
     .attr("stroke-dasharray", (node) => (node.status === "locked" || node.kind === "seed" ? "2 2" : null))
-    .attr("opacity", (node) => (node.status === "done" && !node.recent ? 0.78 : 1))
-    .attr("filter", (node) => (node.kind === "goal" || node.recent || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
+    .attr("opacity", (node) => (node.status === "done" && !node.recent && !node.milestone ? 0.78 : 1))
+    .attr("filter", (node) => (node.kind === "goal" || node.recent || node.milestone || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
   // Rewards: one thin gold ring per reward earned, around every goal.
   nodeGroups.select(".net-reward-rings")
     .selectAll("circle")
