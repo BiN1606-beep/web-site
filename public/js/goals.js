@@ -155,6 +155,7 @@ const loadProgressTree = async () => {
       const response = await fetch("/api/progress-tree", { cache: "no-store" });
       const result = await readApiResponse(response, "Progress tree");
       if (!response.ok) throw new Error(result.error || "Could not load your progress tree.");
+      useSavedNetworkStyle(result.network_style);
       renderProgressTree(result.tree);
       setupReminders(result.reminders_key);
     } catch (error) {

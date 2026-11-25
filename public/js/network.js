@@ -202,6 +202,7 @@ const network = {
   world: null,
   linkLayer: null,
   nodeLayer: null,
+  decorLayer: null,
   effectLayer: null,
   nodes: [],
   links: [],
@@ -264,8 +265,26 @@ const goalsFromTree = (tree) => {
 
 const fitProgressNetwork = (animate = true) => {
   if (!network.zoom) return;
-  const box = netStage.getBoundingClientRect();
-  if (!box.width || !box.height) return;
+  const stageBox = netStage.getBoundingClientRect();
+  // On phones the Customize sheet covers the bottom of the network; fit
+  // into the part above it so you can watch your changes.
+  const covered = networkStyleSheetHeight();
+  const box = { width: stageBox.width, height: stageBox.height - covered };
+  if (!box.width || box.height <= 0) return;
+  // A shaped network (tree, galaxy, ...) is fitted to where its dots go.
+  const shaped = networkShapeBounds();
+  if (shaped) {
+    const scale = Math.min(1.3, Math.max(0.3, Math.min(
+      (box.width - 48) / Math.max(shaped.width, 1),
+      (box.height - 110) / Math.max(shaped.height, 1),
+    )));
+    const transform = d3.zoomIdentity
+      .translate(box.width / 2 - shaped.centerX * scale, box.height / 2 + 10 - shaped.centerY * scale)
+      .scale(scale);
+    const svg = d3.select(treeGrowth);
+    (animate ? svg.transition().duration(600) : svg).call(network.zoom.transform, transform);
+    return;
+  }
   const shownGoals = network.focusOnly ? 1 : network.goals.length;
   const span = shownGoals > 1 ? 700 : 480;
   const scale = Math.min(1.3, Math.max(0.45, Math.min(box.width, box.height) / span));
@@ -290,6 +309,9 @@ const setUpProgressNetwork = () => {
   sun.append("stop").attr("offset", "100%").attr("stop-color", "#c98a1b");
 
   network.world = svg.append("g");
+  // Behind everything: the rings of the orbit shape, the galaxy's core
+  // glow and the ground under the tree (js/network-style.js).
+  network.decorLayer = network.world.append("g").attr("class", "net-decor");
   network.linkLayer = network.world.append("g");
   network.nodeLayer = network.world.append("g");
   network.effectLayer = network.world.append("g");
@@ -306,19 +328,22 @@ const setUpProgressNetwork = () => {
   svg.call(network.zoom).on("dblclick.zoom", null);
   svg.on("click", () => selectNetworkNode(null));
 
+  // The forces read your style (js/network-style.js): "Pull" makes the
+  // lines stronger, "Spread" pushes dots apart, and a shape gives every
+  // dot a place (tx, ty) it is pulled towards. d3 reads these numbers
+  // again each time renderNetwork() hands it the nodes and links.
   network.sim = d3.forceSimulation()
     .force("link", d3.forceLink().id((node) => node.id)
-      .distance((link) => link.distance)
-      .strength((link) => (link.kind === "skill" ? 0.08 : link.kind === "area" ? 0.5 : 0.9)))
-    .force("charge", d3.forceManyBody().strength((node) => node.charge).distanceMax(420))
+      .distance((link) => link.distance * styleSpread())
+      .strength((link) => styleLinkStrength(link)))
+    .force("charge", d3.forceManyBody().strength((node) => node.charge * styleCharge()).distanceMax(420))
     .force("collide", d3.forceCollide((node) => node.r + 6))
-    .force("x", d3.forceX(0).strength(0.07))
-    .force("y", d3.forceY(0).strength(0.07))
+    .force("x", d3.forceX((node) => node.tx ?? 0).strength((node) => styleTargetStrength(node)))
+    .force("y", d3.forceY((node) => node.ty ?? 0).strength((node) => styleTargetStrength(node)))
     .alphaDecay(0.03)
     .on("tick", () => {
-      network.linkLayer.selectAll("line")
-        .attr("x1", (link) => link.source.x).attr("y1", (link) => link.source.y)
-        .attr("x2", (link) => link.target.x).attr("y2", (link) => link.target.y);
+      network.linkLayer.selectAll("path")
+        .attr("d", (link) => networkLinkPath(link));
       network.nodeLayer.selectAll("g.net-node")
         .attr("transform", (node) => `translate(${node.x},${node.y})`);
     });
@@ -349,7 +374,7 @@ const highlightProgressNetwork = () => {
   if (!network.nodeLayer) return;
   const focus = network.hovered || network.selected;
   const nodes = network.nodeLayer.selectAll("g.net-node");
-  const lines = network.linkLayer.selectAll("line");
+  const lines = network.linkLayer.selectAll("path");
   nodes.classed("is-hovered", (node) => node.id === network.hovered)
     .classed("is-selected", (node) => node.id === network.selected);
   if (!focus) {
@@ -649,16 +674,21 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
       }
     }
   }
+  // Your style: bigger or smaller dots, and the shape (tree, galaxy, ...)
+  // which may add a hidden root the branches grow from.
+  for (const node of nodes) node.r *= styleDotScale();
+  layoutNetworkShape(nodes, links);
   network.nodes = nodes;
   network.links = links;
 
-  network.linkLayer.selectAll("line")
+  network.linkLayer.selectAll("path")
     .data(links, (link) => `${link.source.id || link.source}>${link.target.id || link.target}`)
-    .join("line")
+    .join("path")
     .attr("class", (link) => `net-link is-${link.kind}${link.grown ? " is-grown" : ""}`);
 
+  // The hidden root of a shape is only a place to grow from, not a dot.
   const nodeGroups = network.nodeLayer.selectAll("g.net-node")
-    .data(nodes, (node) => node.id)
+    .data(nodes.filter((node) => node.kind !== "root"), (node) => node.id)
     .join((enter) => {
       const group = enter.append("g");
       // An invisible, larger circle so small dots are easy to tap with a
@@ -820,6 +850,7 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
 // Stats, the goal list and the strongest skills in the panel overview.
 const renderNetworkSummary = (goals, skillUses) => {
   netControls.hidden = goals.length === 0;
+  netStyleButton.hidden = goals.length === 0;
   netStatDone.textContent = String(goals.reduce((sum, goal) => sum + goal.completed.length, 0));
   netStatGoals.textContent = String(goals.filter((goal) => goal.finished).length);
   netStatSkills.textContent = String(skillUses.size);
@@ -889,6 +920,7 @@ const playNetworkTimelapse = () => {
   network.hasDrawn = false;
   network.linkLayer.selectAll("*").remove();
   network.nodeLayer.selectAll("*").remove();
+  network.decorLayer.selectAll("*").remove();
   renderNetwork(frame(0));
   fitProgressNetwork(true);
   let count = 0;

@@ -10,6 +10,7 @@ local common = require "osiris.common"
 local goals = require "osiris.goals"
 local reminders = require "osiris.reminders"
 local coach = require "osiris.coach"
+local network_style = require "osiris.network_style"
 
 local respond = common.respond
 local database_query = common.database_query
@@ -51,6 +52,8 @@ local function handle_progress_tree()
         return respond(ngx.HTTP_OK, {
             tree = progress_tree_payload(row, user.id),
             reminders_key = vapid_public_key(),
+            -- How you like your network to look (nil = the default look).
+            network_style = network_style.load_style(user.id),
         })
     end
     if method ~= "POST" then
