@@ -28,39 +28,93 @@ const SERIES = [
   { key: "ai", label: "AI requests" },
 ];
 
+// "Today", "Yesterday", "Monday", or "Monday, 2 weeks ago": the day, not the date.
+const dayName = (isoDay, todayIso) => {
+  const day = new Date(`${isoDay}T12:00:00`);
+  const daysAgo = Math.round((new Date(`${todayIso}T12:00:00`) - day) / 86400000);
+  if (daysAgo === 0) return "Today";
+  if (daysAgo === 1) return "Yesterday";
+  const weekday = day.toLocaleDateString("en-GB", { weekday: "long" });
+  if (daysAgo < 7) return weekday;
+  const weeks = Math.floor(daysAgo / 7);
+  return `${weekday}, ${weeks === 1 ? "last week" : `${weeks} weeks ago`}`;
+};
+
+// A bar with round top corners and a flat bottom, as an SVG path.
+const pillarPath = (x, y, width, height) => {
+  const radius = Math.min(width / 2, height, 8);
+  return `M${x},${y + height} V${y + radius} Q${x},${y} ${x + radius},${y} H${x + width - radius} Q${x + width},${y} ${x + width},${y + radius} V${y + height} Z`;
+};
+
 const drawChart = (daily, series) => {
   const chart = document.querySelector("#stats-chart");
   const values = daily.map((day) => Number(day[series.key]) || 0);
   const max = Math.max(1, ...values);
-  // Draw at the real width so the labels stay readable on phones.
+  const todayIso = daily.length ? daily[daily.length - 1].day : "";
+  // Draw at the real width so everything stays readable on phones.
   const width = Math.max(280, Math.round(chart.clientWidth - 32) || 600);
   const height = width < 500 ? 120 : 160;
-  const gap = width < 500 ? 2 : 3;
-  const barWidth = width / values.length - gap;
+  const slot = width / values.length;
+  const barWidth = slot * (width < 500 ? 0.68 : 0.62);
   const ns = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(ns, "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height + 20}`);
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", `${series.label} per day, last 30 days`);
 
-  values.forEach((value, index) => {
-    const barHeight = value === 0 ? 1 : Math.max(3, (value / max) * height);
-    const rect = document.createElementNS(ns, "rect");
-    rect.setAttribute("x", index * (barWidth + gap));
-    rect.setAttribute("y", height - barHeight);
-    rect.setAttribute("width", barWidth);
-    rect.setAttribute("height", barHeight);
-    rect.setAttribute("rx", 2);
-    rect.setAttribute("class", index === values.length - 1 ? "stats-bar is-today" : "stats-bar");
-    const title = document.createElementNS(ns, "title");
-    title.textContent = `${daily[index].day}: ${value}`;
-    rect.append(title);
-    svg.append(rect);
+  // The line above the chart: the picked day, or the best day and total.
+  const info = element("span", "stats-chart-info");
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const summary = `Best day ${formatNumber(max)} · total ${formatNumber(total)}`;
+  info.textContent = summary;
+
+  const pillars = values.map((value, index) => {
+    const x = index * slot + (slot - barWidth) / 2;
+    const group = document.createElementNS(ns, "g");
+    group.setAttribute("class", index === values.length - 1 ? "stats-pillar is-today" : "stats-pillar");
+    group.setAttribute("tabindex", "0");
+    group.setAttribute("role", "button");
+    const text = `${dayName(daily[index].day, todayIso)}: ${formatNumber(value)} ${series.label.toLowerCase()}`;
+    group.setAttribute("aria-label", text);
+
+    // A soft track behind each pillar, so empty days still look tidy.
+    const track = document.createElementNS(ns, "path");
+    track.setAttribute("d", pillarPath(x, 0, barWidth, height));
+    track.setAttribute("class", "stats-pillar-track");
+    group.append(track);
+
+    if (value > 0) {
+      const barHeight = Math.max(barWidth, (value / max) * height);
+      const bar = document.createElementNS(ns, "path");
+      bar.setAttribute("d", pillarPath(x, height - barHeight, barWidth, barHeight));
+      bar.setAttribute("class", "stats-pillar-bar");
+      group.append(bar);
+    }
+
+    const pick = () => {
+      const wasPicked = group.classList.contains("is-picked");
+      pillars.forEach((other) => other.classList.remove("is-picked"));
+      if (wasPicked) {
+        info.textContent = summary;
+        return;
+      }
+      group.classList.add("is-picked");
+      info.textContent = text;
+    };
+    group.addEventListener("click", pick);
+    group.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        pick();
+      }
+    });
+    svg.append(group);
+    return group;
   });
 
-  [[0, "30 days ago", "start"], [values.length - 1, "Today", "end"]].forEach(([index, text, anchor]) => {
+  [["30 days ago", "start", 0], ["Today", "end", width]].forEach(([text, anchor, x]) => {
     const label = document.createElementNS(ns, "text");
-    label.setAttribute("x", anchor === "start" ? 0 : width);
+    label.setAttribute("x", x);
     label.setAttribute("y", height + 15);
     label.setAttribute("text-anchor", anchor);
     label.setAttribute("class", "stats-chart-label");
@@ -68,8 +122,7 @@ const drawChart = (daily, series) => {
     svg.append(label);
   });
 
-  const total = values.reduce((sum, value) => sum + value, 0);
-  chart.replaceChildren(element("span", "stats-chart-max", `Best day ${formatNumber(max)} · total ${formatNumber(total)}`), svg);
+  chart.replaceChildren(info, svg);
 };
 
 const drawSwitch = (daily) => {
