@@ -5,12 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <title>Sign in | Osiris</title>
+    <!-- Same fonts and colors as the rest of the site (public/css/base.css). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
     <style>
       :root {
         color-scheme: light;
-        font-family: "JetBrains Mono", ui-monospace, monospace;
-        color: #4c4f69;
-        background: #eff1f5;
+        --base: #f5f2eb;
+        --surface: #faf8f3;
+        --border: #dcd5c6;
+        --text: #24221d;
+        --muted: #6b655a;
+        --accent: #2f6b4f;
+        --accent-hover: #24563f;
+        --button-text: #fbfaf6;
+        --error: #b03f38;
+        --shadow: rgba(36, 34, 29, 0.09);
+        font-family: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+        color: var(--text);
+        background: var(--base);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --base: #15140f;
+          --surface: #1b1a15;
+          --border: #36322a;
+          --text: #ece6d9;
+          --muted: #a8a091;
+          --accent: #8cc29f;
+          --accent-hover: #a5d2b5;
+          --button-text: #15140f;
+          --error: #e08a80;
+          --shadow: rgba(0, 0, 0, 0.45);
+        }
       }
 
       * {
@@ -28,19 +58,27 @@
       main {
         width: min(100%, 28rem);
         padding: clamp(1.5rem, 6vw, 2.5rem);
-        border: 1px solid #ccd0da;
-        border-radius: 1.25rem;
-        background: #e6e9ef;
-        box-shadow: 0 1.25rem 3rem rgba(76, 79, 105, 0.16);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        background: var(--surface);
+        box-shadow: 0 1rem 2.5rem var(--shadow);
       }
 
       h1 {
         margin: 0;
-        color: #8839ef;
+        font-family: "Fraunces", Georgia, serif;
+        font-size: 2rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
       }
 
       p {
+        color: var(--muted);
         line-height: 1.6;
+      }
+
+      a {
+        color: var(--accent);
       }
 
       form {
@@ -50,13 +88,13 @@
       }
 
       label {
-        font-weight: 700;
+        font-weight: 600;
       }
 
       input,
       button {
         min-height: 2.8rem;
-        border: 1px solid #ccd0da;
+        border: 1px solid var(--border);
         border-radius: 0.6rem;
         padding: 0.65rem 0.8rem;
         font: inherit;
@@ -65,7 +103,14 @@
       input {
         width: 100%;
         color: inherit;
-        background: #eff1f5;
+        background: var(--base);
+      }
+
+      input:focus-visible,
+      button:focus-visible,
+      .google-link:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
       }
 
       .remember-me {
@@ -83,16 +128,23 @@
         width: 1rem;
         min-height: 1rem;
         margin: 0;
-        accent-color: #8839ef;
+        accent-color: var(--accent);
       }
 
       button,
       .google-link {
-        color: #eff1f5;
-        background: #8839ef;
+        border-color: transparent;
+        color: var(--button-text);
+        background: var(--accent);
+        font-weight: 500;
         cursor: pointer;
         text-align: center;
         text-decoration: none;
+      }
+
+      button:hover,
+      .google-link:hover {
+        background: var(--accent-hover);
       }
 
       button:disabled {
@@ -116,50 +168,15 @@
         display: block;
         width: 100%;
         margin-top: 1rem;
-        color: #8839ef;
+        border-color: var(--border);
+        color: var(--accent);
         background: transparent;
       }
 
       #status {
         min-height: 1.5em;
-        color: #d20f39;
+        color: var(--error);
         overflow-wrap: anywhere;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root {
-          color-scheme: dark;
-          color: #cdd6f4;
-          background: #1e1e2e;
-        }
-
-        main {
-          border-color: rgba(108, 112, 134, 0.55);
-          background: #313244;
-          box-shadow: 0 1.25rem 3rem rgba(17, 17, 27, 0.48);
-        }
-
-        h1 {
-          color: #cba6f7;
-        }
-
-        input {
-          border-color: rgba(108, 112, 134, 0.55);
-          color: #cdd6f4;
-          background: #1e1e2e;
-        }
-
-        button,
-        .google-link {
-          color: #1e1e2e;
-          background: #cba6f7;
-        }
-
-        #switch-mode {
-          border-color: rgba(108, 112, 134, 0.55);
-          color: #cba6f7;
-          background: transparent;
-        }
       }
     </style>
   </head>

@@ -112,10 +112,10 @@ const renderStreak = (tree) => {
   streakCountLabel.textContent = "day streak";
   todayStreak.textContent = String(streak.current);
   todayStreakLabel.textContent = streak.freezes
-    ? `day streak · ❄ ${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}`
+    ? `day streak · ${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}`
     : "day streak";
   streakBest.textContent = [
-    streak.freezes ? `❄ ${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
+    streak.freezes ? `${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
     streak.best > streak.current ? `Best: ${streak.best}` : "",
   ].filter(Boolean).join(" · ");
   streakBest.title = `Every ${FREEZE_EVERY} days in a row earns a freeze (you can hold ${MAX_FREEZES}). A freeze covers one missed day.`;

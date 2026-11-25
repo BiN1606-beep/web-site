@@ -6,12 +6,13 @@
     <title>Osiris</title>
     <!-- Makes Osiris installable as an app (needed for reminders on iPhone). -->
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#100f19">
+    <meta name="theme-color" content="#15140f">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+    <!-- Fraunces (headings) and IBM Plex Sans (everything else); both free. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
     <script>
       if (document.cookie.split(";").some((cookie) => cookie.trim() === "background-theme=dark")) {
         document.documentElement.classList.add("is-dark");
@@ -79,10 +80,17 @@
         <aside class="home-panel" id="progress-tree-page" data-mode="overview" aria-labelledby="progress-tree-title">
           <p id="tree-status" role="status" aria-live="polite"></p>
           <section class="tree-empty-state" id="tree-empty-state" hidden>
-          <div class="tree-empty-icon" aria-hidden="true">✦</div>
+          <div class="tree-empty-icon" aria-hidden="true">
+            <!-- A small seedling: where every goal starts. -->
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21v-9"></path>
+              <path d="M12 12c0-4 3-6 7-6 0 4-3 6-7 6Z"></path>
+              <path d="M12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5Z"></path>
+            </svg>
+          </div>
           <h2>What do you want to achieve?</h2>
           <p>Answer 10 quick multiple-choice questions. Your AI coach builds a step-by-step path to your goal and shows you one step at a time.</p>
-          <button class="save-button" id="tree-create" type="button">Create My Progress Tree</button>
+          <button class="save-button" id="tree-create" type="button">Set my first goal</button>
         </section>
           <section class="tree-node-details" id="tree-node-details" hidden></section>
           <section class="tree-view" id="tree-view" hidden>
@@ -152,7 +160,7 @@
                 <!-- Daily check-in: one line a day keeps the streak alive.
                      The full streak (week dots, freezes) is on the Progress tab. -->
                 <section class="checkin-card" id="checkin-card" aria-labelledby="checkin-label">
-                  <p class="checkin-streak"><span aria-hidden="true">🔥</span> <b id="today-streak">0</b> <span id="today-streak-label">day streak</span></p>
+                  <p class="checkin-streak"><b id="today-streak">0</b> <span id="today-streak-label">day streak</span></p>
                   <p class="streak-message" id="streak-message"></p>
                   <form class="checkin-form" id="checkin-form">
                     <label for="checkin-input" id="checkin-label">What did you do on your step today?</label>
@@ -193,7 +201,7 @@
                     <span class="streak-best" id="streak-best"></span>
                   </div>
                   <ol class="streak-week" id="streak-week" aria-label="The last 7 days"></ol>
-                  <p class="section-help">Check in once a day to grow it. Every 7 days in a row earns a ❄ freeze that covers one missed day. Miss a day without one and your network wilts.</p>
+                  <p class="section-help">Check in once a day to grow it. Every 7 days in a row earns a freeze that covers one missed day. Miss a day without one and your network wilts.</p>
                 </section>
                 <!-- Rewards: milestones for steps done and for the best streak.
                      Each one earned adds a gold ring around your goals. -->

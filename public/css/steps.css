@@ -151,8 +151,7 @@
 .tree-step-label {
   color: var(--muted);
   font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: 600;
 }
 
 .tree-interview-progress {
@@ -210,7 +209,7 @@
 
 .tree-assistant h2 {
   margin: 0;
-  color: var(--accent);
+  color: var(--text);
   font-size: 1.15rem;
 }
 

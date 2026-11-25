@@ -35,9 +35,8 @@
 .review-points dt {
   margin-top: 0.3rem;
   color: var(--muted);
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .review-points dd {
