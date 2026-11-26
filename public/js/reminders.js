@@ -5,8 +5,8 @@
 
 // ---- Daily reminders (web push) ----
 // The browser subscribes to push messages with the server's public
-// key and gives us an address to send them to. A script on the server
-// (reminders/send_reminders.py) sends one in the evening on days you
+// key and gives us an address to send them to. The server
+// (lua/osiris/push_sender.lua) sends one at your chosen hour on days you
 // haven't checked in. This device's choice of hour is remembered in
 // localStorage only to show it again; the server has its own copy.
 const reminderRow = document.querySelector("#reminder-row");
