@@ -6,7 +6,8 @@
 // - How it feels: how hard the lines pull, how spread out it is, dot size.
 // - Curvy lines and goal names on or off.
 // - Timelapse: replay your network growing, pick its speed, and choose if
-//   it plays by itself each time you open Osiris (off by default).
+//   it plays by itself each time you open Osiris (off by default), and if
+//   all paths grow at the same time (on by default) or in real order.
 // Every change shows at once. It is saved on your account
 // (POST /api/network-style, lua/osiris/network_style.lua), so it looks the
 // same on every device. GET /api/progress-tree sends it back with the goals.
@@ -25,6 +26,7 @@ const NETWORK_STYLE_DEFAULTS = {
   names: true,
   lapse: "normal",
   autoplay: false,
+  together: true,
 };
 // Keep these in step with CHOICES in lua/osiris/network_style.lua.
 const STYLE_CHOICES = {
@@ -47,7 +49,7 @@ const cleanNetworkStyle = (style) => {
     const value = Number(style[key]);
     if (Number.isFinite(value) && value >= 0 && value <= 1) clean[key] = value;
   }
-  for (const key of ["curved", "names", "autoplay"]) {
+  for (const key of ["curved", "names", "autoplay", "together"]) {
     if (typeof style[key] === "boolean") clean[key] = style[key];
   }
   return clean;
@@ -277,6 +279,8 @@ const networkLinkPath = (link) => {
 // How long each step of the replay waits (js/network.js reads this).
 const LAPSE_DELAYS = { slow: 900, normal: 500, fast: 250, turbo: 110 };
 const timelapseStepDelay = () => LAPSE_DELAYS[networkStyle.lapse] ?? 500;
+// All goal paths grow side by side, or one step at a time in real order.
+const timelapseTogether = () => networkStyle.together;
 
 // js/network.js calls this while the timelapse plays: a number from 0 to 1
 // fills the bar on the play button, null means it has stopped.
@@ -452,15 +456,20 @@ const buildNetworkStylePanel = () => {
       `<svg class="net-lapse-arrows" viewBox="-1 -1 22 10" aria-hidden="true">${arrows}</svg>`));
   }
   lapseTop.append(play, speedRow);
-  const auto = document.createElement("button");
-  auto.type = "button";
-  auto.className = "net-style-switch is-wide";
-  auto.dataset.switch = "autoplay";
-  auto.setAttribute("aria-pressed", "false");
-  auto.innerHTML = '<i aria-hidden="true"></i>';
-  auto.append(document.createTextNode("Play when I open Osiris"));
-  auto.addEventListener("click", () => changeNetworkStyle({ autoplay: !networkStyle.autoplay }));
-  lapse.append(lapseTop, auto);
+  const lapseSwitches = document.createElement("div");
+  lapseSwitches.className = "net-style-row is-switches";
+  for (const [key, label] of [["together", "All at once"], ["autoplay", "Play on open"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "net-style-switch";
+    button.dataset.switch = key;
+    button.setAttribute("aria-pressed", "false");
+    button.innerHTML = '<i aria-hidden="true"></i>';
+    button.append(document.createTextNode(label));
+    button.addEventListener("click", () => changeNetworkStyle({ [key]: !networkStyle[key] }));
+    lapseSwitches.append(button);
+  }
+  lapse.append(lapseTop, lapseSwitches);
 
   const foot = document.createElement("footer");
   foot.className = "net-style-foot";

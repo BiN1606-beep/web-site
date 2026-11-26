@@ -570,7 +570,8 @@ const selectNetworkNode = (id) => {
 };
 
 // Builds the dots and lines for a list of goals and updates the graph.
-// `sproutId` is a step that was just completed (it gets a flash).
+// `sproutId` is a step that was just completed (it gets a flash), or a
+// list of them (the timelapse grows several paths at once).
 const renderNetwork = (goals = network.goals, sproutId = null) => {
   if (!network.sim) setUpProgressNetwork();
   const firstDraw = !network.hasDrawn;
@@ -792,8 +793,9 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
   nodeGroups.select("title").text((node) => node.label);
 
   // A burst of light where a step was just completed.
-  const sprouted = sproutId && network.cache.get(sproutId);
-  if (sprouted && !reducedMotion.matches) {
+  const sproutIds = Array.isArray(sproutId) ? sproutId : [sproutId];
+  for (const sprouted of sproutIds.map((id) => id && network.cache.get(id))) {
+    if (!sprouted || reducedMotion.matches) continue;
     network.effectLayer.append("circle")
       .attr("class", "net-spark")
       .attr("cx", sprouted.x).attr("cy", sprouted.y).attr("r", 10)
@@ -884,16 +886,30 @@ const playNetworkTimelapse = () => {
     return;
   }
   if (!goals.length) return;
-  // Replay steps in the order they really happened. Steps without a
-  // date (finished before dates were saved) come first, goal by goal;
-  // the sort is stable, so their original order is kept.
-  const order = goals
-    .flatMap((goal, goalIndex) => goal.completed.map((step, stepIndex) =>
-      [goalIndex, stepIndex, completedTime(step) ?? -Infinity]))
-    .sort((a, b) => a[2] - b[2]);
+  // Each tick of the replay grows some steps. With "All paths at once" on
+  // (the default) every goal grows its next step together, so all paths
+  // climb side by side. Off, steps come back in the order they really
+  // happened; steps without a date (finished before dates were saved)
+  // come first, goal by goal, since the sort is stable.
+  const ticks = [];
+  if (timelapseTogether()) {
+    const longest = Math.max(0, ...goals.map((goal) => goal.completed.length));
+    for (let stepIndex = 0; stepIndex < longest; stepIndex += 1) {
+      ticks.push(goals.flatMap((goal, goalIndex) =>
+        stepIndex < goal.completed.length ? [[goalIndex, stepIndex]] : []));
+    }
+  } else {
+    goals
+      .flatMap((goal, goalIndex) => goal.completed.map((step, stepIndex) =>
+        [goalIndex, stepIndex, completedTime(step) ?? -Infinity]))
+      .sort((a, b) => a[2] - b[2])
+      .forEach(([goalIndex, stepIndex]) => ticks.push([[goalIndex, stepIndex]]));
+  }
   const frame = (count) => {
     const doneByGoal = goals.map(() => 0);
-    for (const [goalIndex] of order.slice(0, count)) doneByGoal[goalIndex] += 1;
+    for (const tick of ticks.slice(0, count)) {
+      for (const [goalIndex] of tick) doneByGoal[goalIndex] += 1;
+    }
     return goals.map((goal, goalIndex) => {
       const done = doneByGoal[goalIndex];
       const replaying = done < goal.completed.length;
@@ -918,17 +934,17 @@ const playNetworkTimelapse = () => {
   fitProgressNetwork(true);
   let count = 0;
   const next = () => {
-    if (count >= order.length || network.stopLapse) {
+    if (count >= ticks.length || network.stopLapse) {
       network.playing = false;
       network.stopLapse = false;
       showTimelapseProgress(null);
       renderNetwork(network.goals);
       return;
     }
-    const [goalIndex, stepIndex] = order[count];
+    const sprouts = ticks[count].map(([goalIndex, stepIndex]) => `goal:${goals[goalIndex].id}:step:${stepIndex}`);
     count += 1;
-    showTimelapseProgress(count / order.length);
-    renderNetwork(frame(count), `goal:${goals[goalIndex].id}:step:${stepIndex}`);
+    showTimelapseProgress(count / ticks.length);
+    renderNetwork(frame(count), sprouts);
     // The speed is read every step, so changing it while it plays works.
     window.setTimeout(next, reducedMotion.matches ? 150 : timelapseStepDelay());
   };

@@ -575,9 +575,6 @@ html.is-dark [data-palette="ink"],
   inset: 0.28rem;
 }
 
-.net-style-switch.is-wide {
-  justify-self: start;
-}
 
 /* Phones: the panel becomes a sheet over the bottom of the network. */
 @media (max-width: 560px) {

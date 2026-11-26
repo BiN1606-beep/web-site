@@ -102,8 +102,9 @@ customizes your network: its shape (a free web, a tree, a galaxy, orbits or line
 sky behind it (paper, dots or stars), how hard the lines pull, how spread
 out it is, dot size, curvy lines and goal names. It also holds the
 timelapse, which replays your network growing: play it, pick its speed
-(slow to turbo), and turn on "Play when I open Osiris" to watch it each
-time you arrive (off by default). The choice is saved on your
+(slow to turbo), let all goal paths grow at the same time (on by default)
+or in the real order, and turn on "Play on open" to watch it
+each time you arrive (off by default). The choice is saved on your
 account (`/api/network-style`), so it looks the same on every device.
 Settings > Appearance picks a color theme for the whole site (Osiris paper,
 the four Catppuccin flavors, Nord, Gruvbox, Rose Pine, Solarized, Tokyo

@@ -220,9 +220,9 @@ echo "shared trees ok"
 style() { curl -sS -b $J -H 'Content-Type: application/json' -o /tmp/out -w '%{http_code}' -X POST "$B/api/network-style" -d "$1"; }
 [ "$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' $B/api/network-style -d '{"style":{}}')" = 401 ] || fail "style signed out"
 [ "$(style '{"nope":1}')" = 400 ] || fail "style without style"
-[ "$(style '{"style":{"shape":"galaxy","palette":"ocean","sky":"stars","pull":0.734,"spread":2,"dots":0.2,"curved":true,"names":"yes","lapse":"turbo","autoplay":true,"evil":"<script>"}}')" = 200 ] || { cat /tmp/out; fail "save style"; }
+[ "$(style '{"style":{"shape":"galaxy","palette":"ocean","sky":"stars","pull":0.734,"spread":2,"dots":0.2,"curved":true,"names":"yes","lapse":"turbo","autoplay":true,"together":false,"evil":"<script>"}}')" = 200 ] || { cat /tmp/out; fail "save style"; }
 curl -sS -b $J -o /tmp/out $B/api/progress-tree
-jq -e '.network_style.shape == "galaxy" and .network_style.sky == "stars" and .network_style.pull == 0.73 and .network_style.curved == true and .network_style.lapse == "turbo" and .network_style.autoplay == true' /tmp/out >/dev/null || { cat /tmp/out; fail "style in progress tree"; }
+jq -e '.network_style.shape == "galaxy" and .network_style.sky == "stars" and .network_style.pull == 0.73 and .network_style.curved == true and .network_style.lapse == "turbo" and .network_style.autoplay == true and .network_style.together == false' /tmp/out >/dev/null || { cat /tmp/out; fail "style in progress tree"; }
 jq -e '.network_style | has("spread") or has("names") or has("evil") | not' /tmp/out >/dev/null || { cat /tmp/out; fail "bad style values kept"; }
 [ "$(style '{"style":{"shape":"pyramid","lapse":"warp","autoplay":"on"}}')" = 200 ] || fail "unknown shape"
 jq -e '.style | has("shape") or has("lapse") or has("autoplay") | not' /tmp/out >/dev/null || { cat /tmp/out; fail "unknown shape kept"; }
