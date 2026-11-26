@@ -879,7 +879,9 @@ const drawProgressNetwork = (tree, sproutIndex = -1) => {
 // from the Timelapse part of "Customize" (js/network-style.js), which also
 // sets its speed and can play it each time you open Osiris. Calling it
 // while it plays stops it and shows the whole network again.
-const playNetworkTimelapse = () => {
+// `waitFor` (optional) holds the first step until it returns true: autoplay
+// shows the empty start straight away but waits for the startup screen.
+const playNetworkTimelapse = (waitFor = null) => {
   const goals = network.goals;
   if (network.playing) {
     network.stopLapse = true;
@@ -948,7 +950,16 @@ const playNetworkTimelapse = () => {
     // The speed is read every step, so changing it while it plays works.
     window.setTimeout(next, reducedMotion.matches ? 150 : timelapseStepDelay());
   };
-  window.setTimeout(next, 700);
+  let waited = 0;
+  const begin = () => {
+    if (waitFor && !waitFor() && waited < 6000 && !network.stopLapse) {
+      waited += 150;
+      window.setTimeout(begin, 150);
+      return;
+    }
+    window.setTimeout(next, 700);
+  };
+  begin();
 };
 
 netSkillsButton.addEventListener("click", () => {

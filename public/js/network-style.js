@@ -293,23 +293,15 @@ const showTimelapseProgress = (part) => {
   play.style.setProperty("--lapse-done", String(playing ? part : 0));
 };
 
-// "Play when I open Osiris": runs once per page load, after the startup
-// animation has gone, so you see your journey grow as you arrive.
+// "Play on open": runs once per page load. It starts in the same moment
+// the network is first drawn, so the full network never flashes before
+// the replay; the empty start waits until the startup animation has gone.
 let timelapseAutoplayed = false;
 const autoplayTimelapse = () => {
   if (timelapseAutoplayed || !networkStyle.autoplay) return;
   timelapseAutoplayed = true;
-  let waited = 0;
-  const start = () => {
-    const startupShowing = document.querySelector("#startup-screen") && waited < 4000;
-    if (startupShowing || !network.sim) {
-      waited += 200;
-      if (waited < 6000) window.setTimeout(start, 200);
-      return;
-    }
-    if (network.goals.length) playNetworkTimelapse();
-  };
-  window.setTimeout(start, 300);
+  if (!network.sim || !network.goals.length) return;
+  playNetworkTimelapse(() => !document.querySelector("#startup-screen"));
 };
 
 // ---- The panel ----
