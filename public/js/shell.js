@@ -213,3 +213,14 @@ const groqPrompt = document.querySelector("#groq-prompt");
 const groqSubmit = document.querySelector("#groq-submit");
 const groqStatus = document.querySelector("#groq-status");
 const groqAnswer = document.querySelector("#groq-answer");
+
+// "Why it matters" should read as one short line. New goals ask the AI for
+// that; older goals may have a long paragraph, so show only its first
+// sentence and cut it at a word if it is still long.
+const shortWhy = (text) => {
+  const clean = String(text || "").trim().replace(/\s+/g, " ");
+  const first = (clean.match(/^.{20,}?[.!?](?=\s|$)/) || [clean])[0];
+  if (first.length <= 110) return first;
+  const cut = first.slice(0, 110);
+  return `${cut.slice(0, cut.lastIndexOf(" ") > 60 ? cut.lastIndexOf(" ") : 110).replace(/[,;:\s]+$/, "")}…`;
+};
