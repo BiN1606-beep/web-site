@@ -103,7 +103,7 @@ const renderProgressTree = (tree) => {
     treeStepNumber.textContent = `Step ${tree.completed_count + 1} of ${tree.total_steps}`;
     treeStepTitle.textContent = tree.current_step.title;
     treeStepDescription.textContent = tree.current_step.description;
-    treeStepWhy.textContent = tree.current_step.why;
+    treeStepWhy.textContent = shortWhy(tree.current_step.why);
     treeStepTip.textContent = tree.current_step.tip || "";
     treeStepTipContainer.hidden = !tree.current_step.tip;
     treeStepTime.textContent = tree.current_step.time ? `About ${tree.current_step.time}` : "";

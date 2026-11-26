@@ -37,7 +37,7 @@ const taskCheckboxes = () => [...treeStepTasks.querySelectorAll("input[type='che
 // text, and what the big button says.
 const buildLessonCards = (step) => {
   const cards = [{ kind: "intro", label: "Today's step", title: step.title, text: step.description, button: "Let's go" }];
-  if (step.why) cards.push({ kind: "why", label: "Why it matters", text: step.why, button: "Got it" });
+  if (step.why) cards.push({ kind: "why", label: "Why it matters", text: shortWhy(step.why), button: "Got it" });
   const how = Array.isArray(step.how) ? step.how : [];
   how.forEach((item, index) => {
     cards.push({ kind: "how", label: `How to do it · ${index + 1} of ${how.length}`, text: item, button: "Next" });
