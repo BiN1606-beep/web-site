@@ -168,7 +168,6 @@ const netControls = document.querySelector("#net-controls");
 const netLegend = document.querySelector("#net-legend");
 const netSkillsButton = document.querySelector("#net-skills");
 const netFocusOnlyButton = document.querySelector("#net-focus-only");
-const netTimelapseButton = document.querySelector("#net-timelapse");
 const netRecenterButton = document.querySelector("#net-recenter");
 const netFullscreenButton = document.querySelector("#net-fullscreen");
 const homeApp = document.querySelector(".home-app");
@@ -874,10 +873,17 @@ const drawProgressNetwork = (tree, sproutIndex = -1) => {
   if (!network.playing) renderNetwork(network.goals, sproutId);
 };
 
-// Replays the network growing: goal by goal, step by step.
+// Replays the network growing: goal by goal, step by step. It is started
+// from the Timelapse part of "Customize" (js/network-style.js), which also
+// sets its speed and can play it each time you open Osiris. Calling it
+// while it plays stops it and shows the whole network again.
 const playNetworkTimelapse = () => {
   const goals = network.goals;
-  if (!goals.length || network.playing) return;
+  if (network.playing) {
+    network.stopLapse = true;
+    return;
+  }
+  if (!goals.length) return;
   // Replay steps in the order they really happened. Steps without a
   // date (finished before dates were saved) come first, goal by goal;
   // the sort is stable, so their original order is kept.
@@ -901,7 +907,8 @@ const playNetworkTimelapse = () => {
   };
   selectNetworkNode(null);
   network.playing = true;
-  netTimelapseButton.disabled = true;
+  network.stopLapse = false;
+  showTimelapseProgress(0);
   network.cache.clear();
   network.hasDrawn = false;
   network.linkLayer.selectAll("*").remove();
@@ -910,18 +917,20 @@ const playNetworkTimelapse = () => {
   renderNetwork(frame(0));
   fitProgressNetwork(true);
   let count = 0;
-  const delay = reducedMotion.matches ? 150 : 500;
   const next = () => {
-    if (count >= order.length) {
+    if (count >= order.length || network.stopLapse) {
       network.playing = false;
-      netTimelapseButton.disabled = false;
+      network.stopLapse = false;
+      showTimelapseProgress(null);
       renderNetwork(network.goals);
       return;
     }
     const [goalIndex, stepIndex] = order[count];
     count += 1;
+    showTimelapseProgress(count / order.length);
     renderNetwork(frame(count), `goal:${goals[goalIndex].id}:step:${stepIndex}`);
-    window.setTimeout(next, delay);
+    // The speed is read every step, so changing it while it plays works.
+    window.setTimeout(next, reducedMotion.matches ? 150 : timelapseStepDelay());
   };
   window.setTimeout(next, 700);
 };
@@ -939,7 +948,6 @@ netFocusOnlyButton.addEventListener("click", () => {
   renderNetwork();
   fitProgressNetwork(true);
 });
-netTimelapseButton.addEventListener("click", playNetworkTimelapse);
 netRecenterButton.addEventListener("click", () => fitProgressNetwork(true));
 
 // ---- Full screen (phones) ----

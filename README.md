@@ -97,11 +97,13 @@ per area.
 The progress tree is the whole home screen: an interactive network (like
 Obsidian's graph view) fills the page, drawn with the free d3 library loaded
 from cdnjs, and a side panel shows today's step or the dot you click. Skills
-can be hidden, the network can be replayed as a timelapse, and Recenter
-resets the view. The small button in its corner customizes your network:
-its shape (a free web, a tree, a galaxy, orbits or lines), the colors, the
+can be hidden and Recenter resets the view. The small button in its corner
+customizes your network: its shape (a free web, a tree, a galaxy, orbits or lines), the colors, the
 sky behind it (paper, dots or stars), how hard the lines pull, how spread
-out it is, dot size, curvy lines and goal names. The choice is saved on your
+out it is, dot size, curvy lines and goal names. It also holds the
+timelapse, which replays your network growing: play it, pick its speed
+(slow to turbo), and turn on "Play when I open Osiris" to watch it each
+time you arrive (off by default). The choice is saved on your
 account (`/api/network-style`), so it looks the same on every device.
 Settings > Appearance picks a color theme for the whole site (Osiris paper,
 the four Catppuccin flavors, Nord, Gruvbox, Rose Pine, Solarized, Tokyo

@@ -158,6 +158,7 @@ const loadProgressTree = async () => {
       useSavedNetworkStyle(result.network_style);
       useSavedAppearance(result.appearance);
       renderProgressTree(result.tree);
+      autoplayTimelapse();
       setupReminders(result.reminders_key);
       showDevToolsButton(result.dev === true);
     } catch (error) {
