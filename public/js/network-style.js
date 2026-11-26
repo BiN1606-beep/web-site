@@ -228,6 +228,12 @@ const layoutNetworkShape = (nodes, links) => {
     }
     grow(0, size.rootY + 20);
   }
+  // Nothing placed yet (the very start of a timelapse): no bounds, so the
+  // view isn't fitted to an empty box (that gave a broken zoom).
+  if (!Number.isFinite(minX)) {
+    drawShapeDecor(size);
+    return;
+  }
   // Leave room for names next to the dots.
   network.shapeBounds = {
     width: maxX - minX + 160,
