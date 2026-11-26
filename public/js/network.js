@@ -580,7 +580,7 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
   const links = [];
   const skillUses = new Map();
 
-  if (shown.length === 0) {
+  if (shown.length === 0 && !network.playing) {
     nodes.push(networkNode("seed", { kind: "seed", label: "Your first goal will grow here", r: 12, charge: -200 }));
   }
   // A goal made with "Keep evolving" grows from the last step of the goal it
@@ -592,7 +592,8 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
     return parent && parent.id !== goal.id ? parent : null;
   };
   const lastStepId = (goal) => {
-    const total = Math.max(Number(goal.total_steps) || 0, goal.completed.length + (goal.current_step ? 1 : 0));
+    const grown = goal.completed.length + (goal.current_step ? 1 : 0);
+    const total = goal.replaying ? grown : Math.max(Number(goal.total_steps) || 0, grown);
     return total > 0 ? `goal:${goal.id}:step:${total - 1}` : `goal:${goal.id}`;
   };
   const areas = [...new Set(shown.filter((goal) => !sproutParent(goal)).map((goal) => goal.area))];
@@ -622,7 +623,9 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
     } else if (!network.focusOnly) {
       links.push({ source: `area:${goal.area}`, target: goalId, kind: "area", distance: 90 });
     }
-    const total = Math.max(Number(goal.total_steps) || 0, goal.completed.length + (goal.current_step ? 1 : 0));
+    // In the timelapse only grown steps and the next bud are drawn.
+    const grown = goal.completed.length + (goal.current_step ? 1 : 0);
+    const total = goal.replaying ? grown : Math.max(Number(goal.total_steps) || 0, grown);
     let previous = goalId;
     for (let index = 0; index < total; index += 1) {
       const isDone = index < goal.completed.length;
@@ -894,11 +897,23 @@ const playNetworkTimelapse = (waitFor = null) => {
   // happened; steps without a date (finished before dates were saved)
   // come first, goal by goal, since the sort is stable.
   const ticks = [];
+  // A "Keep evolving" goal only starts growing once the goal it grew from
+  // is done, so its steps come after all of its parent's steps.
+  const byId = new Map(goals.map((goal) => [goal.id, goal]));
+  const startTick = (goal, seen = new Set()) => {
+    const parent = goal.grows_from != null ? byId.get(goal.grows_from) : null;
+    if (!parent || parent === goal || seen.has(parent.id)) return 0;
+    seen.add(goal.id);
+    return startTick(parent, seen) + parent.completed.length;
+  };
   if (timelapseTogether()) {
-    const longest = Math.max(0, ...goals.map((goal) => goal.completed.length));
-    for (let stepIndex = 0; stepIndex < longest; stepIndex += 1) {
-      ticks.push(goals.flatMap((goal, goalIndex) =>
-        stepIndex < goal.completed.length ? [[goalIndex, stepIndex]] : []));
+    const starts = goals.map((goal) => startTick(goal));
+    const longest = Math.max(0, ...goals.map((goal, goalIndex) => starts[goalIndex] + goal.completed.length));
+    for (let tick = 0; tick < longest; tick += 1) {
+      ticks.push(goals.flatMap((goal, goalIndex) => {
+        const stepIndex = tick - starts[goalIndex];
+        return stepIndex >= 0 && stepIndex < goal.completed.length ? [[goalIndex, stepIndex]] : [];
+      }));
     }
   } else {
     goals
@@ -912,7 +927,10 @@ const playNetworkTimelapse = (waitFor = null) => {
     for (const tick of ticks.slice(0, count)) {
       for (const [goalIndex] of tick) doneByGoal[goalIndex] += 1;
     }
-    return goals.map((goal, goalIndex) => {
+    // Everything grows out of the core: a goal only shows up with its
+    // first step (an evolved one once its parent is done), and only the
+    // steps grown so far are drawn, plus the next one as a bud.
+    const replayed = goals.map((goal, goalIndex) => {
       const done = doneByGoal[goalIndex];
       const replaying = done < goal.completed.length;
       return {
@@ -920,8 +938,10 @@ const playNetworkTimelapse = (waitFor = null) => {
         completed: goal.completed.slice(0, done),
         current_step: replaying ? goal.completed[done] : goal.current_step,
         finished: !replaying && goal.finished,
+        replaying: true,
       };
     });
+    return replayed.filter((goal) => goal.completed.length > 0);
   };
   selectNetworkNode(null);
   network.playing = true;
@@ -947,6 +967,8 @@ const playNetworkTimelapse = (waitFor = null) => {
     count += 1;
     showTimelapseProgress(count / ticks.length);
     renderNetwork(frame(count), sprouts);
+    // A shape knows where its dots go, so the view zooms out as it grows.
+    if (networkShapeBounds()) fitProgressNetwork(!reducedMotion.matches);
     // The speed is read every step, so changing it while it plays works.
     window.setTimeout(next, reducedMotion.matches ? 150 : timelapseStepDelay());
   };
