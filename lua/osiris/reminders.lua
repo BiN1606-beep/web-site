@@ -14,7 +14,7 @@ local database_query = common.database_query
 
 -- The public half of the VAPID key pair that signs our push messages. The
 -- browser needs it to subscribe. deploy.sh copies it here from
--- /etc/mysite/vapid_public.txt (made once by reminders/setup.sh). Without
+-- /etc/mysite/vapid_public.txt (made once by reminders/make_vapid_keys.sh). Without
 -- it, reminders are simply not offered.
 local function vapid_public_key()
     local file = io.open("/opt/mysite/lua/vapid_public_key.txt", "r")
@@ -29,7 +29,7 @@ end
 
 -- The server will send requests to the endpoint a browser gives us, so only
 -- the real push services are accepted (otherwise anyone could make our
--- server call any address). reminders/send_reminders.py checks again.
+-- server call any address). osiris/push_sender.lua checks again.
 local PUSH_SERVICE_HOSTS = {
     "^fcm%.googleapis%.com$",
     "^updates%.push%.services%.mozilla%.com$",
