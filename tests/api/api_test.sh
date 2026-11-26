@@ -53,6 +53,22 @@ jq -e '.tree.completed_count == 0 and .tree.checkins[0].note == "ran 2 km"' /tmp
 [ "$(psql -tAc 'SELECT count(*) FROM step_completions')" = 0 ] || fail "undo date"
 echo "undo ok"
 
+# ---- Topaz gems: paid once per check-in per day, spent on streak freezes ----
+# Check-in, finish a step, undo it: still only one payout today.
+[ "$(post "{\"action\":\"checkin\",\"day\":\"$TODAY\",\"note\":\"ran 2 km\"}")" = 200 ] || fail "check in again"
+jq -e '.tree.topaz.balance == 10 and .tree.topaz.freeze_price == 70 and (.tree.topaz.purchases | length == 0)' /tmp/out >/dev/null || { cat /tmp/out; fail "topaz once a day"; }
+[ "$(post "{\"action\":\"buy_freeze\",\"day\":\"$TODAY\"}")" = 409 ] || { cat /tmp/out; fail "can't buy without topaz"; }
+[ "$(post '{"action":"buy_freeze","day":"nope"}')" = 400 ] || fail "buy needs a date"
+psql -q -c "UPDATE topaz_wallets SET balance = 300"
+[ "$(post "{\"action\":\"buy_freeze\",\"day\":\"$OLD\"}")" = 409 ] || { cat /tmp/out; fail "old day purchase"; }
+[ "$(post "{\"action\":\"buy_freeze\",\"day\":\"$TODAY\"}")" = 200 ] || { cat /tmp/out; fail "buy freeze"; }
+jq -e --arg d "$TODAY" '.tree.topaz.balance == 230 and .tree.topaz.purchases == [$d]' /tmp/out >/dev/null || { cat /tmp/out; fail "freeze bought"; }
+post "{\"action\":\"buy_freeze\",\"day\":\"$TODAY\"}" >/dev/null
+[ "$(post "{\"action\":\"buy_freeze\",\"day\":\"$TODAY\"}")" = 200 ] || { cat /tmp/out; fail "third freeze"; }
+[ "$(post "{\"action\":\"buy_freeze\",\"day\":\"$TODAY\"}")" = 409 ] || { cat /tmp/out; fail "only 3 bought freezes"; }
+[ "$(psql -tAc "SELECT balance FROM topaz_wallets") $(psql -tAc "SELECT count(*) FROM freeze_purchases")" = "90 3" ] || fail "full slots cost nothing"
+echo "topaz and freezes ok"
+
 [ "$(post '{"action":"step_guide","expectedStep":0}')" = 502 ] || { cat /tmp/out; fail "guide without AI should be 502/503"; }
 echo "step guide without AI fails cleanly: $(jq -r .error /tmp/out)"
 
@@ -138,7 +154,7 @@ TREE=$(jq -r .id /tmp/out)
 [ "$(tpost $J tree_accept "")" = 200 ] && fail "planter can't accept own invite" || true
 [ "$(tpost $J2 tree_accept "")" = 200 ] || { cat /tmp/out; fail "accept tree"; }
 [ "$(tpost $J tree_water "ran 3 km")" = 200 ] || { cat /tmp/out; fail "water"; }
-jq -e '.grew == false' /tmp/out >/dev/null || { cat /tmp/out; fail "one watering doesn't grow"; }
+jq -e '.grew == false and .topaz.balance == 100' /tmp/out >/dev/null || { cat /tmp/out; fail "one watering doesn't grow, pays 10 topaz"; }
 [ "$(cget $J2 "action=trees&day=$TODAY")" = 200 ] || { cat /tmp/out; fail "trees"; }
 jq -e --arg t "$TODAY" '.trees[0].grown == 0 and .trees[0].status == "growing" and .trees[0].days[0].day == $t and .trees[0].days[0].partner == "ran 3 km" and .trees[0].days[0].me == null' /tmp/out >/dev/null || { cat /tmp/out; fail "tree waiting for B"; }
 # Side quest: A checked in, B hasn't. Not when yesterday was already saved.
@@ -175,6 +191,8 @@ jq -e '[.notifications[].notification_type] | (index("tree_invite") != null) and
 [ "$(cpost $J2 "{\"action\":\"follow\",\"userId\":\"$A_ID\"}")" = 200 ] || fail "follow again"
 jq -e '.friends == true' /tmp/out >/dev/null || { cat /tmp/out; fail "friends again"; }
 [ "$(tpost $J tree_water "again")" = 200 ] || { cat /tmp/out; fail "water after follow back"; }
+jq -e '.topaz.balance == 100' /tmp/out >/dev/null || { cat /tmp/out; fail "a shared goal pays once a day"; }
+[ "$(psql -tAc "SELECT count(*) FROM topaz_earnings WHERE user_id = $B_ID AND reason = 'shared_checkin'")" = 1 ] || fail "B paid once"
 [ "$(tpost $J tree_remove "")" = 200 ] || fail "remove tree"
 [ "$(cget $J "action=trees&day=$TODAY")" = 200 ] || fail "trees after remove"
 jq -e '.trees | length == 0' /tmp/out >/dev/null || { cat /tmp/out; fail "removed tree hidden"; }

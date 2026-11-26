@@ -1,0 +1,401 @@
+/* Topaz gems: the counter on the Today tab, the gem shop and the flying
+   gems (public/js/topaz.js). The gem keeps its yellow in every theme,
+   because it is the thing you collect. Flat facets, no gradients. */
+
+:root {
+  --topaz-light: #f6d46a;
+  --topaz: #e5ac22;
+  --topaz-mid: #f0bf3c;
+  --topaz-dark: #b97f0c;
+  --topaz-edge: #8a5d06;
+  --topaz-soft: rgba(229, 172, 34, 0.16);
+}
+
+html.is-dark {
+  --topaz-edge: #fbe3a0;
+  --topaz-soft: rgba(240, 191, 60, 0.16);
+}
+
+/* ---- The gem drawing ---- */
+.topaz-icon {
+  display: inline-grid;
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+}
+
+.topaz-icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.topaz-facet-top { fill: var(--topaz-light); }
+.topaz-facet-crown { fill: #fbe7a6; }
+.topaz-facet-left { fill: var(--topaz); }
+.topaz-facet-mid { fill: var(--topaz-mid); }
+.topaz-facet-right { fill: var(--topaz-dark); }
+
+.topaz-edge {
+  fill: none;
+  stroke: var(--topaz-edge);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+/* ---- The counter next to the streak ---- */
+.topaz-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  padding: 0.22rem 0.6rem 0.22rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--topaz) 55%, var(--panel-border));
+  border-radius: 999px;
+  background: var(--topaz-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.topaz-chip:hover {
+  transform: translateY(-1px);
+}
+
+.topaz-chip b {
+  font-variant-numeric: tabular-nums;
+}
+
+.topaz-chip .topaz-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.topaz-chip.is-bumping {
+  animation: topaz-bump 0.45s ease;
+}
+
+/* "+10" rising from where you checked in. */
+.topaz-pop {
+  position: fixed;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--topaz) 55%, var(--panel-border));
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 6px 16px var(--shadow);
+  color: var(--topaz-dark);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: topaz-rise 1.3s ease-out forwards;
+}
+
+html.is-dark .topaz-pop {
+  color: var(--topaz-light);
+}
+
+/* Small gems flying in an arc to the counter (or into a freeze slot). */
+.topaz-flyer {
+  position: fixed;
+  z-index: 1000;
+  width: 1rem;
+  height: 1rem;
+  margin: -0.5rem 0 0 -0.5rem;
+  pointer-events: none;
+  opacity: 0;
+  animation: topaz-fly 0.8s cubic-bezier(0.45, 0, 0.3, 1) forwards;
+}
+
+/* ---- The shop ---- */
+.topaz-shop {
+  width: min(92vw, 22rem);
+  max-width: none;
+  padding: 1.3rem 1.2rem 1.2rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1.4rem;
+  background: var(--base);
+  color: var(--text);
+  box-shadow: 0 20px 45px var(--shadow);
+  text-align: center;
+}
+
+.topaz-shop[open] {
+  display: grid;
+  gap: 1rem;
+  animation: topaz-shop-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.topaz-shop[open].is-closing {
+  animation: topaz-shop-out 0.18s ease-in forwards;
+}
+
+.topaz-shop::backdrop {
+  background: var(--backdrop);
+}
+
+.topaz-shop-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topaz-wallet {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+}
+
+.topaz-big {
+  width: 3.6rem;
+  height: 3.6rem;
+  margin-bottom: 0.3rem;
+  animation: topaz-float 3s ease-in-out infinite;
+}
+
+.topaz-wallet-count {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.topaz-wallet span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.topaz-offer {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: 1rem 0.9rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.topaz-offer h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.topaz-offer-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.freeze-icon {
+  display: inline-grid;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.freeze-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.freeze-arms {
+  fill: none;
+  stroke: var(--moon);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.freeze-hero {
+  width: 2.6rem;
+  height: 2.6rem;
+  animation: freeze-turn 9s linear infinite;
+}
+
+.freeze-slots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* An empty slot is a faint outline; a filled one is a solid blue crystal. */
+.freeze-slot {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0.3rem;
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 0.7rem;
+}
+
+.freeze-slot .freeze-arms {
+  stroke: var(--panel-border);
+}
+
+.freeze-slot.is-filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--moon) 60%, transparent);
+  background: color-mix(in srgb, var(--moon) 14%, transparent);
+}
+
+.freeze-slot.is-filled .freeze-arms {
+  stroke: var(--moon);
+}
+
+.freeze-slot.is-new {
+  animation: freeze-land 0.7s 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+.topaz-buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 10rem;
+}
+
+.topaz-buy .topaz-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* How close you are to affording the next freeze. */
+.topaz-meter {
+  width: 100%;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--panel-border);
+  overflow: hidden;
+}
+
+.topaz-meter span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--topaz);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
+  animation: topaz-meter 0.8s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.topaz-status {
+  min-height: 1em;
+  margin: 0;
+  color: var(--area-career);
+  font-size: 0.82rem;
+}
+
+.topaz-status:empty {
+  display: none;
+}
+
+.topaz-earn {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.topaz-earn li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.7rem;
+  background: var(--surface);
+  text-align: left;
+}
+
+.topaz-earn b {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--topaz-dark);
+}
+
+html.is-dark .topaz-earn b {
+  color: var(--topaz-light);
+}
+
+.topaz-earn li.is-done {
+  opacity: 0.55;
+}
+
+.topaz-earn li.is-done span {
+  text-decoration: line-through;
+}
+
+@keyframes topaz-bump {
+  40% { transform: scale(1.18); }
+}
+
+@keyframes topaz-rise {
+  0% { opacity: 0; transform: translate(-50%, -60%) scale(0.6); }
+  20% { opacity: 1; transform: translate(-50%, -120%) scale(1.1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -260%) scale(1); }
+}
+
+@keyframes topaz-fly {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4) rotate(0deg); }
+  15% { opacity: 1; transform: translate(calc(var(--dx) * 0.1), var(--arc)) scale(1.1) rotate(40deg); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(220deg); }
+}
+
+@keyframes topaz-float {
+  50% { transform: translateY(-4px) rotate(-4deg); }
+}
+
+@keyframes topaz-shop-in {
+  from { opacity: 0; transform: scale(0.9) translateY(12px); }
+}
+
+@keyframes topaz-shop-out {
+  to { opacity: 0; transform: scale(0.94) translateY(8px); }
+}
+
+@keyframes topaz-meter {
+  from { transform: scaleX(0); }
+}
+
+@keyframes freeze-turn {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes freeze-land {
+  0% { transform: scale(0.3) rotate(-90deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topaz-chip.is-bumping,
+  .topaz-big,
+  .freeze-hero,
+  .freeze-slot.is-new,
+  .topaz-shop[open],
+  .topaz-meter span {
+    animation: none;
+  }
+}

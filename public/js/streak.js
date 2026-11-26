@@ -31,16 +31,25 @@ const FULL_WILT_DAYS = 5;
 const FREEZE_EVERY = 7;
 const MAX_FREEZES = 2;
 
+// Streak freezes can also be bought with topaz gems (public/js/topaz.js).
+// You can hold up to MAX_BOUGHT_FREEZES of those. Earned freezes are used
+// up first, because bought ones cost you something. lua/osiris/topaz.lua
+// runs the same replay to check the limit before a purchase.
+const MAX_BOUGHT_FREEZES = 3;
+
 // Works out the streak by replaying every day from the first check-in
-// to today. Nothing about freezes is stored: the same check-in days
+// to today. Only the days of bought freezes are stored: the same days
 // always give the same result, so there's nothing to get out of sync.
+// purchases are the days ("YYYY-MM-DD") freezes were bought on; a freeze
+// covers missed days from the day it was bought, never earlier ones.
 //  current: the streak now. Today counts once you've checked in, and a
 //           missing today doesn't break anything until the day is over.
 //  best:    the longest streak ever.
 //  missed:  missed days in a row that no freeze covered (for wilting).
-//  freezes: freezes you hold now.
+//  freezes: earned freezes you hold now.
+//  boughtFreezes: bought freezes you hold now.
 //  frozenDays: the days a freeze was used on.
-const computeStreak = (checkins, today = localDay()) => {
+const computeStreak = (checkins, today = localDay(), purchases = []) => {
   const days = new Set(checkins.map((checkin) => checkin.day).filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)));
   const first = [...days].filter((day) => day <= today).sort()[0];
   const frozenDays = new Set();
@@ -48,16 +57,30 @@ const computeStreak = (checkins, today = localDay()) => {
   let best = 0;
   let freezes = 0;
   let missed = 0;
+  // Bought freezes, sorted, waiting for their day to come.
+  const bought = (Array.isArray(purchases) ? purchases : [])
+    .filter((day) => typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day)).sort();
+  let boughtFreezes = first ? 0 : bought.length;
+  let nextBought = 0;
   if (first) {
     for (let day = first; day <= today; day = shiftDay(day, 1)) {
+      while (nextBought < bought.length && bought[nextBought] <= day) {
+        boughtFreezes += 1;
+        nextBought += 1;
+      }
       if (days.has(day)) {
         current += 1;
         missed = 0;
         if (current % FREEZE_EVERY === 0) freezes = Math.min(MAX_FREEZES, freezes + 1);
       } else if (day === today) {
         // Today is still open.
-      } else if (freezes > 0) {
+      } else if (current > 0 && freezes > 0) {
         freezes -= 1;
+        frozenDays.add(day);
+      } else if (current > 0 && boughtFreezes > 0) {
+        // Only while there is a streak to save: a bought freeze isn't
+        // wasted on a day when the streak is already 0.
+        boughtFreezes -= 1;
         frozenDays.add(day);
       } else {
         current = 0;
@@ -71,6 +94,7 @@ const computeStreak = (checkins, today = localDay()) => {
     best,
     missed,
     freezes,
+    boughtFreezes,
     frozenDays,
     checkedInToday: days.has(today),
     days,
@@ -100,7 +124,7 @@ const computeRewards = (totalSteps, bestStreak) => REWARDS.map((reward) => {
 const renderStreak = (tree) => {
   const checkins = Array.isArray(tree?.checkins) ? tree.checkins : [];
   const today = localDay();
-  const streak = computeStreak(checkins, today);
+  const streak = computeStreak(checkins, today, tree?.topaz?.purchases);
   const wilt = Math.min(streak.missed, FULL_WILT_DAYS) / FULL_WILT_DAYS;
   netStage.style.setProperty("--wilt", String(wilt));
   streakCard.classList.toggle("is-wilting", streak.missed > 0);
@@ -118,14 +142,15 @@ const renderStreak = (tree) => {
   streakCount.textContent = String(streak.current);
   streakCountLabel.textContent = "day streak";
   todayStreak.textContent = String(streak.current);
-  todayStreakLabel.textContent = streak.freezes
-    ? `day streak · ${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}`
+  const allFreezes = streak.freezes + streak.boughtFreezes;
+  todayStreakLabel.textContent = allFreezes
+    ? `day streak · ${allFreezes} ${allFreezes === 1 ? "freeze" : "freezes"}`
     : "day streak";
   streakBest.textContent = [
-    streak.freezes ? `${streak.freezes} ${streak.freezes === 1 ? "freeze" : "freezes"}` : "",
+    allFreezes ? `${allFreezes} ${allFreezes === 1 ? "freeze" : "freezes"}` : "",
     streak.best > streak.current ? `Best: ${streak.best}` : "",
   ].filter(Boolean).join(" · ");
-  streakBest.title = `Every ${FREEZE_EVERY} days in a row earns a freeze (you can hold ${MAX_FREEZES}). A freeze covers one missed day.`;
+  streakBest.title = `Every ${FREEZE_EVERY} days in a row earns a freeze (you can hold ${MAX_FREEZES}). A freeze covers one missed day. You can also buy freezes with topaz.`;
 
   streakWeek.replaceChildren();
   for (let offset = -6; offset <= 0; offset += 1) {
@@ -161,6 +186,7 @@ const renderStreak = (tree) => {
   if (document.activeElement !== checkinInput) checkinInput.value = streak.todayNote;
   checkinLabel.textContent = streak.checkedInToday ? "Today's check-in" : "What did you do on your step today?";
   checkinButton.textContent = streak.checkedInToday ? "Update" : "Check in";
+  renderTopaz(tree?.topaz, streak);
   return streak;
 };
 

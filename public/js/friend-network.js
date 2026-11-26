@@ -76,7 +76,7 @@ const drawFriendNetwork = (svg, goals, rewardRings) => {
 const renderFriendNetwork = (container, data) => {
   const goals = Array.isArray(data.goals) ? data.goals : [];
   const checkins = (Array.isArray(data.checkin_days) ? data.checkin_days : []).map((day) => ({ day }));
-  const streak = computeStreak(checkins);
+  const streak = computeStreak(checkins, localDay(), Array.isArray(data.freeze_days) ? data.freeze_days : []);
   const stepsDone = goals.reduce((sum, goal) => sum + (goal.completed?.length || 0), 0);
   const rewards = computeRewards(stepsDone, streak.best).filter((reward) => reward.earned);
 

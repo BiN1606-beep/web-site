@@ -61,6 +61,32 @@ assert.deepEqual([s.current, s.freezes, s.missed, s.frozenDays.size], [14, 0, 0,
 s = computeStreak(c(...run("2026-11-24", 21)), today);
 assert.deepEqual([s.current, s.freezes], [21, 2]);
 
+// Bought freezes (topaz). 3 days in a row, a freeze bought on day 2,
+// then a missed day: the bought freeze covers it.
+s = computeStreak(c("2026-11-20", "2026-11-21", "2026-11-22", "2026-11-24"), today, ["2026-11-21"]);
+assert.deepEqual([s.current, s.boughtFreezes, s.missed, [...s.frozenDays]], [4, 0, 0, ["2026-11-23"]]);
+
+// A freeze bought after the missed day can't fix it (and is kept).
+s = computeStreak(c("2026-11-20", "2026-11-21", "2026-11-24"), today, ["2026-11-23"]);
+assert.deepEqual([s.current, s.boughtFreezes], [1, 1]);
+
+// Earned freezes are used before bought ones.
+s = computeStreak(c(...run("2026-11-22", 7), "2026-11-24"), today, ["2026-11-16"]);
+assert.deepEqual([s.current, s.freezes, s.boughtFreezes], [8, 0, 1]);
+
+// Bought before the first check-in, or with no check-ins at all: still held.
+assert.equal(computeStreak([], today, ["2026-11-20"]).boughtFreezes, 1);
+assert.equal(computeStreak(c("2026-11-24"), today, ["2026-11-20", "2026-11-21"]).boughtFreezes, 2);
+
+// No streak to save: a bought freeze isn't wasted on missed days.
+s = computeStreak(c("2026-11-15", "2026-11-24"), today, ["2026-11-18"]);
+assert.deepEqual([s.current, s.boughtFreezes], [1, 1]);
+
+// Today still open doesn't use a freeze; a server-style empty object is ignored.
+s = computeStreak(c("2026-11-23"), today, ["2026-11-23"]);
+assert.deepEqual([s.current, s.boughtFreezes], [1, 1]);
+assert.equal(computeStreak(c("2026-11-23"), today, {}).boughtFreezes, 0);
+
 // Notes for today come through.
 assert.equal(computeStreak([{ day: today, note: "ran" }], today).todayNote, "ran");
 

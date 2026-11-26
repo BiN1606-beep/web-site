@@ -801,6 +801,8 @@ const sharedTreeCard = (tree) => {
         await loadCommunityTrees();
         renderTrees();
         const fresh = communityList.querySelector(`[data-tree-id="${tree.id}"] .shared-tree-picture`);
+        // Topaz gems for checking in (public/js/topaz.js), rising from the card.
+        applyTopazFromCommunity(result.topaz, communityList.querySelector(`[data-tree-id="${tree.id}"] .shared-person.is-watered`) || fresh);
         if (result.grew) {
           communityCelebrate(fresh, 26);
           communityToast("You both checked in. Your network grew!");
