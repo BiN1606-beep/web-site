@@ -1,22 +1,27 @@
-/* Topaz gems: the counter on the Today tab, the gem shop and the flying
-   gems (public/js/topaz.js). The gem keeps its yellow in every theme,
-   because it is the thing you collect. Flat facets, no gradients. */
+/* Topaz: the crystal icon, the counter and orb button on the Today tab,
+   the orb opening, the orb shelf on Progress and the shop
+   (public/js/topaz.js). The crystal keeps its honey color in every theme,
+   because it is the thing you collect. The orb and the rainbow glints are
+   the one place where the site uses gradients: they are light passing
+   through glass and crystal. */
 
 :root {
-  --topaz-light: #f6d46a;
-  --topaz: #e5ac22;
-  --topaz-mid: #f0bf3c;
-  --topaz-dark: #b97f0c;
-  --topaz-edge: #8a5d06;
-  --topaz-soft: rgba(229, 172, 34, 0.16);
+  --topaz-shine-color: #fff3cc;
+  --topaz-light: #ffdf8a;
+  --topaz: #eea23a;
+  --topaz-face-color: #f8c45a;
+  --topaz-dark: #c2721f;
+  --topaz-edge: #7a430d;
+  --topaz-soft: rgba(238, 162, 58, 0.16);
+  --topaz-text: #9a5810;
 }
 
 html.is-dark {
-  --topaz-edge: #fbe3a0;
-  --topaz-soft: rgba(240, 191, 60, 0.16);
+  --topaz-soft: rgba(248, 196, 90, 0.16);
+  --topaz-text: #ffd27a;
 }
 
-/* ---- The gem drawing ---- */
+/* ---- The crystal ---- */
 .topaz-icon {
   display: inline-grid;
   width: 1.1em;
@@ -30,17 +35,32 @@ html.is-dark {
   overflow: visible;
 }
 
-.topaz-facet-top { fill: var(--topaz-light); }
-.topaz-facet-crown { fill: #fbe7a6; }
-.topaz-facet-left { fill: var(--topaz); }
-.topaz-facet-mid { fill: var(--topaz-mid); }
-.topaz-facet-right { fill: var(--topaz-dark); }
+.topaz-icon .topaz-shine { fill: var(--topaz-shine-color); }
+.topaz-icon .topaz-light { fill: var(--topaz-light); }
+.topaz-icon .topaz-mid { fill: var(--topaz); }
+.topaz-icon .topaz-face { fill: var(--topaz-face-color); }
+.topaz-icon .topaz-dark { fill: var(--topaz-dark); }
 
-.topaz-edge {
+.topaz-icon .topaz-edge {
   fill: none;
   stroke: var(--topaz-edge);
-  stroke-width: 1.4;
+  stroke-width: 1.1;
   stroke-linejoin: round;
+}
+
+/* A thin beam of white light inside the big crystal. */
+.topaz-icon .topaz-ray {
+  stroke: #fffaf0;
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+
+/* The rainbow glint on the tip's edge. */
+.topaz-icon .topaz-glint {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
 }
 
 /* ---- The counter next to the streak ---- */
@@ -78,32 +98,7 @@ html.is-dark {
   animation: topaz-bump 0.45s ease;
 }
 
-/* "+10" rising from where you checked in. */
-.topaz-pop {
-  position: fixed;
-  z-index: 1000;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.15rem 0.55rem;
-  border: 1px solid color-mix(in srgb, var(--topaz) 55%, var(--panel-border));
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 6px 16px var(--shadow);
-  color: var(--topaz-dark);
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 600;
-  pointer-events: none;
-  transform: translate(-50%, -100%);
-  animation: topaz-rise 1.3s ease-out forwards;
-}
-
-html.is-dark .topaz-pop {
-  color: var(--topaz-light);
-}
-
-/* Small gems flying in an arc to the counter (or into a freeze slot). */
+/* Small crystals flying in an arc to a counter (or into a freeze slot). */
 .topaz-flyer {
   position: fixed;
   z-index: 1000;
@@ -330,12 +325,10 @@ html.is-dark .topaz-pop {
 .topaz-earn b {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  color: var(--topaz-dark);
-}
-
-html.is-dark .topaz-earn b {
-  color: var(--topaz-light);
+  gap: 0.25rem;
+  color: var(--topaz-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .topaz-earn li.is-done {
@@ -348,13 +341,6 @@ html.is-dark .topaz-earn b {
 
 @keyframes topaz-bump {
   40% { transform: scale(1.18); }
-}
-
-@keyframes topaz-rise {
-  0% { opacity: 0; transform: translate(-50%, -60%) scale(0.6); }
-  20% { opacity: 1; transform: translate(-50%, -120%) scale(1.1); }
-  70% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -260%) scale(1); }
 }
 
 @keyframes topaz-fly {
@@ -389,13 +375,628 @@ html.is-dark .topaz-earn b {
   100% { transform: scale(1) rotate(0deg); }
 }
 
+/* ---- Orbs ---- */
+/* A glass ball full of honey light, with a crystal inside and a slow
+   rainbow swirl, like light through a prism. */
+.orb {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #fffaf0 0 6%, #ffe6a6 15%, #f7bd52 38%, #d9861f 66%, #8a4a0e 100%);
+  box-shadow:
+    inset -0.2em -0.3em 0.5em rgba(90, 40, 0, 0.45),
+    inset 0.15em 0.15em 0.35em rgba(255, 255, 255, 0.35),
+    0 0 0.6em rgba(247, 189, 82, 0.55);
+  font-size: 1rem;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.orb-swirl {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(255, 107, 107, 0),
+    rgba(255, 107, 107, 0.5),
+    rgba(255, 228, 92, 0.5),
+    rgba(110, 231, 160, 0.5),
+    rgba(98, 176, 255, 0.5),
+    rgba(185, 139, 255, 0.5),
+    rgba(255, 107, 107, 0));
+  filter: blur(0.25em);
+  mix-blend-mode: soft-light;
+  animation: orb-turn 7s linear infinite;
+}
+
+.orb-core {
+  position: relative;
+  width: 46%;
+  height: 46%;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 0.35em rgba(255, 246, 214, 0.8));
+  animation: orb-core-bob 3s ease-in-out infinite;
+}
+
+.orb-shine {
+  position: absolute;
+  top: 9%;
+  left: 17%;
+  width: 36%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+  transform: rotate(-28deg);
+}
+
+.orb-mini .orb-core {
+  display: none;
+}
+
+.orb-mini .orb-swirl {
+  filter: blur(2px);
+}
+
+/* The big orb you tap open. */
+.orb-big {
+  width: min(11rem, 46vw);
+  height: min(11rem, 46vw);
+  font-size: min(1.6rem, 7vw);
+  animation: orb-float 3.2s ease-in-out infinite;
+  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+.orb-big .orb-swirl {
+  filter: blur(14px);
+}
+
+.orb-big[data-crack="1"] {
+  box-shadow:
+    inset -0.2em -0.3em 0.5em rgba(90, 40, 0, 0.45),
+    inset 0.15em 0.15em 0.35em rgba(255, 255, 255, 0.35),
+    0 0 1.6em rgba(247, 189, 82, 0.7);
+}
+
+.orb-big[data-crack="2"],
+.orb-big[data-crack="3"] {
+  filter: brightness(1.12) saturate(1.1);
+  box-shadow:
+    inset -0.2em -0.3em 0.5em rgba(90, 40, 0, 0.35),
+    inset 0 0 1.4em rgba(255, 246, 214, 0.7),
+    0 0 2.6em rgba(255, 214, 120, 0.9);
+}
+
+.orb-big[data-crack="3"] {
+  filter: brightness(1.35) saturate(1.2);
+}
+
+.orb-big.is-tapped {
+  animation: orb-wobble 0.38s ease;
+}
+
+.orb-big[data-crack="2"].is-tapped {
+  animation: orb-wobble-hard 0.42s ease;
+}
+
+.orb-big.is-dropping {
+  animation: orb-drop 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both, orb-float 3.2s 0.6s ease-in-out infinite;
+}
+
+.orb-cracks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.orb-crack {
+  fill: none;
+  stroke: #fffdf5;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 80;
+  stroke-dashoffset: 80;
+  filter: drop-shadow(0 0 2px #fff);
+  transition: stroke-dashoffset 0.25s ease-out;
+}
+
+.orb-big[data-crack="2"] .orb-crack-1,
+.orb-big[data-crack="3"] .orb-crack-1,
+.orb-big[data-crack="3"] .orb-crack-2 {
+  stroke-dashoffset: 0;
+}
+
+/* ---- The orb button and the shelf ---- */
+.orb-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  padding: 0.22rem 0.5rem 0.22rem 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--topaz) 55%, var(--panel-border));
+  border-radius: 999px;
+  background: var(--topaz-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+  animation: orb-call 1.8s ease-in-out infinite;
+}
+
+.orb-chip b:empty {
+  display: none;
+}
+
+.orb-chip:not([hidden]) + .topaz-chip {
+  margin-left: 0.4rem;
+}
+
+.orb-chip.is-new {
+  animation: orb-chip-in 0.7s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.orb-chip.is-bumping {
+  animation: topaz-bump 0.45s ease;
+}
+
+.orb-card {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.orb-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.orb-card-week {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--topaz-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.orb-shelf {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orb-day {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.orb-day b {
+  min-height: 1.1em;
+  color: var(--topaz-text);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.orb-day.is-today > span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.orb-slot {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.orb-slot.is-opened {
+  border: 1.5px solid color-mix(in srgb, var(--topaz) 60%, transparent);
+  background: var(--topaz-soft);
+}
+
+.orb-slot.is-opened .topaz-icon {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.orb-slot.is-waiting {
+  border: 0;
+  cursor: pointer;
+}
+
+.orb-slot.is-waiting .orb {
+  width: 1.9rem;
+  height: 1.9rem;
+  animation: orb-call 1.8s ease-in-out infinite;
+}
+
+/* ---- Opening an orb ---- */
+.orb-dialog {
+  width: min(94vw, 24rem);
+  max-width: none;
+  padding: 1rem 1rem 1.2rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--topaz) 22%, transparent), transparent 60%),
+    var(--base);
+  color: var(--text);
+  box-shadow: 0 20px 45px var(--shadow);
+  text-align: center;
+  overflow: hidden;
+}
+
+.orb-dialog[open] {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.7rem;
+  /* Room for the amount and the Collect button from the start, so the
+     dialog doesn't jump when they appear. */
+  min-height: min(31rem, 92vh);
+  animation: topaz-shop-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.orb-dialog[open].is-closing {
+  animation: topaz-shop-out 0.18s ease-in forwards;
+}
+
+.orb-dialog::backdrop {
+  background: var(--backdrop);
+}
+
+.orb-dialog-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  z-index: 2;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.orb-wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-self: start;
+  padding: 0.22rem 0.65rem 0.22rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--topaz) 55%, var(--panel-border));
+  border-radius: 999px;
+  background: var(--topaz-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.orb-wallet .topaz-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.orb-wallet.is-bumping {
+  animation: topaz-bump 0.45s ease;
+}
+
+.orb-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 15rem;
+}
+
+/* Soft beams of light behind the orb; they flare up when it bursts. */
+.orb-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24rem;
+  height: 24rem;
+  margin: -12rem 0 0 -12rem;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 214, 120, 0) 0deg 9deg, rgba(255, 214, 120, 0.45) 9deg 18deg);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+  opacity: 0.25;
+  pointer-events: none;
+  animation: orb-turn 24s linear infinite;
+  transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.orb-stage.is-burst .orb-rays {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.orb-stage.is-rare .orb-rays,
+.orb-stage.is-max .orb-rays {
+  background: repeating-conic-gradient(
+    rgba(255, 107, 107, 0.4) 0deg 6deg, transparent 6deg 12deg,
+    rgba(255, 228, 92, 0.45) 12deg 18deg, transparent 18deg 24deg,
+    rgba(110, 231, 160, 0.4) 24deg 30deg, transparent 30deg 36deg,
+    rgba(98, 176, 255, 0.4) 36deg 42deg, transparent 42deg 48deg,
+    rgba(185, 139, 255, 0.4) 48deg 54deg, transparent 54deg 60deg);
+}
+
+.orb-stage.is-max .orb-rays {
+  animation-duration: 8s;
+}
+
+.orb-button {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.orb-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 6px;
+}
+
+/* The flash when it breaks. */
+.orb-stage.is-burst::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10rem;
+  height: 10rem;
+  margin: -5rem 0 0 -5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffdf5 0 30%, rgba(255, 230, 166, 0.6) 50%, transparent 70%);
+  pointer-events: none;
+  animation: orb-flash 0.6s ease-out forwards;
+}
+
+.orb-shard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.5rem;
+  height: 1.2rem;
+  margin: -0.6rem 0 0 -0.75rem;
+  background: linear-gradient(135deg, #fff3cc, #f7bd52 50%, #b86a16);
+  clip-path: polygon(0 0, 100% 30%, 40% 100%);
+  pointer-events: none;
+  animation: orb-shard 0.85s cubic-bezier(0.1, 0.7, 0.3, 1) forwards;
+}
+
+.orb-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin: -0.2rem 0 0 -0.2rem;
+  border-radius: 50%;
+  background: hsl(var(--hue) 95% 68%);
+  box-shadow: 0 0 8px hsl(var(--hue) 95% 68%);
+  pointer-events: none;
+  opacity: 0;
+  animation: orb-spark 0.9s ease-out forwards;
+}
+
+/* The crystals that were inside. */
+.orb-gem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: -1.1rem 0 0 -1.1rem;
+  filter: drop-shadow(0 4px 6px rgba(120, 60, 0, 0.3));
+  animation:
+    orb-gem-out 0.65s cubic-bezier(0.2, 1.5, 0.4, 1) both,
+    orb-gem-hover 2.2s ease-in-out infinite alternate;
+}
+
+.orb-taps {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.orb-taps span {
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 1.5px solid color-mix(in srgb, var(--topaz) 70%, var(--panel-border));
+  border-radius: 50%;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.orb-taps span.is-done {
+  background: var(--topaz);
+  transform: scale(1.2);
+}
+
+.orb-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: -0.4rem 0 0;
+  color: var(--topaz-text);
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: orb-amount-in 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.orb-amount .topaz-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+
+.orb-amount.is-rare b,
+.orb-amount.is-max b {
+  background: linear-gradient(90deg, #ff6b6b, #ffb347, #e0b100, #3fbf7f, #3d8fe0, #9a6bff, #ff6b6b);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: orb-rainbow 2.4s linear infinite;
+}
+
+.orb-amount.is-max {
+  font-size: 3.4rem;
+}
+
+.orb-collect {
+  min-width: 10rem;
+  animation: orb-amount-in 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.orb-queue {
+  display: flex;
+  gap: 0.35rem;
+  min-height: 1.25rem;
+}
+
+.orb-queue:empty {
+  display: none;
+}
+
+.orb-status {
+  margin: 0;
+  color: var(--area-career);
+  font-size: 0.85rem;
+}
+
+.orb-status:empty {
+  display: none;
+}
+
+@keyframes orb-turn {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orb-core-bob {
+  50% { transform: translateY(-6%) rotate(-5deg); }
+}
+
+@keyframes orb-float {
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes orb-wobble {
+  0% { transform: scale(1); }
+  25% { transform: scale(0.92, 1.06) rotate(-6deg); }
+  55% { transform: scale(1.06, 0.95) rotate(5deg); }
+  80% { transform: scale(0.98) rotate(-2deg); }
+}
+
+@keyframes orb-wobble-hard {
+  0% { transform: scale(1); }
+  20% { transform: scale(0.88, 1.1) rotate(-10deg); }
+  45% { transform: scale(1.1, 0.9) rotate(9deg); }
+  70% { transform: scale(0.96) rotate(-5deg); }
+  90% { transform: scale(1.03) rotate(2deg); }
+}
+
+@keyframes orb-drop {
+  0% { opacity: 0; transform: translateY(-60px) scale(0.6); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes orb-call {
+  50% { box-shadow: 0 0 0 4px var(--topaz-soft), 0 0 14px rgba(247, 189, 82, 0.6); }
+}
+
+@keyframes orb-chip-in {
+  0% { transform: translateY(-24px) scale(0.3); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+@keyframes orb-flash {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes orb-shard {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(0.5); opacity: 0; }
+}
+
+@keyframes orb-spark {
+  0% { transform: translate(0, 0) scale(1.4); opacity: 1; }
+  100% { transform: translate(var(--x), var(--y)) scale(0.3); opacity: 0; }
+}
+
+@keyframes orb-gem-out {
+  0% { transform: translate(0, 0) scale(0.2) rotate(0deg); opacity: 0; }
+  100% { transform: translate(var(--x), var(--y)) scale(1) rotate(var(--spin)); opacity: 1; }
+}
+
+@keyframes orb-gem-hover {
+  from { transform: translate(var(--x), var(--y)) scale(1) rotate(var(--spin)); }
+  to { transform: translate(var(--x), calc(var(--y) - 6px)) scale(1) rotate(calc(var(--spin) * -1)); }
+}
+
+@keyframes orb-amount-in {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+@keyframes orb-rainbow {
+  to { background-position: 200% 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .topaz-chip.is-bumping,
   .topaz-big,
   .freeze-hero,
   .freeze-slot.is-new,
   .topaz-shop[open],
-  .topaz-meter span {
+  .topaz-meter span,
+  .orb-swirl,
+  .orb-core,
+  .orb-big,
+  .orb-big.is-tapped,
+  .orb-big.is-dropping,
+  .orb-chip,
+  .orb-slot.is-waiting .orb,
+  .orb-dialog[open],
+  .orb-rays,
+  .orb-gem,
+  .orb-amount,
+  .orb-collect,
+  .orb-amount.is-rare b,
+  .orb-amount.is-max b {
     animation: none;
+  }
+
+  .orb-gem {
+    transform: translate(var(--x), var(--y));
+  }
+
+  .orb-stage.is-burst::after {
+    display: none;
   }
 }

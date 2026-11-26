@@ -694,7 +694,6 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
       // An invisible, larger circle so small dots are easy to tap with a
       // finger. css/network.css only lets it catch taps on touch screens.
       group.append("circle").attr("class", "net-hit");
-      group.append("g").attr("class", "net-reward-rings");
       group.append("circle").attr("class", "tree-pulse");
       group.append("circle").attr("class", "net-core");
       group.append("circle").attr("class", "net-focus-ring");
@@ -777,19 +776,6 @@ const renderNetwork = (goals = network.goals, sproutId = null) => {
     .attr("stroke-dasharray", (node) => (node.status === "locked" || node.kind === "seed" ? "2 2" : null))
     .attr("opacity", (node) => (node.status === "done" && !node.recent && !node.milestone ? 0.78 : 1))
     .attr("filter", (node) => (node.kind === "goal" || node.recent || node.milestone || (node.kind === "skill" && node.done >= 3) ? "url(#net-glow)" : null));
-  // Rewards: one thin gold ring per reward earned, around every goal.
-  nodeGroups.select(".net-reward-rings")
-    .selectAll("circle")
-    .data((node) => (node.kind === "goal" ? d3.range(network.rewardRings || 0) : []))
-    .join("circle")
-    .attr("r", (ring, index, rings) => {
-      const node = d3.select(rings[index].parentNode).datum();
-      return node.r + 9 + ring * 4;
-    })
-    .attr("fill", "none")
-    .attr("stroke", "var(--sun)")
-    .attr("stroke-width", 1)
-    .attr("opacity", (ring) => 0.7 - ring * 0.08);
   // A thin ring marks the focus goal.
   nodeGroups.select(".net-focus-ring")
     .attr("r", (node) => node.r + 5)

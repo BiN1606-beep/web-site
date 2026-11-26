@@ -1,4 +1,4 @@
-// Daily streak, streak freezes and rewards. The pure functions here are tested by tests/unit/streak_test.mjs.
+// Daily streak and streak freezes. The pure functions here are tested by tests/unit/streak_test.mjs.
 //
 // Loaded as a plain script (see the list at the end of index.html); all
 // these files share one set of top-level names, so the order matters.
@@ -102,25 +102,6 @@ const computeStreak = (checkins, today = localDay(), purchases = []) => {
   };
 };
 
-// ---- Rewards ----
-// Milestones for steps done (across all goals) and for the best streak
-// ever. They're worked out from data the server already sends, so a
-// reward can't be lost: undoing a step only takes back a steps reward
-// if the total really drops below it.
-const REWARDS = [
-  { id: "steps-10", kind: "steps", target: 10, label: "10 steps" },
-  { id: "steps-50", kind: "steps", target: 50, label: "50 steps" },
-  { id: "steps-100", kind: "steps", target: 100, label: "100 steps" },
-  { id: "streak-7", kind: "streak", target: 7, label: "7-day streak" },
-  { id: "streak-30", kind: "streak", target: 30, label: "30-day streak" },
-  { id: "streak-100", kind: "streak", target: 100, label: "100-day streak" },
-];
-
-const computeRewards = (totalSteps, bestStreak) => REWARDS.map((reward) => {
-  const value = reward.kind === "steps" ? totalSteps : bestStreak;
-  return { ...reward, value: Math.min(value, reward.target), earned: value >= reward.target };
-});
-
 const renderStreak = (tree) => {
   const checkins = Array.isArray(tree?.checkins) ? tree.checkins : [];
   const today = localDay();
@@ -190,40 +171,3 @@ const renderStreak = (tree) => {
   return streak;
 };
 
-// The rewards earned when the page last drew them; null before the
-// first draw, so rewards you already had don't celebrate on page load.
-let earnedRewardIds = null;
-
-const renderRewards = (tree, streak) => {
-  const totalSteps = goalsFromTree(tree).reduce((sum, goal) => sum + goal.completed.length, 0);
-  const rewards = computeRewards(totalSteps, streak.best);
-  const earned = new Set(rewards.filter((reward) => reward.earned).map((reward) => reward.id));
-  const fresh = earnedRewardIds ? rewards.filter((reward) => reward.earned && !earnedRewardIds.has(reward.id)) : [];
-  earnedRewardIds = earned;
-  // Each reward earned draws one gold ring around every goal.
-  network.rewardRings = earned.size;
-
-  rewardStrip.replaceChildren();
-  for (const reward of rewards) {
-    const item = document.createElement("li");
-    item.className = "reward";
-    item.classList.toggle("is-earned", reward.earned);
-    item.classList.toggle("is-new", fresh.includes(reward));
-    item.setAttribute("aria-label", reward.earned
-      ? `${reward.label}: earned`
-      : `${reward.label}: ${reward.value} of ${reward.target}`);
-    const badge = document.createElement("span");
-    badge.className = "reward-badge";
-    badge.textContent = reward.earned ? String(reward.target) : `${reward.value}/${reward.target}`;
-    const label = document.createElement("span");
-    label.textContent = reward.kind === "steps" ? "steps" : "day streak";
-    item.append(badge, label);
-    rewardStrip.append(item);
-    if (fresh.includes(reward)) celebrateStep(badge);
-  }
-  // A new reward lights up the Progress tab until you open it.
-  if (fresh.length) setPanelTabDot("progress", true);
-  rewardMessage.textContent = fresh.length
-    ? `Reward unlocked: ${fresh.map((reward) => reward.label).join(" and ")}! A new gold ring now circles your goals.`
-    : "";
-};

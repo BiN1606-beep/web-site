@@ -1,4 +1,4 @@
-/* The streak card, check-ins, reminders, rewards, and the wilting network. */
+/* The streak card, check-ins, reminders and the wilting network. */
 
 /* ---- Daily streak ---- */
 .streak-card {
@@ -149,78 +149,6 @@
   margin: 0;
   color: var(--muted);
   font-size: 0.8rem;
-}
-
-/* ---- Rewards ---- */
-.reward-card {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.reward-strip {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.35rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.reward {
-  display: grid;
-  justify-items: center;
-  gap: 0.2rem;
-  color: var(--muted);
-  font-size: 0.68rem;
-  text-align: center;
-}
-
-.reward-badge {
-  display: grid;
-  place-items: center;
-  width: 2.3rem;
-  height: 2.3rem;
-  border: 2px dashed var(--panel-border);
-  border-radius: 50%;
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.reward.is-earned {
-  color: var(--text);
-}
-
-.reward.is-earned .reward-badge {
-  border: 2px solid var(--sun);
-  background: color-mix(in srgb, var(--sun) 22%, transparent);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--sun) 45%, transparent);
-  font-weight: 600;
-}
-
-.reward.is-new .reward-badge {
-  animation: reward-pop 0.9s ease;
-}
-
-@keyframes reward-pop {
-  0% { transform: scale(0.4); }
-  60% { transform: scale(1.25); }
-  100% { transform: scale(1); }
-}
-
-.reward-message {
-  margin: 0;
-  min-height: 0;
-  font-size: 0.85rem;
-}
-
-.reward-message:empty {
-  display: none;
-}
-
-@media (max-width: 380px) {
-  .reward-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 /* The network wilts when check-ins are missed: --wilt goes from 0

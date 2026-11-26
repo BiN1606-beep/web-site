@@ -1,24 +1,28 @@
--- Topaz: yellow gems you earn by checking in and spend on streak freezes.
+-- Topaz: crystals you get from orbs and spend on streak freezes.
 --
--- The earning happens in the database (see db/migrations/015_topaz_gems.sql):
--- every new check-in, on your own goal or a shared one, pays out once per
--- day. This module reads the wallet and handles buying a freeze.
+-- Orbs are the only reward. Every finished daily task (your check-in, or
+-- a check-in on a shared goal) gives one orb, made by the database (see
+-- db/migrations/016_topaz_orbs.sql) with its amount, 20 to 100 topaz,
+-- already drawn. This module reads the wallet and the orbs, opens an orb
+-- and handles buying a freeze.
 --
 -- Part of the server code that auth.lua used to hold in one file. Each
 -- module returns a table M with its functions; the names a module
 -- borrows from another module are listed at the top.
 
 local M = {}
+local cjson = require "cjson.safe"
 local common = require "osiris.common"
 
 local database_query = common.database_query
 local decode_json_value = common.decode_json_value
 
--- Keep these in step with the migration (the payouts) and with
--- public/js/streak.js (the freeze replay).
-local FREEZE_PRICE = 70
+-- Keep these in step with the migration (the orbs) and with
+-- public/js/streak.js (the freeze replay). An orb is worth 60 on average,
+-- so a freeze costs about a week of daily orbs.
+local FREEZE_PRICE = 400
 local MAX_BOUGHT_FREEZES = 3
-local PER_CHECKIN = 10
+local ORB_MIN, ORB_MAX, ORB_STEP = 20, 100, 5
 local MAX_SHARED_PER_DAY = 3
 
 -- "YYYY-MM-DD" as a whole day number (days since 1970-01-01), so days can
@@ -92,28 +96,76 @@ local function bought_freezes_left(checkin_days, purchase_days, today)
     return bought
 end
 
--- The wallet as the browser sees it. A failed load shows 0 gems and no
--- bought freezes rather than breaking the page.
+-- The wallet as the browser sees it, with the orbs:
+--  waiting = orbs not opened yet ({ id, day, reason }; no amount, so the
+--            page can't peek), oldest first,
+--  recent  = the orbs of about the last week, with the amount only once
+--            they are open (for the orb shelf on Progress). The browser
+--            picks its own last 7 days, since only it knows its date.
+-- A failed load shows 0 gems and no orbs rather than breaking the page.
 local function load_topaz(user_id)
     local rows = database_query([[
         SELECT
             COALESCE((SELECT balance FROM public.topaz_wallets WHERE user_id = $1), 0) AS balance,
             COALESCE((SELECT json_agg(day::text ORDER BY day) FROM public.freeze_purchases
-                      WHERE user_id = $1), '[]') AS purchases
+                      WHERE user_id = $1), '[]') AS purchases,
+            COALESCE((SELECT json_agg(json_build_object('id', id, 'day', day::text, 'reason', reason)
+                                      ORDER BY created_at, id)
+                      FROM public.topaz_orbs WHERE user_id = $1 AND opened_at IS NULL), '[]') AS waiting,
+            COALESCE((SELECT json_agg(json_build_object(
+                                'id', id, 'day', day::text, 'reason', reason,
+                                'opened', opened_at IS NOT NULL,
+                                'amount', CASE WHEN opened_at IS NOT NULL THEN amount END)
+                                      ORDER BY day, created_at, id)
+                      FROM public.topaz_orbs
+                      WHERE user_id = $1
+                        AND day >= (now() AT TIME ZONE 'UTC')::date - 8), '[]') AS recent
     ]], user_id)
     local row = rows and rows[1]
-    local purchases = row and decode_json_value(row.purchases, {}) or {}
-    if type(purchases) ~= "table" then
-        purchases = {}
+    local function list(value)
+        local decoded = row and decode_json_value(value, {}) or {}
+        if type(decoded) ~= "table" then
+            decoded = {}
+        end
+        return setmetatable(decoded, cjson.empty_array_mt)
     end
     return {
         balance = row and tonumber(row.balance) or 0,
-        purchases = purchases,
+        purchases = list(row and row.purchases),
+        orbs = list(row and row.waiting),
+        recent_orbs = list(row and row.recent),
         freeze_price = FREEZE_PRICE,
         max_bought = MAX_BOUGHT_FREEZES,
-        per_checkin = PER_CHECKIN,
+        orb_min = ORB_MIN,
+        orb_max = ORB_MAX,
+        orb_step = ORB_STEP,
         max_shared_per_day = MAX_SHARED_PER_DAY,
     }
+end
+
+-- Opens one of your orbs. Marking it open and paying happen in one
+-- statement, and only for an orb that is yours and still closed, so a
+-- double tap or two tabs can't open it twice. Returns the amount, false
+-- when there was no such closed orb, or nil on a database error.
+local function open_orb(user_id, orb_id)
+    local rows = database_query([[
+        WITH opened AS (
+            UPDATE public.topaz_orbs
+            SET opened_at = now()
+            WHERE id = $2 AND user_id = $1 AND opened_at IS NULL
+            RETURNING id, day, amount
+        ), paid AS (
+            INSERT INTO public.topaz_earnings (user_id, day, reason, ref_id, amount)
+            SELECT $1, day, 'orb', id, amount FROM opened
+            ON CONFLICT DO NOTHING
+            RETURNING amount
+        )
+        SELECT amount FROM paid
+    ]], user_id, orb_id)
+    if not rows then
+        return nil
+    end
+    return rows[1] and tonumber(rows[1].amount) or false
 end
 
 -- Buys one streak freeze for FREEZE_PRICE topaz. checkins are the user's
@@ -155,6 +207,7 @@ M.MAX_BOUGHT_FREEZES = MAX_BOUGHT_FREEZES
 M.day_number = day_number
 M.bought_freezes_left = bought_freezes_left
 M.load_topaz = load_topaz
+M.open_orb = open_orb
 M.buy_freeze = buy_freeze
 
 return M
