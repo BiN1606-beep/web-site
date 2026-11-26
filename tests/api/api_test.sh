@@ -23,6 +23,30 @@ for check in "/css/base.css text/css" "/js/main.js application/javascript" "/sw.
 done
 echo "public pages ok"
 
+# Security headers (lua/osiris/security.lua) on pages and API replies.
+for path in /login /welcome /api/auth/me; do
+    headers=$(curl -sS -I "$B$path")
+    for h in "strict-transport-security: max-age=" "content-security-policy: default-src 'self'" "x-frame-options: DENY" "x-content-type-options: nosniff" "referrer-policy:"; do
+        echo "$headers" | grep -qi "^$h" || fail "$path is missing header $h"
+    done
+    if echo "$headers" | grep -qi "^server: openresty/"; then fail "$path shows the server version"; fi
+done
+# The pages must not need inline scripts, or the policy above blocks them.
+for page in index login stats welcome; do
+    if grep -q "<script>" /opt/mysite/public/$page.html; then fail "$page.html has an inline <script>"; fi
+done
+# Another website can't make a visitor's browser change things here.
+[ "$(curl -sS -o /dev/null -w '%{http_code}' -H 'Origin: https://evil.example.com' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"x@test.se","password":"averylongpassword1"}')" = 403 ] || fail "cross-site signup accepted"
+[ "$(curl -sS -o /dev/null -w '%{http_code}' -H 'Sec-Fetch-Site: cross-site' -X POST $B/api/auth/logout)" = 403 ] || fail "cross-site logout accepted"
+# Too many wrong passwords lock that account's password sign-in for a while.
+L=/tmp/lockjar
+[ "$(curl -sS -c $L -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"lock@test.se","password":"averylongpassword1"}')" = 201 ] || fail "lock signup"
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    [ "$(curl -sS -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/login -d '{"email":"lock@test.se","password":"wrongpassword"}')" = 401 ] || fail "wrong password not refused"
+done
+[ "$(curl -sS -o /dev/null -w '%{http_code}' -H "Origin: $B" -H 'Content-Type: application/json' -X POST $B/api/auth/login -d '{"email":"lock@test.se","password":"averylongpassword1"}')" = 429 ] || fail "account not locked after 10 wrong passwords"
+echo "security ok"
+
 code=$(curl -sS -c $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"t@test.se","password":"averylongpassword1"}')
 [ "$code" = 201 ] || { cat /tmp/out; fail "signup $code"; }
 psql -q -v ON_ERROR_STOP=1 -c "INSERT INTO user_progress_trees (user_id, tree_data, completed_count, is_active) SELECT id, '{\"goal\":\"G\",\"area\":\"Health\",\"summary\":\"s\",\"steps\":[{\"title\":\"s1\",\"description\":\"d\",\"why\":\"w\"},{\"title\":\"s2\",\"description\":\"d\",\"why\":\"w\",\"how\":[\"a\",\"b\"]},{\"title\":\"s3\",\"description\":\"d\",\"why\":\"w\"}]}', 0, true FROM auth_users WHERE email='t@test.se'"

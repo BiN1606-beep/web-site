@@ -7,6 +7,7 @@
 local cjson = require "cjson.safe"
 local M = {}
 local common = require "osiris.common"
+local security = require "osiris.security"
 
 local respond = common.respond
 local set_cookie = common.set_cookie
@@ -52,6 +53,9 @@ local function create_session(user_id, remember_me)
     if not rows or not rows[1] or type(rows[1].token) ~= "string" then
         return false
     end
+    -- Tidy up: sessions past their end date can never be used again, so
+    -- there is no reason to keep them. A failure here changes nothing.
+    database_query("DELETE FROM public.auth_sessions WHERE expires_at < now()")
     local cookie_options = { http_only = true }
     if remember_me == true then
         cookie_options.max_age = REMEMBERED_SESSION_MAX_AGE
@@ -109,17 +113,27 @@ local function handle_login()
         return respond(ngx.HTTP_BAD_REQUEST, { error = "Remember me must be enabled or disabled." })
     end
 
+    local email = string.lower(body.email)
+    -- Too many wrong passwords for this email lately (see osiris/security.lua).
+    if security.login_locked(email) then
+        return respond(429, {
+            error = "Too many wrong passwords for this account. Wait 15 minutes, or continue with Google.",
+        })
+    end
+
     local rows = database_query([[
         SELECT id, email
         FROM public.auth_users
         WHERE email = $1 AND password_hash = crypt($2, password_hash)
-    ]], string.lower(body.email), body.password)
+    ]], email, body.password)
     if not rows then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Sign-in is temporarily unavailable." })
     end
     if not rows[1] then
+        security.record_login_failure(email)
         return respond(ngx.HTTP_UNAUTHORIZED, { error = "Email or password is incorrect." })
     end
+    security.clear_login_failures(email)
     if not create_session(rows[1].id, body.rememberMe == true) then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start your session." })
     end
@@ -358,18 +372,46 @@ local function handle_google_callback()
         return google_error_redirect()
     end
 
+    -- Anyone can create a password account for any email address, because
+    -- Osiris does not send a confirmation email. So when Google proves who
+    -- really owns an email and it is linked to an existing password account
+    -- for the first time, that password may have been set by someone else
+    -- ("account pre-hijacking"). To be safe the first link removes the
+    -- password and signs out every other session on the account; the real
+    -- owner keeps signing in with Google. "linked_now" is true only then.
     local rows = database_query([[
-        INSERT INTO public.auth_users (email, google_sub)
-        VALUES ($1, $2)
-        ON CONFLICT (email) DO UPDATE
-        SET google_sub = EXCLUDED.google_sub
-        WHERE public.auth_users.google_sub IS NULL
-           OR public.auth_users.google_sub = EXCLUDED.google_sub
-        RETURNING id
+        WITH existing AS (
+            SELECT id, google_sub, password_hash IS NOT NULL AS had_password
+            FROM public.auth_users
+            WHERE email = $1
+        ),
+        upserted AS (
+            INSERT INTO public.auth_users (email, google_sub)
+            VALUES ($1, $2)
+            ON CONFLICT (email) DO UPDATE
+            SET google_sub = EXCLUDED.google_sub,
+                password_hash = CASE
+                    WHEN public.auth_users.google_sub IS NULL THEN NULL
+                    ELSE public.auth_users.password_hash
+                END
+            WHERE public.auth_users.google_sub IS NULL
+               OR public.auth_users.google_sub = EXCLUDED.google_sub
+            RETURNING id
+        )
+        SELECT upserted.id,
+               COALESCE(existing.google_sub IS NULL AND existing.had_password, false) AS linked_now
+        FROM upserted
+        LEFT JOIN existing ON existing.id = upserted.id
     ]], string.lower(userinfo.email), userinfo.sub)
     if not rows or not rows[1] then
         ngx.log(ngx.ERR, "Could not link the verified Google account")
         return google_error_redirect()
+    end
+    if rows[1].linked_now == true then
+        if not database_query("DELETE FROM public.auth_sessions WHERE user_id = $1", rows[1].id) then
+            ngx.log(ngx.ERR, "Could not end old sessions after linking a Google account")
+            return google_error_redirect()
+        end
     end
     if not create_session(rows[1].id) then
         ngx.log(ngx.ERR, "Could not create a session for the Google account")

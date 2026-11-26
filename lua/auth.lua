@@ -10,6 +10,7 @@ local community = require "osiris.community"
 local stats = require "osiris.stats"
 local network_style = require "osiris.network_style"
 local appearance = require "osiris.appearance"
+local security = require "osiris.security"
 
 local respond = common.respond
 local current_user = common.current_user
@@ -46,6 +47,10 @@ function M.require_page_session()
 end
 
 function M.require_api_session()
+    if not security.same_origin_request() then
+        respond(ngx.HTTP_FORBIDDEN, { error = "This request did not come from Osiris." })
+        return false
+    end
     local user, database_error = current_user()
     if database_error then
         respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Authentication is temporarily unavailable." })
@@ -61,6 +66,10 @@ end
 
 function M.handle_request()
     local path = ngx.var.uri
+    -- Changes must come from Osiris's own pages (see osiris/security.lua).
+    if not security.same_origin_request() then
+        return respond(ngx.HTTP_FORBIDDEN, { error = "This request did not come from Osiris." })
+    end
     if path == "/api/auth/signup" then
         return handle_signup()
     elseif path == "/api/auth/login" then
