@@ -1,5 +1,5 @@
 // A friend's network on their Community profile: a small, read-only copy
-// of the progress network, with their streak and rewards. The server only
+// of the progress network, with their streak. The server only
 // sends it when they share their progress (lua/osiris/community.lua,
 // friend_network), and never their check-in notes.
 //
@@ -8,7 +8,7 @@
 
 // Lays the network out once with d3's physics (300 quiet steps, no
 // animation) and draws it as a still picture. Hover a dot to see its name.
-const drawFriendNetwork = (svg, goals, rewardRings) => {
+const drawFriendNetwork = (svg, goals) => {
   const nodes = [];
   const links = [];
   goals.forEach((goal) => {
@@ -56,14 +56,6 @@ const drawFriendNetwork = (svg, goals, rewardRings) => {
 
   const groups = root.append("g").selectAll("g").data(nodes).join("g")
     .attr("transform", (node) => `translate(${node.x},${node.y})`);
-  // Their rewards, like in your own network: one gold ring per reward.
-  groups.filter((node) => node.kind === "goal").each(function drawRings() {
-    for (let ring = 0; ring < rewardRings; ring += 1) {
-      d3.select(this).append("circle")
-        .attr("class", "friend-ring")
-        .attr("r", (node) => node.r + 6 + ring * 3);
-    }
-  });
   groups.append("circle")
     .attr("r", (node) => node.r)
     .attr("fill", (node) => (node.kind === "step" && !node.done ? "var(--base)" : node.color))
@@ -78,7 +70,6 @@ const renderFriendNetwork = (container, data) => {
   const checkins = (Array.isArray(data.checkin_days) ? data.checkin_days : []).map((day) => ({ day }));
   const streak = computeStreak(checkins, localDay(), Array.isArray(data.freeze_days) ? data.freeze_days : []);
   const stepsDone = goals.reduce((sum, goal) => sum + (goal.completed?.length || 0), 0);
-  const rewards = computeRewards(stepsDone, streak.best).filter((reward) => reward.earned);
 
   const section = document.createElement("section");
   section.className = "friend-network";
@@ -96,14 +87,8 @@ const renderFriendNetwork = (container, data) => {
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `Their progress network: ${goals.length} ${goals.length === 1 ? "goal" : "goals"} and ${stepsDone} finished steps`);
     section.append(svg);
-    drawFriendNetwork(svg, goals, rewards.length);
+    drawFriendNetwork(svg, goals);
   }
 
-  if (rewards.length) {
-    const list = document.createElement("p");
-    list.className = "friend-network-rewards";
-    list.textContent = `Rewards: ${rewards.map((reward) => reward.label).join(", ")}`;
-    section.append(list);
-  }
   container.append(section);
 };

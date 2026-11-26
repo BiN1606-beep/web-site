@@ -181,8 +181,6 @@ const treeStepTime = document.querySelector("#tree-step-time");
 const treeStepHowContainer = document.querySelector("#tree-step-how-container");
 const treeStepHow = document.querySelector("#tree-step-how");
 const treeStepGuideButton = document.querySelector("#tree-step-guide");
-const rewardStrip = document.querySelector("#reward-strip");
-const rewardMessage = document.querySelector("#reward-message");
 // Undo takes two clicks, like removing a goal.
 let confirmingUndo = false;
 let progressTreeRequest = null;

@@ -12,6 +12,8 @@ local devtools = require "osiris.devtools"
 local network_style = require "osiris.network_style"
 local appearance = require "osiris.appearance"
 local routines = require "osiris.routines"
+-- Only registers the Topaz card in the dev tools panel.
+require "osiris.topaz_dev"
 
 local respond = common.respond
 local current_user = common.current_user

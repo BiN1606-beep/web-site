@@ -495,9 +495,29 @@ local function handle_progress_tree()
             })
         end
         if bought == "poor" then
-            return respond(ngx.HTTP_CONFLICT, { error = "Not enough topaz yet. Check in to earn more." })
+            return respond(ngx.HTTP_CONFLICT, { error = "Not enough topaz yet. Open orbs to get more." })
         end
         return respond(ngx.HTTP_OK, { tree = progress_tree_payload(row, user.id), bought_freeze = true })
+    end
+
+    -- Open an orb (the reward for a daily task). The amount inside was
+    -- drawn when the orb was made; opening only reveals and pays it.
+    if body.action == "open_orb" then
+        local orb_id = tonumber(body.orbId)
+        if not orb_id or orb_id < 1 or orb_id % 1 ~= 0 then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Which orb?" })
+        end
+        local amount = topaz.open_orb(user.id, orb_id)
+        if amount == nil then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not open the orb. Try again." })
+        end
+        if not amount then
+            return respond(ngx.HTTP_CONFLICT, {
+                error = "That orb is already open.",
+                topaz = topaz.load_topaz(user.id),
+            })
+        end
+        return respond(ngx.HTTP_OK, { amount = amount, topaz = topaz.load_topaz(user.id) })
     end
 
     -- A daily check-in: one short line about what you did today. Sending it

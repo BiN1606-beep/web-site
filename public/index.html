@@ -306,7 +306,7 @@
                 </div>
               </section>
 
-              <!-- ---- Progress: stats, streak, rewards, all goals ---- -->
+              <!-- ---- Progress: stats, streak, orbs, all goals ---- -->
               <section class="panel-tab-page" id="panel-progress" role="tabpanel" aria-labelledby="panel-tab-progress" hidden>
                 <div class="net-stats">
                   <div class="net-stat"><b id="net-stat-done">0</b><span>steps done</span></div>
@@ -325,13 +325,14 @@
                   <ol class="streak-week" id="streak-week" aria-label="The last 7 days"></ol>
                   <p class="section-help">Check in once a day to grow it. Every 7 days in a row earns a freeze that covers one missed day, and you can buy more with topaz. Miss a day without one and your network wilts.</p>
                 </section>
-                <!-- Rewards: milestones for steps done and for the best streak.
-                     Each one earned adds a gold ring around your goals. -->
-                <section class="reward-card" aria-labelledby="reward-title">
-                  <span class="tree-step-label" id="reward-title">Rewards</span>
-                  <ol class="reward-strip" id="reward-strip"></ol>
-                  <p class="section-help">Milestones for steps done and for your best streak. Each one you reach puts a gold ring around your goals.</p>
-                  <p class="reward-message" id="reward-message" role="status" aria-live="polite"></p>
+                <!-- Orbs: one for each daily task, opened for 20 to 100 topaz.
+                     The last 7 days as a shelf (public/js/topaz.js). -->
+                <section class="orb-card" id="orb-card" aria-labelledby="orb-card-title" hidden>
+                  <div class="orb-card-head">
+                    <span class="tree-step-label" id="orb-card-title">Orbs</span>
+                    <b class="orb-card-week" id="orb-card-week"></b>
+                  </div>
+                  <ol class="orb-shelf" id="orb-shelf" aria-label="Orbs of the last 7 days"></ol>
                 </section>
                 <div class="net-list" id="net-goal-list" hidden></div>
                 <button class="profile-secondary-button" id="tree-start-new" type="button" hidden>+ Add a new goal</button>

@@ -50,6 +50,7 @@ step "1/4 JavaScript and Lua checks"
 docker run --rm -v "$ROOT_FOR_DOCKER:/repo:ro" node:22-alpine sh -c '
     node --experimental-vm-modules --no-warnings /repo/tests/unit/syntax_check.mjs &&
     node /repo/tests/unit/streak_test.mjs &&
+    node /repo/tests/unit/topaz_test.mjs &&
     node /repo/tests/unit/routines_test.mjs'
 # luacheck finds names that are used but never defined (for example a
 # function a module forgot to borrow from another module) and leftovers

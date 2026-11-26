@@ -81,7 +81,7 @@ const renderProgressTree = (tree) => {
   }
 
   treeActions.hidden = false;
-  renderRewards(tree, renderStreak(tree));
+  renderStreak(tree);
   renderWeeklyReview(tree);
   treeGoal.textContent = tree.goal;
   treeSummary.textContent = tree.summary;

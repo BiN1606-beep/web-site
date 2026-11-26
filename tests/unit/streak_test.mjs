@@ -1,4 +1,4 @@
-// Pulls the pure streak and reward functions out of public/js/streak.js and checks them.
+// Pulls the pure streak functions out of public/js/streak.js and checks them.
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
@@ -6,8 +6,8 @@ const html = readFileSync(new URL("../../public/js/streak.js", import.meta.url),
 const start = html.indexOf("const localDay = ");
 const end = html.indexOf("const renderStreak = ");
 assert.ok(start > 0 && end > start, "streak functions found");
-const { localDay, daysBetween, shiftDay, computeStreak, computeRewards } =
-  new Function(`${html.slice(start, end)}; return { localDay, daysBetween, shiftDay, computeStreak, computeRewards };`)();
+const { localDay, daysBetween, shiftDay, computeStreak } =
+  new Function(`${html.slice(start, end)}; return { localDay, daysBetween, shiftDay, computeStreak };`)();
 
 const c = (...days) => days.map((day) => ({ day, note: "x" }));
 // n days in a row ending at `last`
@@ -90,10 +90,4 @@ assert.equal(computeStreak(c("2026-11-23"), today, {}).boughtFreezes, 0);
 // Notes for today come through.
 assert.equal(computeStreak([{ day: today, note: "ran" }], today).todayNote, "ran");
 
-// Rewards
-const r = computeRewards(12, 7);
-assert.deepEqual(r.filter((x) => x.earned).map((x) => x.id), ["steps-10", "streak-7"]);
-assert.equal(r.find((x) => x.id === "steps-50").value, 12);
-assert.equal(computeRewards(0, 0).some((x) => x.earned), false);
-assert.equal(computeRewards(500, 500).every((x) => x.earned), true);
-console.log("STREAK_AND_REWARD_TESTS_OK");
+console.log("STREAK_TESTS_OK");
