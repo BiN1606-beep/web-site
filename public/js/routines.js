@@ -94,6 +94,48 @@ const routineRepeatText = (rule) => {
   return "Every day";
 };
 
+// Ideas for routines, so you know where to start. Each has a life area
+// (the same names as goals) and a rhythm that suits it. Ideas from the
+// areas of your own goals come first.
+const ROUTINE_IDEAS = [
+  { title: "Drink 2 l of water", area: "Health", repeat: { kind: "daily" } },
+  { title: "Walk 20 min", area: "Health", repeat: { kind: "daily" } },
+  { title: "Stretch 10 min", area: "Health", repeat: { kind: "daily" } },
+  { title: "Work out", area: "Health", repeat: { kind: "weekdays", days: [0, 2, 4] } },
+  { title: "In bed before 23:00", area: "Health", repeat: { kind: "daily" } },
+  { title: "Eat a fruit or vegetable", area: "Health", repeat: { kind: "daily" } },
+  { title: "Meditate 5 min", area: "Mind", repeat: { kind: "daily" } },
+  { title: "Write 3 things you're thankful for", area: "Mind", repeat: { kind: "daily" } },
+  { title: "No phone the first hour", area: "Mind", repeat: { kind: "daily" } },
+  { title: "Journal", area: "Mind", repeat: { kind: "every", every: 2 } },
+  { title: "Read 10 pages", area: "Learning", repeat: { kind: "daily" } },
+  { title: "Practice a language 15 min", area: "Learning", repeat: { kind: "daily" } },
+  { title: "Learn one new thing", area: "Learning", repeat: { kind: "weekdays", days: [0, 1, 2, 3, 4] } },
+  { title: "Plan tomorrow", area: "Career", repeat: { kind: "weekdays", days: [0, 1, 2, 3, 4] } },
+  { title: "One hour of focused work", area: "Career", repeat: { kind: "weekdays", days: [0, 1, 2, 3, 4] } },
+  { title: "Draw or write 15 min", area: "Creativity", repeat: { kind: "every", every: 2 } },
+  { title: "Practice your instrument", area: "Creativity", repeat: { kind: "daily" } },
+  { title: "Message a friend", area: "Relationships", repeat: { kind: "every", every: 3 } },
+  { title: "Call your family", area: "Relationships", repeat: { kind: "every", every: 7 } },
+  { title: "Write down what you spent", area: "Money", repeat: { kind: "daily" } },
+  { title: "Check your budget", area: "Money", repeat: { kind: "every", every: 7 } },
+  { title: "Tidy up 10 min", area: "Other", repeat: { kind: "daily" } },
+  { title: "Make your bed", area: "Other", repeat: { kind: "daily" } },
+];
+
+// The ideas to offer: not ones you already have, your goals' areas first,
+// then the rest. "turn" rotates the list for "More ideas".
+const routineIdeas = (have, areas, turn = 0) => {
+  const taken = new Set(have.map((title) => title.trim().toLowerCase()));
+  const fresh = ROUTINE_IDEAS.filter((idea) => !taken.has(idea.title.toLowerCase()));
+  const mine = fresh.filter((idea) => areas.includes(idea.area));
+  const rest = fresh.filter((idea) => !areas.includes(idea.area));
+  const list = [...mine, ...rest];
+  if (!list.length) return [];
+  const start = (turn * 6) % list.length;
+  return [...list.slice(start), ...list.slice(0, start)];
+};
+
 // ---- The page ----
 
 let routinesState = { routines: [], checks: [] };
@@ -194,6 +236,7 @@ const renderRoutines = () => {
   document.querySelector("#routine-ring-text").textContent = `${done}/${dueCount}`;
   document.querySelector("#routine-ring-fill").style.strokeDashoffset = String(dueCount ? 1 - done / dueCount : 1);
   routineCard.classList.toggle("is-all-done", dueCount > 0 && done === dueCount);
+  renderRoutineIdeas();
 };
 
 const toggleRoutine = async (routine, done, item) => {
@@ -222,6 +265,61 @@ const toggleRoutine = async (routine, done, item) => {
     routineStatus.textContent = error.message;
   }
 };
+
+// ---- Ideas ----
+
+let routineIdeaTurn = 0;
+
+// The life areas of your goals (from goals.js), to pick fitting ideas.
+const routineGoalAreas = () => {
+  const goals = typeof progressTreeState !== "undefined" && Array.isArray(progressTreeState?.goals) ? progressTreeState.goals : [];
+  return goals.map((goal) => String(goal.area || ""));
+};
+
+const routineIdeaChip = (idea, onPick) => {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "routine-idea";
+  chip.style.setProperty("--area", `var(--area-${idea.area.toLowerCase()}, var(--area-other))`);
+  chip.title = routineRepeatText(idea.repeat);
+  chip.textContent = idea.title;
+  chip.addEventListener("click", () => onPick(idea, chip));
+  return chip;
+};
+
+const renderRoutineIdeas = () => {
+  const ideas = routineIdeas(routineActive().map((routine) => routine.title), routineGoalAreas(), routineIdeaTurn);
+  // On the empty card: four ideas; tapping one opens the form with it.
+  document.querySelector("#routine-empty-ideas-list").replaceChildren(
+    ...ideas.slice(0, 4).map((idea) => routineIdeaChip(idea, (picked) => {
+      openRoutineForm();
+      useRoutineIdea(picked);
+    })),
+  );
+  document.querySelector("#routine-empty-ideas").hidden = routineEmpty.hidden || ideas.length === 0;
+  // In the form: six ideas; tapping one fills in the name and rhythm.
+  document.querySelector("#routine-form-ideas-list").replaceChildren(
+    ...ideas.slice(0, 6).map((idea) => routineIdeaChip(idea, (picked, chip) => {
+      useRoutineIdea(picked);
+      for (const other of chip.parentElement.children) other.classList.toggle("is-picked", other === chip);
+    })),
+  );
+  document.querySelector("#routine-form-ideas").hidden = Boolean(routineEditing) || ideas.length === 0;
+  document.querySelector("#routine-ideas-more").hidden = ideas.length <= 6;
+};
+
+const useRoutineIdea = (idea) => {
+  routineName.value = idea.title;
+  routineRepeatKind = idea.repeat.kind;
+  if (idea.repeat.kind === "weekdays") routineChosenDays = new Set(idea.repeat.days);
+  if (idea.repeat.kind === "every") routineEvery = idea.repeat.every;
+  showRoutineRepeat();
+};
+
+document.querySelector("#routine-ideas-more").addEventListener("click", () => {
+  routineIdeaTurn += 1;
+  renderRoutineIdeas();
+});
 
 // ---- Adding and changing a routine ----
 
@@ -287,7 +385,9 @@ const openRoutineForm = (routine = null) => {
   routineStatus.textContent = "";
   showRoutineRepeat();
   renderRoutines();
-  routineName.focus();
+  // When changing a routine, start typing straight away. When adding, the
+  // ideas come first, so don't pop up the phone keyboard over them.
+  if (routine) routineName.focus();
 };
 
 const closeRoutineForm = () => {

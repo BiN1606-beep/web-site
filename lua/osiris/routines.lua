@@ -404,6 +404,63 @@ local function handle_routines()
     return respond(ngx.HTTP_BAD_REQUEST, { error = "Unknown routines action." })
 end
 
+-- ---- Dev tools (lua/osiris/devtools.lua, owner accounts only) ----
+-- A "Routines" card in the panel's Extras tab: how many you have, and
+-- buttons to fill or clear today and to start over. devtools.lua checks
+-- that the account is allowed before any of these run.
+local devtools = require "osiris.devtools"
+
+devtools.add_section(function(user, today)
+    local rows = database_query([[
+        SELECT (SELECT count(*) FROM public.routines
+                WHERE user_id = $1 AND removed_on IS NULL) AS active,
+               (SELECT count(*) FROM public.routine_checks
+                WHERE user_id = $1 AND day = $2::date) AS today,
+               (SELECT count(*) FROM public.routine_checks WHERE user_id = $1) AS total
+    ]], user.id, today)
+    local counts = rows and rows[1] or {}
+    return {
+        id = "routines",
+        title = "Routines",
+        stats = {
+            { label = "Routines", value = tonumber(counts.active) or 0 },
+            { label = "Ticked today", value = tonumber(counts.today) or 0 },
+            { label = "All ticks", value = tonumber(counts.total) or 0 },
+        },
+        actions = {
+            { action = "routines_tick_today", label = "Tick all today" },
+            { action = "routines_clear_ticks", label = "Clear all ticks" },
+            { action = "routines_reset", label = "Remove all routines", danger = true },
+        },
+    }
+end)
+
+devtools.add_action("routines_tick_today", function(user, _, today)
+    local rows = load_routines(user.id)
+    if not rows then
+        return false
+    end
+    for _, row in ipairs(rows) do
+        if is_due(row, today) and not database_query([[
+            INSERT INTO public.routine_checks (routine_id, user_id, day)
+            VALUES ($1, $2, $3::date) ON CONFLICT DO NOTHING
+        ]], row.id, user.id, today) then
+            return false
+        end
+    end
+    return true, "Today's routines are ticked", { reload = true }
+end)
+
+devtools.add_action("routines_clear_ticks", function(user)
+    local done = database_query("DELETE FROM public.routine_checks WHERE user_id = $1", user.id)
+    return done ~= nil, "All routine ticks removed", { reload = true }
+end)
+
+devtools.add_action("routines_reset", function(user)
+    local done = database_query("DELETE FROM public.routines WHERE user_id = $1", user.id)
+    return done ~= nil, "All routines removed", { reload = true }
+end)
+
 M.handle_routines = handle_routines
 -- For tests and for other modules that may want them later.
 M.is_due = is_due

@@ -244,9 +244,22 @@
                   <button class="routine-empty" id="routine-empty" type="button" hidden>
                     <span aria-hidden="true">+</span> Add a routine you want to keep
                   </button>
+                  <!-- Ideas to start from, so an empty list doesn't feel
+                       like a blank page. Tap one to add it. -->
+                  <div class="routine-ideas-box" id="routine-empty-ideas" hidden>
+                    <span class="routine-ideas-label">Ideas</span>
+                    <div class="routine-ideas" id="routine-empty-ideas-list"></div>
+                  </div>
                   <form class="routine-form" id="routine-form" hidden>
+                    <div class="routine-ideas-box" id="routine-form-ideas">
+                      <div class="routine-ideas-head">
+                        <span class="routine-ideas-label">Ideas</span>
+                        <button class="routine-ideas-more" id="routine-ideas-more" type="button">More ideas</button>
+                      </div>
+                      <div class="routine-ideas" id="routine-form-ideas-list"></div>
+                    </div>
                     <input id="routine-name" type="text" maxlength="80" autocomplete="off" required
-                      aria-label="Routine" placeholder="e.g. Stretch 10 min">
+                      aria-label="Routine" placeholder="Or write your own">
                     <div class="routine-repeat" role="radiogroup" aria-label="How often">
                       <button type="button" role="radio" data-repeat="daily" aria-checked="true">Every day</button>
                       <button type="button" role="radio" data-repeat="weekdays" aria-checked="false">Some days</button>

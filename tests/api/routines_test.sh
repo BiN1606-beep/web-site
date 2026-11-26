@@ -106,4 +106,23 @@ done
 [ "$(r '{"action":"add","title":"one more","repeat":{"kind":"daily"},"day":"'$TODAY'"}')" = 409 ] || fail "limit status"
 echo "limit ok"
 
+# Dev tools: a debug account gets a Routines card and its buttons work;
+# everyone else gets nothing (devtools.lua checks that).
+dev() { curl -sS -b $J -H 'Content-Type: application/json' -o /tmp/rout -w '%{http_code}' -X POST "$B/api/dev" -d "$1"; }
+[ "$(dev '{"action":"routines_reset"}')" = 403 ] || fail "routine dev action for a normal account"
+DEBUG_FILE=/opt/mysite/lua/debug_menu_email.txt
+if [ -w /opt/mysite/lua ]; then
+    printf 'r1@test.se\n' > $DEBUG_FILE
+    curl -sS -b $J -o /tmp/rout "$B/api/dev?today=$TODAY"
+    jq -e '.snapshot.extras[] | select(.id == "routines") | .stats[0].value == 20' /tmp/rout >/dev/null || { cat /tmp/rout; fail "dev routines card"; }
+    [ "$(dev '{"action":"routines_tick_today","today":"'$TODAY'"}')" = 200 ] || { cat /tmp/rout; fail "dev tick today"; }
+    jq -e '.snapshot.extras[] | select(.id == "routines") | .stats[1].value >= 20' /tmp/rout >/dev/null || { cat /tmp/rout; fail "dev ticked"; }
+    [ "$(dev '{"action":"routines_clear_ticks","today":"'$TODAY'"}')" = 200 ] || fail "dev clear ticks"
+    [ "$(psql -tAc "SELECT count(*) FROM routine_checks c JOIN auth_users u ON u.id = c.user_id WHERE u.email = 'r1@test.se'")" = 0 ] || fail "dev cleared"
+    [ "$(r '{"action":"debug_reset"}')" = 200 ] || fail "debug_reset for debug account"
+    jq -e '.routines == []' /tmp/rout >/dev/null || fail "debug_reset emptied"
+    rm -f $DEBUG_FILE
+    echo "dev tools ok"
+fi
+
 echo "ALL_ROUTINE_TESTS_OK"

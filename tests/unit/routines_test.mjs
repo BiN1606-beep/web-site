@@ -12,8 +12,8 @@ const slice = (code, from, to) => {
 };
 const streak = slice(read("streak.js"), "const localDay = ", "// How many missed days");
 const routines = slice(read("routines.js"), "const ROUTINE_WEEKDAYS", "// ---- The page ----");
-const { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText } =
-  new Function(`${streak}${routines}; return { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText };`)();
+const { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS } =
+  new Function(`${streak}${routines}; return { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS };`)();
 
 // 2026-11-23 is a Monday, 2026-11-29 a Sunday.
 assert.equal(routineWeekday("2026-11-23"), 0);
@@ -67,5 +67,14 @@ assert.equal(routineRepeatText({ kind: "weekdays", days: [4, 0, 2] }), "Mon, Wed
 assert.equal(routineRepeatText({ kind: "every", every: 2 }), "Every other day");
 assert.equal(routineRepeatText({ kind: "every", every: 7 }), "Once a week");
 assert.equal(routineRepeatText({ kind: "every", every: 3 }), "Every 3 days");
+
+// Ideas: none you already have, your goals' areas first, all short enough.
+let ideas = routineIdeas(["  drink 2 L of WATER "], ["Money"]);
+assert.equal(ideas.length, ROUTINE_IDEAS.length - 1);
+assert.ok(!ideas.some((idea) => idea.title === "Drink 2 l of water"));
+assert.deepEqual(ideas.slice(0, 2).map((idea) => idea.area), ["Money", "Money"]);
+assert.notEqual(routineIdeas([], [], 1)[0].title, routineIdeas([], [], 0)[0].title, "More ideas shows others");
+assert.deepEqual(routineIdeas(ROUTINE_IDEAS.map((idea) => idea.title), []), []);
+for (const idea of ROUTINE_IDEAS) assert.ok(idea.title.length <= 80 && routineRepeatText(idea.repeat), idea.title);
 
 console.log("routine tests passed");
