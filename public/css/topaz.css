@@ -1,9 +1,9 @@
 /* Topaz: the crystal icon, the counter and orb button on the Today tab,
    the orb opening, the orb shelf on Progress and the shop
-   (public/js/topaz.js). The crystal keeps its honey color in every theme,
-   because it is the thing you collect. The orb and the rainbow glints are
-   the one place where the site uses gradients: they are light passing
-   through glass and crystal. */
+   (public/js/topaz.js). The crystal (drawn in topaz.js) keeps its yellow
+   in every theme, because it is the thing you collect. The orb and the
+   crystal are the one place where the site uses gradients and glow: they
+   are light passing through glass and crystal. */
 
 :root {
   --topaz-shine-color: #fff3cc;
@@ -33,34 +33,6 @@ html.is-dark {
   width: 100%;
   height: 100%;
   overflow: visible;
-}
-
-.topaz-icon .topaz-shine { fill: var(--topaz-shine-color); }
-.topaz-icon .topaz-light { fill: var(--topaz-light); }
-.topaz-icon .topaz-mid { fill: var(--topaz); }
-.topaz-icon .topaz-face { fill: var(--topaz-face-color); }
-.topaz-icon .topaz-dark { fill: var(--topaz-dark); }
-
-.topaz-icon .topaz-edge {
-  fill: none;
-  stroke: var(--topaz-edge);
-  stroke-width: 1.1;
-  stroke-linejoin: round;
-}
-
-/* A thin beam of white light inside the big crystal. */
-.topaz-icon .topaz-ray {
-  stroke: #fffaf0;
-  stroke-width: 1;
-  stroke-linecap: round;
-  opacity: 0.9;
-}
-
-/* The rainbow glint on the tip's edge. */
-.topaz-icon .topaz-glint {
-  fill: none;
-  stroke-width: 1.5;
-  stroke-linecap: round;
 }
 
 /* ---- The counter next to the streak ---- */
@@ -376,102 +348,210 @@ html.is-dark {
 }
 
 /* ---- Orbs ---- */
-/* A glass ball full of honey light, with a crystal inside and a slow
-   rainbow swirl, like light through a prism. */
+/* A magic ball of topaz light: dark glass with a hot core, a swirl of
+   energy, crackling lightning, orbit rings and floating sparks. The
+   lightning, the rings and the sparks are only on the big orb. */
 .orb {
+  --energy: 1;
   position: relative;
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
   flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.3rem;
+  height: 1.3rem;
   border-radius: 50%;
-  background: radial-gradient(circle at 34% 28%, #fffaf0 0 6%, #ffe6a6 15%, #f7bd52 38%, #d9861f 66%, #8a4a0e 100%);
-  box-shadow:
-    inset -0.2em -0.3em 0.5em rgba(90, 40, 0, 0.45),
-    inset 0.15em 0.15em 0.35em rgba(255, 255, 255, 0.35),
-    0 0 0.6em rgba(247, 189, 82, 0.55);
-  font-size: 1rem;
-  overflow: hidden;
   isolation: isolate;
 }
 
-.orb-swirl {
+.orb > * {
   position: absolute;
-  inset: 6%;
+  pointer-events: none;
+}
+
+/* The glow around it. */
+.orb-aura {
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 196, 70, 0.55) 30%, rgba(255, 140, 30, 0.18) 52%, transparent 70%);
+  animation: orb-breathe 2.6s ease-in-out infinite;
+}
+
+.orb-glass {
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 52%,
+    #fffbe6 0%, #ffe38a 9%, #ffb53a 19%, rgba(206, 92, 16, 0.85) 34%,
+    rgba(92, 28, 26, 0.92) 56%, rgba(30, 10, 32, 0.96) 82%, rgba(255, 196, 96, 0.9) 100%);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 216, 130, 0.8),
+    inset 0 0 0.6em rgba(255, 170, 60, 0.7),
+    0 0 0.5em rgba(255, 170, 50, 0.6);
+}
+
+.orb-swirl {
+  inset: 10%;
   border-radius: 50%;
   background: conic-gradient(
-    rgba(255, 107, 107, 0),
-    rgba(255, 107, 107, 0.5),
-    rgba(255, 228, 92, 0.5),
-    rgba(110, 231, 160, 0.5),
-    rgba(98, 176, 255, 0.5),
-    rgba(185, 139, 255, 0.5),
-    rgba(255, 107, 107, 0));
-  filter: blur(0.25em);
-  mix-blend-mode: soft-light;
-  animation: orb-turn 7s linear infinite;
+    rgba(255, 240, 170, 0) 0deg, rgba(255, 236, 160, 0.75) 40deg, rgba(255, 170, 60, 0) 90deg,
+    rgba(255, 220, 120, 0) 180deg, rgba(255, 245, 190, 0.7) 225deg, rgba(255, 170, 60, 0) 280deg);
+  filter: blur(0.12em);
+  mix-blend-mode: screen;
+  animation: orb-turn 4s linear infinite;
 }
 
 .orb-core {
-  position: relative;
-  width: 46%;
-  height: 46%;
-  opacity: 0.9;
-  filter: drop-shadow(0 0 0.35em rgba(255, 246, 214, 0.8));
-  animation: orb-core-bob 3s ease-in-out infinite;
+  top: 50%;
+  left: 50%;
+  width: 34%;
+  height: 34%;
+  margin: -17% 0 0 -17%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0 30%, #fff4c2 50%, rgba(255, 214, 110, 0) 75%);
+  filter: blur(1px);
+  animation: orb-core-pulse 1.6s ease-in-out infinite;
 }
 
 .orb-shine {
-  position: absolute;
-  top: 9%;
-  left: 17%;
-  width: 36%;
-  height: 22%;
+  top: 10%;
+  left: 20%;
+  width: 30%;
+  height: 16%;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
-  transform: rotate(-28deg);
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 70%);
+  transform: rotate(-30deg);
 }
 
-.orb-mini .orb-core {
+.orb-arcs {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 1.5px #fff2b0) drop-shadow(0 0 4px #ffab2e);
+  animation: orb-turn 18s linear infinite reverse;
+}
+
+.orb-bolts {
+  fill: none;
+  stroke: #fffbe8;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: orb-flicker 1.5s steps(1, end) infinite;
+}
+
+.orb-bolts-2 { animation-delay: -0.5s; }
+.orb-bolts-3 { animation-delay: -1s; }
+
+/* Two thin rings orbiting at an angle. */
+.orb-rings {
+  inset: -14%;
+}
+
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-top-color: rgba(255, 232, 160, 0.95);
+  border-right-color: rgba(255, 200, 100, 0.5);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 3px #ffc04a);
+  transform: rotate(-24deg) scaleY(0.34) rotate(0deg);
+  animation: orb-ring-a 3.2s linear infinite;
+}
+
+.orb-ring + .orb-ring {
+  inset: 6%;
+  border-top-color: rgba(255, 246, 210, 0.85);
+  border-right-color: transparent;
+  border-left-color: rgba(255, 190, 90, 0.5);
+  animation: orb-ring-b 4.4s linear infinite;
+}
+
+.orb-motes {
+  inset: 0;
+}
+
+.orb-mote {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: #fff6cf;
+  box-shadow: 0 0 4px 1px #ffc24a;
+  opacity: 0;
+  animation: orb-mote 2.4s ease-in-out infinite;
+}
+
+.orb-mini .orb-arcs,
+.orb-mini .orb-rings,
+.orb-mini .orb-motes,
+.orb-mini .orb-swirl {
   display: none;
 }
 
-.orb-mini .orb-swirl {
-  filter: blur(2px);
+.orb-mini .orb-aura {
+  inset: -22%;
 }
 
-/* The big orb you tap open. */
+/* The big orb you tap open. Each tap charges it up (--energy). */
 .orb-big {
   width: min(11rem, 46vw);
   height: min(11rem, 46vw);
-  font-size: min(1.6rem, 7vw);
   animation: orb-float 3.2s ease-in-out infinite;
-  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+.orb-big .orb-glass {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 216, 130, 0.85),
+    inset 0 0 1.6rem rgba(255, 170, 60, 0.75),
+    inset 0 -1rem 2rem rgba(255, 120, 20, 0.35),
+    0 0 1.4rem rgba(255, 170, 50, 0.6),
+    0 0 3.5rem rgba(255, 140, 20, 0.3);
 }
 
 .orb-big .orb-swirl {
-  filter: blur(14px);
+  filter: blur(6px);
 }
 
-.orb-big[data-crack="1"] {
-  box-shadow:
-    inset -0.2em -0.3em 0.5em rgba(90, 40, 0, 0.45),
-    inset 0.15em 0.15em 0.35em rgba(255, 255, 255, 0.35),
-    0 0 1.6em rgba(247, 189, 82, 0.7);
+.orb-big .orb-core {
+  filter: blur(3px);
 }
 
-.orb-big[data-crack="2"],
-.orb-big[data-crack="3"] {
-  filter: brightness(1.12) saturate(1.1);
-  box-shadow:
-    inset -0.2em -0.3em 0.5em rgba(90, 40, 0, 0.35),
-    inset 0 0 1.4em rgba(255, 246, 214, 0.7),
-    0 0 2.6em rgba(255, 214, 120, 0.9);
+.orb-big .orb-mote {
+  width: 4px;
+  height: 4px;
 }
 
-.orb-big[data-crack="3"] {
-  filter: brightness(1.35) saturate(1.2);
+.orb-big[data-crack="1"] { --energy: 1.25; }
+.orb-big[data-crack="2"] { --energy: 1.6; }
+.orb-big[data-crack="3"] { --energy: 2.2; }
+
+.orb-big[data-crack] .orb-aura {
+  transform: scale(calc(0.7 + var(--energy) * 0.3));
+  transition: transform 0.25s ease;
+}
+
+.orb-big[data-crack] .orb-core {
+  width: calc(34% * var(--energy));
+  height: calc(34% * var(--energy));
+  margin: calc(-17% * var(--energy)) 0 0 calc(-17% * var(--energy));
+  transition: width 0.25s ease, height 0.25s ease, margin 0.25s ease;
+}
+
+.orb-big[data-crack="2"] .orb-bolts,
+.orb-big[data-crack="3"] .orb-bolts {
+  stroke-width: 1.4;
+  animation-duration: 0.6s;
+}
+
+.orb-big[data-crack="2"] .orb-ring,
+.orb-big[data-crack="3"] .orb-ring {
+  animation-duration: 1.2s;
+}
+
+.orb-big[data-crack="3"] .orb-glass {
+  filter: brightness(1.3);
 }
 
 .orb-big.is-tapped {
@@ -484,32 +564,6 @@ html.is-dark {
 
 .orb-big.is-dropping {
   animation: orb-drop 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both, orb-float 3.2s 0.6s ease-in-out infinite;
-}
-
-.orb-cracks {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.orb-crack {
-  fill: none;
-  stroke: #fffdf5;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 80;
-  stroke-dashoffset: 80;
-  filter: drop-shadow(0 0 2px #fff);
-  transition: stroke-dashoffset 0.25s ease-out;
-}
-
-.orb-big[data-crack="2"] .orb-crack-1,
-.orb-big[data-crack="3"] .orb-crack-1,
-.orb-big[data-crack="3"] .orb-crack-2 {
-  stroke-dashoffset: 0;
 }
 
 /* ---- The orb button and the shelf ---- */
@@ -631,13 +685,14 @@ html.is-dark {
   width: min(94vw, 24rem);
   max-width: none;
   padding: 1rem 1rem 1.2rem;
-  border: 1px solid var(--panel-border);
+  border: 1px solid rgba(255, 200, 110, 0.35);
   border-radius: 1.4rem;
+  /* Always night inside, so the orb's light shows. */
   background:
-    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--topaz) 22%, transparent), transparent 60%),
-    var(--base);
-  color: var(--text);
-  box-shadow: 0 20px 45px var(--shadow);
+    radial-gradient(circle at 50% 38%, rgba(255, 150, 40, 0.28), transparent 55%),
+    radial-gradient(circle at 50% 100%, #2a1a3a, #120d1c 70%);
+  color: #f7efdc;
+  box-shadow: 0 20px 45px var(--shadow), 0 0 40px rgba(255, 160, 40, 0.15);
   text-align: center;
   overflow: hidden;
 }
@@ -671,7 +726,7 @@ html.is-dark {
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--muted);
+  color: rgba(247, 239, 220, 0.7);
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
@@ -703,7 +758,7 @@ html.is-dark {
   display: grid;
   place-items: center;
   width: 100%;
-  height: 15rem;
+  height: 16.5rem;
 }
 
 /* Soft beams of light behind the orb; they flare up when it bursts. */
@@ -840,7 +895,8 @@ html.is-dark {
   align-items: center;
   gap: 0.3rem;
   margin: -0.4rem 0 0;
-  color: var(--topaz-text);
+  color: #ffd76a;
+  text-shadow: 0 0 18px rgba(255, 180, 60, 0.55);
   font-family: var(--font-display);
   font-size: 2.8rem;
   font-weight: 600;
@@ -897,8 +953,34 @@ html.is-dark {
   to { transform: rotate(360deg); }
 }
 
-@keyframes orb-core-bob {
-  50% { transform: translateY(-6%) rotate(-5deg); }
+@keyframes orb-breathe {
+  50% { transform: scale(1.12); opacity: 0.8; }
+}
+
+@keyframes orb-core-pulse {
+  50% { transform: scale(1.25); }
+}
+
+/* Lightning: on for a blink, then off, in turns. */
+@keyframes orb-flicker {
+  0% { opacity: 0.95; }
+  12% { opacity: 0.2; }
+  18% { opacity: 0.9; }
+  30% { opacity: 0; }
+}
+
+@keyframes orb-ring-a {
+  to { transform: rotate(-24deg) scaleY(0.34) rotate(360deg); }
+}
+
+@keyframes orb-ring-b {
+  from { transform: rotate(30deg) scaleY(0.28) rotate(0deg); }
+  to { transform: rotate(30deg) scaleY(0.28) rotate(-360deg); }
+}
+
+@keyframes orb-mote {
+  0%, 100% { opacity: 0; transform: translateY(4px) scale(0.5); }
+  50% { opacity: 1; transform: translateY(-6px) scale(1); }
 }
 
 @keyframes orb-float {
@@ -977,6 +1059,10 @@ html.is-dark {
   .topaz-meter span,
   .orb-swirl,
   .orb-core,
+  .orb-aura,
+  .orb-arcs,
+  .orb-ring,
+  .orb-mote,
   .orb-big,
   .orb-big.is-tapped,
   .orb-big.is-dropping,
@@ -994,6 +1080,15 @@ html.is-dark {
 
   .orb-gem {
     transform: translate(var(--x), var(--y));
+  }
+
+  .orb-bolts {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .orb-mote {
+    opacity: 0.8;
   }
 
   .orb-stage.is-burst::after {

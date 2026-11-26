@@ -41,10 +41,11 @@ const orbGemCount = (amount) => Math.max(3, Math.min(12, Math.round(amount / 9))
 
 // ---- end of pure helpers ----
 
-// The topaz crystal: a natural cluster, one big crystal and a small one
-// behind it, with a rainbow where light splits inside it and a rainbow
-// glint on one edge, like a prism. Each copy gets its own ids for its
-// rainbow and clip path, so copies never borrow from a hidden one.
+// The topaz: a rough, glassy chunk of yellow crystal, the way it comes
+// out of the ground. Flat broken faces in light and deeper yellows, light
+// shining through the middle, sharp white glints on the edges, and a small
+// rainbow where light splits inside it, like a prism. Each copy gets its
+// own gradient ids, so copies never borrow from a hidden one.
 let topazIconCount = 0;
 const topazSvg = () => {
   topazIconCount += 1;
@@ -52,30 +53,34 @@ const topazSvg = () => {
   return `
   <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
     <defs>
-      <linearGradient id="${id}-rainbow" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#ff6b6b"/><stop offset="0.22" stop-color="#ffb347"/>
-        <stop offset="0.42" stop-color="#ffe45c"/><stop offset="0.6" stop-color="#6ee7a0"/>
-        <stop offset="0.8" stop-color="#62b0ff"/><stop offset="1" stop-color="#b98bff"/>
+      <linearGradient id="la${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffdf0"/><stop offset="1" stop-color="#f7e27a"/></linearGradient>
+      <linearGradient id="lb${id}" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#fbe983"/><stop offset="1" stop-color="#ddb928"/></linearGradient>
+      <linearGradient id="lc${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2a6"/><stop offset="1" stop-color="#ecd04a"/></linearGradient>
+      <linearGradient id="ld${id}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#e8c632"/><stop offset="1" stop-color="#a98a0c"/></linearGradient>
+      <radialGradient id="glow${id}" cx="0.55" cy="0.55" r="0.5">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/><stop offset="0.45" stop-color="#fff6b0" stop-opacity="0.4"/><stop offset="1" stop-color="#fff6b0" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="rb${id}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff7a7a"/><stop offset="0.3" stop-color="#ffd24a"/><stop offset="0.55" stop-color="#7be3a4"/><stop offset="0.8" stop-color="#6fb6ff"/><stop offset="1" stop-color="#c194ff"/>
       </linearGradient>
-      <clipPath id="${id}-face"><path d="M16 11L22.5 10.5 21 29.5 14 30.5z"/></clipPath>
     </defs>
-    <path class="topaz-dark" d="M1.5 15L5 16.5 6 28 2.5 26.5z"/>
-    <path class="topaz-mid" d="M5 16.5L10 14.5 10 27 6 28z"/>
-    <path class="topaz-light" d="M3.5 10L1.5 15 5 16.5z"/>
-    <path class="topaz-shine" d="M3.5 10L5 16.5 10 14.5z"/>
-    <path class="topaz-edge" d="M3.5 10L10 14.5 10 27 6 28 2.5 26.5 1.5 15z M1.5 15L5 16.5 10 14.5 M5 16.5L6 28"/>
-    <path class="topaz-mid" d="M11 8.5L16 11 14 30.5 9 27.5z"/>
-    <path class="topaz-face" d="M16 11L22.5 10.5 21 29.5 14 30.5z"/>
-    <path class="topaz-dark" d="M22.5 10.5L26 6.5 24.5 25.5 21 29.5z"/>
-    <path class="topaz-light" d="M19 1.5L11 8.5 16 11z"/>
-    <path class="topaz-shine" d="M19 1.5L16 11 22.5 10.5z"/>
-    <path class="topaz-face" d="M19 1.5L22.5 10.5 26 6.5z"/>
-    <g clip-path="url(#${id}-face)" opacity="0.9">
-      <path d="M15 13.5L24 19.5 24 27.5z" fill="url(#${id}-rainbow)"/>
-    </g>
-    <path class="topaz-ray" d="M11.5 13.5l4.3 1.2"/>
-    <path class="topaz-edge" d="M19 1.5L26 6.5 24.5 25.5 21 29.5 14 30.5 9 27.5 11 8.5z M11 8.5L16 11 22.5 10.5 26 6.5 M16 11L19 1.5 22.5 10.5 M16 11L14 30.5 M22.5 10.5L21 29.5"/>
-    <path class="topaz-glint" d="M20 3L25 6.6" stroke="url(#${id}-rainbow)"/>
+    <path fill="url(#lb${id})" d="M2.5 19L6 8 15 11 13 21 4.5 26z"/>
+    <path fill="url(#la${id})" d="M6 8L12 3 20 1.5 15 11z"/>
+    <path fill="url(#lc${id})" d="M20 1.5L24 5 28.5 7 30 15 21 15 15 11z"/>
+    <path fill="#ffe55c" d="M15 11L21 15 22 24 13 21z"/>
+    <path fill="url(#ld${id})" d="M30 15L27 19 28.5 25 22 24 21 15z"/>
+    <path fill="url(#ld${id})" opacity="0.92" d="M4.5 26L13 21 22 24 28.5 25 21 30 11 30.5z"/>
+    <path fill="#fff7c0" opacity="0.45" d="M4.5 19.5l4.5-7 3 1-3.5 8.5z"/>
+    <path fill="#fff09a" opacity="0.5" d="M23 17.5l4.5 1-1 5-3.5-.8z"/>
+    <path fill="#f6dc55" opacity="0.6" d="M9 27.5l5-4 6 2-3 3.5z"/>
+    <path fill="url(#glow${id})" d="M13 9L23 13 24 25 11 22z"/>
+    <path fill="url(#rb${id})" opacity="0.6" d="M17 14.5l4.5 2.5-.5 5.5z"/>
+    <path fill="none" stroke="#e0c22a" stroke-width="0.5" opacity="0.9" d="M5 21q3-1 5 1.5M6.5 15q2.5.5 3.5 3"/>
+    <path fill="none" stroke="#fffef2" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" d="M7 8.5L12.3 4M15.4 11.4L20.6 15"/>
+    <path fill="none" stroke="#fffef2" stroke-width="0.7" stroke-linecap="round" opacity="0.8" d="M21.5 15.8l.6 7.4M6.4 9.5L3.6 18.5"/>
+    <path fill="none" stroke="url(#rb${id})" stroke-width="1.1" stroke-linecap="round" d="M28.9 8.2l1 6"/>
+    <circle cx="17.5" cy="3.6" r="0.8" fill="#fff"/>
+    <path fill="none" stroke="#8f750c" stroke-width="0.8" stroke-linejoin="round" d="M2.5 19L6 8 12 3 20 1.5 24 5 28.5 7 30 15 27 19 28.5 25 21 30 11 30.5 4.5 26z"/>
   </svg>`;
 };
 
@@ -102,17 +107,64 @@ const freezeIcon = (className = "freeze-icon") => {
   return icon;
 };
 
-// An orb: a glowing glass ball with a crystal inside and a slow rainbow
-// swirl. "mini" is the small one on buttons and the shelf.
+// Lightning for an orb: a few jagged bolts from the middle out towards the
+// glass, different every time. Points are in a 100 x 100 box.
+const orbBolts = (count) => {
+  const bolts = [];
+  for (let index = 0; index < count; index += 1) {
+    const angle = (index / count) * Math.PI * 2 + Math.random() * 0.8;
+    const reach = 30 + Math.random() * 14;
+    let path = `M${50 + Math.cos(angle) * 4} ${50 + Math.sin(angle) * 4}`;
+    for (let step = 1; step <= 5; step += 1) {
+      const along = 4 + (reach - 4) * (step / 5);
+      const side = (Math.random() - 0.5) * 9;
+      const x = 50 + Math.cos(angle) * along - Math.sin(angle) * side;
+      const y = 50 + Math.sin(angle) * along + Math.cos(angle) * side;
+      path += `L${x.toFixed(1)} ${y.toFixed(1)}`;
+      // Now and then a short fork off to the side.
+      if (step === 3 && Math.random() < 0.6) {
+        const fork = angle + (Math.random() < 0.5 ? -0.6 : 0.6);
+        path += `l${(Math.cos(fork) * 9).toFixed(1)} ${(Math.sin(fork) * 9).toFixed(1)}M${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+    }
+    bolts.push(path);
+  }
+  return bolts;
+};
+
+// An orb: a magic ball of topaz light. A dark glass sphere with a hot
+// glowing core, crackling lightning, a swirl of energy, two orbit rings
+// and sparks floating around it. "orb-mini" (buttons, the shelf) only
+// keeps the glass, the core and the glow.
 const orbElement = (className = "orb") => {
   const orb = document.createElement("span");
   orb.className = className;
-  const swirl = document.createElement("span");
-  swirl.className = "orb-swirl";
-  const core = topazIcon("topaz-icon orb-core");
-  const shine = document.createElement("span");
-  shine.className = "orb-shine";
-  orb.append(swirl, core, shine);
+  const part = (name) => {
+    const element = document.createElement("span");
+    element.className = name;
+    return element;
+  };
+  const bolts = orbBolts(12);
+  const groups = [0, 1, 2].map((group) => `<g class="orb-bolts orb-bolts-${group + 1}">${
+    bolts.filter((_, index) => index % 3 === group).map((d) => `<path d="${d}"/>`).join("")}</g>`).join("");
+  const arcs = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  arcs.setAttribute("class", "orb-arcs");
+  arcs.setAttribute("viewBox", "0 0 100 100");
+  arcs.setAttribute("aria-hidden", "true");
+  arcs.innerHTML = groups;
+  const rings = part("orb-rings");
+  rings.append(part("orb-ring"), part("orb-ring"));
+  const motes = part("orb-motes");
+  for (let index = 0; index < 10; index += 1) {
+    const mote = part("orb-mote");
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 52 + Math.random() * 18;
+    mote.style.left = `${50 + Math.cos(angle) * distance}%`;
+    mote.style.top = `${50 + Math.sin(angle) * distance}%`;
+    mote.style.animationDelay = `${(Math.random() * 2.4).toFixed(2)}s`;
+    motes.append(mote);
+  }
+  orb.append(part("orb-aura"), part("orb-glass"), part("orb-swirl"), arcs, part("orb-core"), rings, motes, part("orb-shine"));
   return orb;
 };
 
@@ -284,11 +336,6 @@ document.body.append(orbDialog);
 // The orb on stage: { id, taps, request, done }.
 let orbOpening = null;
 
-const orbCrackSvg = `
-  <svg class="orb-cracks" viewBox="0 0 100 100" aria-hidden="true">
-    <path class="orb-crack orb-crack-1" d="M50 8l-4 14 7 8-5 12"/>
-    <path class="orb-crack orb-crack-2" d="M53 30l12 6 4 12M48 42l-12 8-3 13 6 9"/>
-  </svg>`;
 
 const drawOrbDialog = () => {
   const topaz = topazState;
@@ -315,7 +362,6 @@ const drawOrbDialog = () => {
   orbButton.className = "orb-button";
   orbButton.setAttribute("aria-label", "Tap to open the orb");
   const orb = orbElement("orb orb-big");
-  orb.insertAdjacentHTML("beforeend", orbCrackSvg);
   orbButton.append(orb);
   orbButton.addEventListener("click", tapOrb);
   stage.append(rays, orbButton);
