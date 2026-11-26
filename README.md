@@ -90,16 +90,25 @@ are connected through that skill's node, which grows as more steps use it.
 Trees created before skills were added still work, just without skill nodes.
 If d3 cannot load, the page falls back to a static drawing of the tree.
 
-The Progress Tree debug menu opens with the `ä` key only for the account
-matching an address in the server-side `DEBUG_MENU_EMAIL` setting. Add one or
-more comma-separated sign-in emails to `/etc/mysite/deploy.env`, for example
+The dev tools panel opens with the `ä` key, or Settings > Dev tools, only for
+the accounts matching an address in the server-side `DEBUG_MENU_EMAIL`
+setting. Add one or more comma-separated sign-in emails to
+`/etc/mysite/deploy.env`, for example
 `DEBUG_MENU_EMAIL="first@example.com,second@example.com"`, then rerun the Deploy
 workflow. Deployment writes the allowlist to a server-side file read by
-OpenResty, so no OpenResty restart is needed just to apply the setting. If an
-account is not allowed, pressing `ä` reports that access is not enabled. The
-menu can reset the complete tree interview and progress or skip steps to
-inspect later milestones; debug actions are checked by the server, not just
-hidden in the page.
+OpenResty, so no OpenResty restart is needed just to apply the setting. For
+everyone else the Settings button stays hidden and `ä` does nothing.
+
+The panel (`public/js/devtools.js`, `/api/dev` in `lua/osiris/devtools.lua`)
+shows everything about your own account in four tabs and lets you push it back
+and forth while testing: jump to any step or finish a goal, restart the goal
+interview, tap days on a 4-week calendar to add or remove check-ins, set the
+streak to a number, skip a day (all your dates move one day back), grow or
+unwater shared trees, clear follows and notifications, show the welcome flow
+again, reset the look, and let today's reminder send again. Wiping buttons need
+a second tap. Every action only touches your own rows and is checked by the
+server, not just hidden in the page. A new feature can add its own card and
+buttons on the server side (see `EXTRA_SECTIONS` in `devtools.lua`).
 
 Community supports discovery, friend requests, following, activity reactions,
 notifications, blocks, and reports. Profiles and progress trees are private by

@@ -1,4 +1,4 @@
-/* The side panel's lists, the details of a clicked dot, and the debug panel. */
+/* The side panel's lists, and the details of a clicked dot. (The dev tools panel is in devtools.css.) */
 
 .net-list {
   display: grid;
@@ -125,34 +125,3 @@
   padding: 1.5rem 1.25rem;
 }
 
-.debug-panel {
-  width: min(94vw, 620px);
-}
-
-.debug-panel h1 {
-  padding-right: 1.5rem;
-  color: var(--accent);
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
-}
-
-.debug-actions {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1.25rem;
-}
-
-.debug-actions label {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.debug-actions input {
-  width: 100%;
-  min-height: 2.8rem;
-  padding: 0.7rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 0.6rem;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-}
