@@ -507,6 +507,78 @@ html.is-dark [data-palette="ink"],
   font-size: 0.75rem;
 }
 
+/* ---- Timelapse: a round play button, speed tiles and an autoplay switch ---- */
+.net-lapse-top {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.net-style-row.is-speeds {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.net-style-choice .net-lapse-arrows {
+  width: 1.5rem;
+  height: 0.75rem;
+  margin: 0.15rem 0;
+  overflow: visible;
+}
+
+.net-style-choice .net-lapse-arrows path {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* The ring around the play button fills up as the replay goes. */
+.net-lapse-play {
+  --lapse-done: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--lapse-done) * 360deg), var(--accent-soft) 0);
+  color: var(--panel);
+  cursor: pointer;
+}
+
+.net-lapse-play::before {
+  content: "";
+  position: absolute;
+  inset: 0.22rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.net-lapse-play svg {
+  position: relative;
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: currentColor;
+}
+
+.net-lapse-play .is-stop,
+.net-lapse-play.is-playing .is-play {
+  display: none;
+}
+
+.net-lapse-play.is-playing .is-stop {
+  display: inline;
+}
+
+.net-lapse-play.is-playing::before {
+  inset: 0.28rem;
+}
+
+.net-style-switch.is-wide {
+  justify-self: start;
+}
+
 /* Phones: the panel becomes a sheet over the bottom of the network. */
 @media (max-width: 560px) {
   .net-style-panel {
@@ -540,8 +612,18 @@ html.is-dark [data-palette="ink"],
     transform-origin: top right;
   }
 
-  .net-style-choice:active {
+  .net-style-choice:active,
+  .net-lapse-play:active {
     transform: scale(0.94);
+  }
+
+  /* The play button breathes softly to say "tap me". */
+  .net-lapse-play:not(.is-playing)::before {
+    animation: net-lapse-breathe 2.4s ease-in-out infinite;
+  }
+
+  .net-lapse-play {
+    transition: transform 150ms ease;
   }
 
   .net-stage .tree-growth .net-link {
@@ -580,5 +662,15 @@ html.is-dark [data-palette="ink"],
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes net-lapse-breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--accent-soft);
+  }
+
+  50% {
+    box-shadow: 0 0 0 0.35rem var(--accent-soft);
   }
 }

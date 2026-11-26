@@ -1,7 +1,8 @@
 -- The /api/network-style endpoint: how your progress network looks.
 --
 -- The "Customize" button on the network (public/js/network-style.js) lets
--- you pick a shape, colors, a background and how hard the lines pull. The
+-- you pick a shape, colors, a background, how hard the lines pull and how
+-- the timelapse plays (its speed, and if it plays when you open Osiris). The
 -- choice is saved on your account (auth_users.network_style) so it is the
 -- same on every device. GET /api/progress-tree also sends it, so the
 -- network is drawn in your style straight away.
@@ -21,11 +22,13 @@ local network_style = saved_look.new({
         shape = { web = true, tree = true, galaxy = true, orbit = true, lines = true },
         palette = { areas = true, forest = true, sunset = true, ocean = true, ink = true },
         sky = { plain = true, dots = true, stars = true },
+        -- How fast the timelapse replays your network growing.
+        lapse = { slow = true, normal = true, fast = true, turbo = true },
     },
     -- Sliders are numbers from 0 to 1.
     sliders = { "pull", "spread", "dots" },
-    -- On/off switches.
-    switches = { "curved", "names" },
+    -- On/off switches. "autoplay" plays the timelapse when you open Osiris.
+    switches = { "curved", "names", "autoplay" },
 })
 
 M.clean_style = network_style.clean

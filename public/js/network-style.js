@@ -5,6 +5,8 @@
 // - Colors for the life areas, and a "sky" behind the network.
 // - How it feels: how hard the lines pull, how spread out it is, dot size.
 // - Curvy lines and goal names on or off.
+// - Timelapse: replay your network growing, pick its speed, and choose if
+//   it plays by itself each time you open Osiris (off by default).
 // Every change shows at once. It is saved on your account
 // (POST /api/network-style, lua/osiris/network_style.lua), so it looks the
 // same on every device. GET /api/progress-tree sends it back with the goals.
@@ -21,12 +23,15 @@ const NETWORK_STYLE_DEFAULTS = {
   dots: 0.5,
   curved: false,
   names: true,
+  lapse: "normal",
+  autoplay: false,
 };
 // Keep these in step with CHOICES in lua/osiris/network_style.lua.
 const STYLE_CHOICES = {
   shape: ["web", "tree", "galaxy", "orbit", "lines"],
   palette: ["areas", "forest", "sunset", "ocean", "ink"],
   sky: ["plain", "dots", "stars"],
+  lapse: ["slow", "normal", "fast", "turbo"],
 };
 const networkStyle = { ...NETWORK_STYLE_DEFAULTS };
 
@@ -42,7 +47,7 @@ const cleanNetworkStyle = (style) => {
     const value = Number(style[key]);
     if (Number.isFinite(value) && value >= 0 && value <= 1) clean[key] = value;
   }
-  for (const key of ["curved", "names"]) {
+  for (const key of ["curved", "names", "autoplay"]) {
     if (typeof style[key] === "boolean") clean[key] = style[key];
   }
   return clean;
@@ -268,6 +273,41 @@ const networkLinkPath = (link) => {
   return `M${x1},${y1}Q${controlX},${controlY} ${x2},${y2}`;
 };
 
+// ---- Timelapse ----
+// How long each step of the replay waits (js/network.js reads this).
+const LAPSE_DELAYS = { slow: 900, normal: 500, fast: 250, turbo: 110 };
+const timelapseStepDelay = () => LAPSE_DELAYS[networkStyle.lapse] ?? 500;
+
+// js/network.js calls this while the timelapse plays: a number from 0 to 1
+// fills the bar on the play button, null means it has stopped.
+const showTimelapseProgress = (part) => {
+  const play = document.querySelector("#net-lapse-play");
+  if (!play) return;
+  const playing = part !== null;
+  play.classList.toggle("is-playing", playing);
+  play.setAttribute("aria-label", playing ? "Stop the timelapse" : "Play the timelapse");
+  play.style.setProperty("--lapse-done", String(playing ? part : 0));
+};
+
+// "Play when I open Osiris": runs once per page load, after the startup
+// animation has gone, so you see your journey grow as you arrive.
+let timelapseAutoplayed = false;
+const autoplayTimelapse = () => {
+  if (timelapseAutoplayed || !networkStyle.autoplay) return;
+  timelapseAutoplayed = true;
+  let waited = 0;
+  const start = () => {
+    const startupShowing = document.querySelector("#startup-screen") && waited < 4000;
+    if (startupShowing || !network.sim) {
+      waited += 200;
+      if (waited < 6000) window.setTimeout(start, 200);
+      return;
+    }
+    if (network.goals.length) playNetworkTimelapse();
+  };
+  window.setTimeout(start, 300);
+};
+
 // ---- The panel ----
 const netStyleButton = document.querySelector("#net-style-button");
 const netStylePanel = document.querySelector("#net-style-panel");
@@ -284,6 +324,9 @@ const SHAPE_NAMES = { web: "Web", tree: "Tree", galaxy: "Galaxy", orbit: "Orbit"
 const PALETTE_NAMES = { areas: "Areas", forest: "Forest", sunset: "Sunset", ocean: "Ocean", ink: "Ink" };
 const SKY_NAMES = { plain: "Paper", dots: "Dots", stars: "Stars" };
 const SLIDER_NAMES = { pull: "Pull", spread: "Spread", dots: "Dot size" };
+// Speed buttons: more arrows is faster.
+const LAPSE_NAMES = { slow: "Slow", normal: "Normal", fast: "Fast", turbo: "Turbo" };
+const LAPSE_ARROWS = { slow: 1, normal: 2, fast: 3, turbo: 4 };
 
 const styleChoiceButton = (group, value, label, content) => {
   const button = document.createElement("button");
@@ -382,6 +425,43 @@ const buildNetworkStylePanel = () => {
   }
   feel.append(switches);
 
+  const lapse = styleSection("Timelapse");
+  lapse.classList.add("is-lapse");
+  const lapseTop = document.createElement("div");
+  lapseTop.className = "net-lapse-top";
+  const play = document.createElement("button");
+  play.type = "button";
+  play.className = "net-lapse-play";
+  play.id = "net-lapse-play";
+  play.setAttribute("aria-label", "Play the timelapse");
+  play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="is-play" d="M8 5.5v13l10.5-6.5z"/>'
+    + '<rect class="is-stop" x="7" y="7" width="10" height="10" rx="1.5"/></svg>';
+  play.addEventListener("click", () => {
+    // On phones the panel covers the network, so it steps aside to watch.
+    if (!network.playing && phoneLayout.matches) closeNetworkStylePanel(false);
+    playNetworkTimelapse();
+  });
+  const speedRow = document.createElement("div");
+  speedRow.className = "net-style-row is-speeds";
+  for (const speed of STYLE_CHOICES.lapse) {
+    let arrows = "";
+    for (let index = 0; index < LAPSE_ARROWS[speed]; index += 1) {
+      arrows += `<path d="M${index * 5} 0l5 4-5 4z"/>`;
+    }
+    speedRow.append(styleChoiceButton("lapse", speed, LAPSE_NAMES[speed],
+      `<svg class="net-lapse-arrows" viewBox="-1 -1 22 10" aria-hidden="true">${arrows}</svg>`));
+  }
+  lapseTop.append(play, speedRow);
+  const auto = document.createElement("button");
+  auto.type = "button";
+  auto.className = "net-style-switch is-wide";
+  auto.dataset.switch = "autoplay";
+  auto.setAttribute("aria-pressed", "false");
+  auto.innerHTML = '<i aria-hidden="true"></i>';
+  auto.append(document.createTextNode("Play when I open Osiris"));
+  auto.addEventListener("click", () => changeNetworkStyle({ autoplay: !networkStyle.autoplay }));
+  lapse.append(lapseTop, auto);
+
   const foot = document.createElement("footer");
   foot.className = "net-style-foot";
   const reset = document.createElement("button");
@@ -395,7 +475,7 @@ const buildNetworkStylePanel = () => {
   status.setAttribute("role", "status");
   foot.append(reset, status);
 
-  netStylePanel.replaceChildren(head, shapes, colors, skies, feel, foot);
+  netStylePanel.replaceChildren(head, shapes, lapse, colors, skies, feel, foot);
   netStylePanel.addEventListener("click", (event) => {
     const choice = event.target.closest(".net-style-choice");
     if (!choice) return;
