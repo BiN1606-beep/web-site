@@ -271,8 +271,11 @@ const fitProgressNetwork = (animate = true) => {
   const box = { width: stageBox.width, height: stageBox.height - covered };
   if (!box.width || box.height <= 0) return;
   // A shaped network (tree, galaxy, ...) is fitted to where its dots go.
-  const shaped = networkShapeBounds();
-  if (shaped) {
+  // "Follow growth" off: while the timelapse plays, keep framing the whole
+  // grown network (also when the page resizes, e.g. as the startup ends).
+  const holdWhole = network.playing && network.lapseBounds && networkStyle.shape !== "web";
+  const shaped = holdWhole ? network.lapseBounds : networkShapeBounds();
+  if (shaped && Number.isFinite(shaped.width) && Number.isFinite(shaped.height)) {
     const scale = Math.min(1.3, Math.max(0.3, Math.min(
       (box.width - 48) / Math.max(shaped.width, 1),
       (box.height - 110) / Math.max(shaped.height, 1),
@@ -951,11 +954,10 @@ const playNetworkTimelapse = (waitFor = null) => {
   // view still. The full network is laid out and fitted in this same
   // moment, before the screen paints, so it never shows.
   const follow = timelapseFollow();
-  let wholeView = null;
+  network.lapseBounds = null;
   if (!follow) {
     renderNetwork(goals);
-    fitProgressNetwork(false);
-    wholeView = d3.zoomTransform(treeGrowth);
+    network.lapseBounds = network.shapeBounds;
   }
   network.cache.clear();
   network.hasDrawn = false;
@@ -963,15 +965,17 @@ const playNetworkTimelapse = (waitFor = null) => {
   network.nodeLayer.selectAll("*").remove();
   network.decorLayer.selectAll("*").remove();
   renderNetwork(frame(0));
-  if (follow) fitProgressNetwork(true);
-  else d3.select(treeGrowth).call(network.zoom.transform, wholeView);
+  fitProgressNetwork(follow);
   let count = 0;
   const next = () => {
     if (count >= ticks.length || network.stopLapse) {
       network.playing = false;
       network.stopLapse = false;
+      network.lapseBounds = null;
       showTimelapseProgress(null);
       renderNetwork(network.goals);
+      // The locked steps come back at the end, so frame the whole network.
+      if (follow && networkShapeBounds()) fitProgressNetwork(!reducedMotion.matches);
       return;
     }
     const sprouts = ticks[count].map(([goalIndex, stepIndex]) => `goal:${goals[goalIndex].id}:step:${stepIndex}`);
