@@ -8,6 +8,7 @@ local accounts = require "osiris.accounts"
 local progress = require "osiris.progress"
 local community = require "osiris.community"
 local stats = require "osiris.stats"
+local devtools = require "osiris.devtools"
 local network_style = require "osiris.network_style"
 local appearance = require "osiris.appearance"
 
@@ -96,6 +97,8 @@ function M.handle_request()
         return appearance.handle_appearance()
     elseif path == "/api/stats" then
         return stats.handle_stats()
+    elseif path == "/api/dev" then
+        return devtools.handle_dev()
     elseif path == "/api/auth/google" then
         return handle_google_start()
     elseif path == "/api/auth/google/callback" then

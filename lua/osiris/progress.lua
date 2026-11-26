@@ -57,6 +57,9 @@ local function handle_progress_tree()
             network_style = network_style.load_style(user.id),
             -- Your color theme and fonts (nil = the default look).
             appearance = appearance.load_appearance(user.id),
+            -- true only for the accounts in lua/debug_menu_email.txt: shows
+            -- the "Dev tools" button in Settings (public/js/devtools.js).
+            dev = is_progress_debug_user(user) or nil,
         })
     end
     if method ~= "POST" then

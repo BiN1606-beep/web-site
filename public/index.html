@@ -44,6 +44,7 @@
     <link rel="stylesheet" href="/css/lesson.css">
     <link rel="stylesheet" href="/css/charts.css">
     <link rel="stylesheet" href="/css/my-stats.css">
+    <link rel="stylesheet" href="/css/devtools.css">
     <link rel="stylesheet" href="/css/motion.css">
   </head>
   <body>
@@ -383,6 +384,7 @@
           <h2 id="developer-title">Developer demos</h2>
           <button class="profile-secondary-button" id="open-shared-text-demo" type="button" aria-controls="content-panel" aria-expanded="false">Shared text demo</button>
           <button class="profile-secondary-button" id="open-groq-demo" type="button" aria-controls="groq-panel" aria-expanded="false">Groq AI demo</button>
+          <button class="profile-secondary-button" id="open-dev-tools" type="button" hidden>Dev tools</button>
         </section>
       </dialog>
       <dialog class="content-panel" id="profile-view-panel" aria-labelledby="profile-view-title">
@@ -525,20 +527,25 @@
           </div>
         </form>
       </dialog>
-      <dialog class="content-panel debug-panel" id="debug-panel" aria-labelledby="debug-title">
-        <button class="close-button" type="button" aria-label="Close debug menu">&times;</button>
-        <h1 id="debug-title">Progress Tree Debug</h1>
-        <p>These tools change your saved tree and are only available to your configured account.</p>
-        <div class="debug-actions">
-          <button class="profile-secondary-button" id="debug-reset-progress" type="button">Reset tree and interview</button>
-          <form id="debug-skip-form">
-            <label for="debug-skip-count">Skip this many steps to inspect later tasks</label>
-            <input id="debug-skip-count" type="number" min="1" max="20" step="1" value="1" required>
-            <button class="profile-secondary-button" id="debug-skip-steps" type="submit">Skip steps</button>
-          </form>
+      <!-- Dev tools: only for the accounts in lua/debug_menu_email.txt.
+           Open with the "ä" key or Settings > Dev tools (that button only
+           appears for those accounts). The cards are drawn by
+           public/js/devtools.js from /api/dev (lua/osiris/devtools.lua). -->
+      <dialog class="content-panel dev-panel" id="debug-panel" aria-labelledby="dev-title">
+        <button class="close-button" type="button" aria-label="Close dev tools">&times;</button>
+        <div class="dev-head">
+          <h1 id="dev-title">Dev tools</h1>
+          <p class="dev-who" id="dev-who"></p>
         </div>
-        <p id="debug-status" role="status" aria-live="polite"></p>
-        <a class="profile-secondary-button debug-stats-link" href="/stats.html">Open site stats</a>
+        <div class="dev-tabs" role="tablist" aria-label="Dev tools">
+          <button class="dev-tab" type="button" role="tab" data-dev-tab="goals" aria-selected="true">Goals</button>
+          <button class="dev-tab" type="button" role="tab" data-dev-tab="streak" aria-selected="false">Streak</button>
+          <button class="dev-tab" type="button" role="tab" data-dev-tab="friends" aria-selected="false">Friends</button>
+          <button class="dev-tab" type="button" role="tab" data-dev-tab="account" aria-selected="false">Account</button>
+          <button class="dev-tab" type="button" role="tab" data-dev-tab="extras" aria-selected="false" hidden>Extras</button>
+        </div>
+        <div class="dev-body" id="dev-body" aria-live="polite"></div>
+        <p class="dev-toast" id="dev-toast" role="status" aria-live="polite"></p>
       </dialog>
       <dialog class="content-panel" id="groq-panel" aria-labelledby="groq-title">
         <button class="close-button" type="button" aria-label="Close Groq AI demo">&times;</button>
@@ -618,7 +625,7 @@
     <script src="/js/reminders.js"></script>
     <script src="/js/profile.js"></script>
     <script src="/js/panels.js"></script>
-    <script src="/js/debug.js"></script>
+    <script src="/js/devtools.js"></script>
     <script src="/js/demos.js"></script>
     <script src="/js/appearance.js"></script>
     <script src="/js/theme.js"></script>

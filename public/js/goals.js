@@ -159,6 +159,7 @@ const loadProgressTree = async () => {
       useSavedAppearance(result.appearance);
       renderProgressTree(result.tree);
       setupReminders(result.reminders_key);
+      showDevToolsButton(result.dev === true);
     } catch (error) {
       treeStatus.textContent = error.message;
       treeEmptyState.hidden = false;
@@ -210,37 +211,6 @@ const startNewProgressTree = async () => {
     treeStatus.textContent = error.message;
   } finally {
     treeStartNewButton.disabled = false;
-  }
-};
-
-// The tree is the page itself now, so after a debug action we only
-// close the debug menu and scroll back up to the tree.
-const openProgressTreeAfterDebug = () => {
-  closePanel(debugMenuDialog);
-  window.scrollTo({ top: 0, behavior: "smooth" });
-};
-
-const openDebugMenu = async () => {
-  if (debugAccessRequest) return debugAccessRequest;
-  debugAccessRequest = (async () => {
-    const response = await fetch("/api/progress-tree?action=debug_status", { cache: "no-store" });
-    const result = await readApiResponse(response, "Debug menu");
-    if (response.status === 401) return;
-    if (response.status === 403) {
-      window.alert(result.error || "Debug access is not enabled for this account.");
-      return;
-    }
-    if (!response.ok) throw new Error(result.error || "Could not check debug access.");
-    if (result.enabled !== true) return;
-    debugStatus.textContent = "";
-    openPanel(debugMenuDialog, null);
-  })();
-  try {
-    await debugAccessRequest;
-  } catch (error) {
-    console.error("Could not open the Progress Tree debug menu:", error);
-  } finally {
-    debugAccessRequest = null;
   }
 };
 

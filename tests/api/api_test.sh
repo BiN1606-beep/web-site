@@ -216,5 +216,13 @@ curl -sS -b $J -o /tmp/out $B/api/appearance
 jq -e '.style == null' /tmp/out >/dev/null || { cat /tmp/out; fail "appearance after reset"; }
 echo "appearance ok"
 
+# Dev tools are only for the accounts in lua/debug_menu_email.txt, which
+# this test account is not: every call must be refused by the server.
+[ "$(curl -sS -o /dev/null -w '%{http_code}' $B/api/dev)" = 401 ] || fail "dev tools signed out"
+[ "$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/api/dev)" = 403 ] || fail "dev tools snapshot for a normal account"
+[ "$(curl -sS -b $J -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/dev -d '{"action":"clear_checkins"}')" = 403 ] || fail "dev action for a normal account"
+curl -sS -b $J $B/api/progress-tree | jq -e '.dev == null' >/dev/null || fail "dev flag for a normal account"
+echo "dev tools locked for normal accounts ok"
+
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"
 echo "ALL_API_TESTS_OK"
