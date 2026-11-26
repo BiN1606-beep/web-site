@@ -12,6 +12,7 @@ local reminders = require "osiris.reminders"
 local coach = require "osiris.coach"
 local network_style = require "osiris.network_style"
 local appearance = require "osiris.appearance"
+local topaz = require "osiris.topaz"
 
 local respond = common.respond
 local database_query = common.database_query
@@ -21,6 +22,7 @@ local utf8_character_count = common.utf8_character_count
 local decode_json_value = common.decode_json_value
 local valid_checkin_day = goals.valid_checkin_day
 local save_checkin = goals.save_checkin
+local load_checkins = goals.load_checkins
 local load_progress_tree = goals.load_progress_tree
 local create_progress_tree_row = goals.create_progress_tree_row
 local progress_tree_payload = goals.progress_tree_payload
@@ -472,6 +474,27 @@ local function handle_progress_tree()
     end
     if body.action == "reminder_unsubscribe" then
         return reminders.unsubscribe(user, body)
+    end
+
+    -- Buy a streak freeze with topaz gems. It doesn't need a goal: the
+    -- streak belongs to you, not to one goal.
+    if body.action == "buy_freeze" then
+        if not valid_checkin_day(body.day) then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "The date is invalid." })
+        end
+        local bought = topaz.buy_freeze(user.id, body.day, load_checkins(user.id))
+        if bought == nil then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not buy the freeze." })
+        end
+        if bought == "full" then
+            return respond(ngx.HTTP_CONFLICT, {
+                error = "You already hold " .. topaz.MAX_BOUGHT_FREEZES .. " freezes. Use one first.",
+            })
+        end
+        if bought == "poor" then
+            return respond(ngx.HTTP_CONFLICT, { error = "Not enough topaz yet. Check in to earn more." })
+        end
+        return respond(ngx.HTTP_OK, { tree = progress_tree_payload(row, user.id), bought_freeze = true })
     end
 
     -- A daily check-in: one short line about what you did today. Sending it

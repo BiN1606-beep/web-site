@@ -30,7 +30,11 @@ local function friend_network(target_id, can_show_goal)
         ORDER BY day DESC
         LIMIT 400
     ]], target_id)
-    if not summaries or not days then
+    -- Freezes bought with topaz count for their streak too (only the days).
+    local bought = database_query([[
+        SELECT day::text AS day FROM public.freeze_purchases WHERE user_id = $1 ORDER BY day
+    ]], target_id)
+    if not summaries or not days or not bought then
         return nil
     end
     local network_goals = {}
@@ -49,7 +53,11 @@ local function friend_network(target_id, can_show_goal)
     for _, row in ipairs(days) do
         checkin_days[#checkin_days + 1] = row.day
     end
-    return { goals = network_goals, checkin_days = checkin_days }
+    local freeze_days = {}
+    for _, row in ipairs(bought) do
+        freeze_days[#freeze_days + 1] = row.day
+    end
+    return { goals = network_goals, checkin_days = checkin_days, freeze_days = freeze_days }
 end
 
 -- A user (or activity) ID from the browser, as a number, or nil.

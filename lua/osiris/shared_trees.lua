@@ -11,6 +11,7 @@
 local M = {}
 local common = require "osiris.common"
 local goals = require "osiris.goals"
+local topaz = require "osiris.topaz"
 
 local respond = common.respond
 local database_query = common.database_query
@@ -286,7 +287,9 @@ local function handle_water(user, tree_id, body)
         return respond(ngx.HTTP_CONFLICT, { error = "Follow each other again to keep growing this tree." })
     end
     local grew = rows[1].grew == true or rows[1].grew == "t"
-    return respond(ngx.HTTP_OK, { ok = true, grew = grew })
+    -- The wallet after the check-in paid out its topaz (once a day per
+    -- shared goal, see db/migrations/015_topaz_gems.sql).
+    return respond(ngx.HTTP_OK, { ok = true, grew = grew, topaz = topaz.load_topaz(user.id) })
 end
 
 -- A side quest: saves today's streak when you checked in and your friend

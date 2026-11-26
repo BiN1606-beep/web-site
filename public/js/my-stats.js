@@ -34,7 +34,7 @@ const renderMyStats = () => {
     stepsPerDay.set(day, (stepsPerDay.get(day) || 0) + 1);
   }
   const checkinDays = new Set(checkins.map((checkin) => checkin.day));
-  const streak = computeStreak(checkins, today);
+  const streak = computeStreak(checkins, today, tree?.topaz?.purchases);
 
   const stepsThisWeek = [...lastWeek].reduce((sum, day) => sum + (stepsPerDay.get(day) || 0), 0);
   const checkinsThisMonth = days.filter((day) => checkinDays.has(day)).length;

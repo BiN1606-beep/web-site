@@ -7,6 +7,7 @@
 local cjson = require "cjson.safe"
 local M = {}
 local common = require "osiris.common"
+local topaz = require "osiris.topaz"
 
 local database_query = common.database_query
 local decode_json_value = common.decode_json_value
@@ -326,6 +327,8 @@ local function progress_tree_payload(row, user_id)
     -- an empty Lua table into {}, so the browser also accepts an object.
     view.checkins = load_checkins(user_id) or {}
     view.weekly_review = load_latest_review(user_id)
+    -- Topaz gems and bought streak freezes (lua/osiris/topaz.lua).
+    view.topaz = topaz.load_topaz(user_id)
     view.max_goals = MAX_GOALS
     return view
 end
