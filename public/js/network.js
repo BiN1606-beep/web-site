@@ -947,13 +947,24 @@ const playNetworkTimelapse = (waitFor = null) => {
   network.playing = true;
   network.stopLapse = false;
   showTimelapseProgress(0);
+  // "Follow growth" off: frame the whole grown network once and keep the
+  // view still. The full network is laid out and fitted in this same
+  // moment, before the screen paints, so it never shows.
+  const follow = timelapseFollow();
+  let wholeView = null;
+  if (!follow) {
+    renderNetwork(goals);
+    fitProgressNetwork(false);
+    wholeView = d3.zoomTransform(treeGrowth);
+  }
   network.cache.clear();
   network.hasDrawn = false;
   network.linkLayer.selectAll("*").remove();
   network.nodeLayer.selectAll("*").remove();
   network.decorLayer.selectAll("*").remove();
   renderNetwork(frame(0));
-  fitProgressNetwork(true);
+  if (follow) fitProgressNetwork(true);
+  else d3.select(treeGrowth).call(network.zoom.transform, wholeView);
   let count = 0;
   const next = () => {
     if (count >= ticks.length || network.stopLapse) {
@@ -967,8 +978,8 @@ const playNetworkTimelapse = (waitFor = null) => {
     count += 1;
     showTimelapseProgress(count / ticks.length);
     renderNetwork(frame(count), sprouts);
-    // A shape knows where its dots go, so the view zooms out as it grows.
-    if (networkShapeBounds()) fitProgressNetwork(!reducedMotion.matches);
+    // "Follow growth": in a shape the view zooms out as it grows.
+    if (follow && networkShapeBounds()) fitProgressNetwork(!reducedMotion.matches);
     // The speed is read every step, so changing it while it plays works.
     window.setTimeout(next, reducedMotion.matches ? 150 : timelapseStepDelay());
   };
