@@ -11,6 +11,7 @@ local stats = require "osiris.stats"
 local devtools = require "osiris.devtools"
 local network_style = require "osiris.network_style"
 local appearance = require "osiris.appearance"
+local routines = require "osiris.routines"
 
 local respond = common.respond
 local current_user = common.current_user
@@ -106,6 +107,8 @@ function M.handle_request()
         return network_style.handle_network_style()
     elseif path == "/api/appearance" then
         return appearance.handle_appearance()
+    elseif path == "/api/routines" then
+        return routines.handle_routines()
     elseif path == "/api/stats" then
         return stats.handle_stats()
     elseif path == "/api/dev" then

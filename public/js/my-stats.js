@@ -106,6 +106,9 @@ document.querySelector("#my-stats-open").addEventListener("click", () => {
   if (!myStatsDialog.open) myStatsDialog.showModal();
   // Draw after opening, so the chart knows how wide it is.
   renderMyStats();
+  // The routines month grid (routines.js) starts at this month.
+  routineGridMonth = null;
+  renderRoutineGrid();
 });
 
 // Closing plays a short animation first (css/motion.css), then closes.

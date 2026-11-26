@@ -1,0 +1,532 @@
+/* Routines (public/js/routines.js): the card in the Today tab and the
+   month grid in "Your stats". Movement is at the end, only for people who
+   haven't asked their device for reduced motion. */
+
+/* ---- Today: the routines card ---- */
+.routine-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.routine-card.is-all-done {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.routine-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.routine-head .tree-step-label {
+  margin-right: auto;
+}
+
+/* A small ring that fills as today's routines get done. */
+.routine-ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+}
+
+.routine-ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.routine-ring circle {
+  fill: none;
+  stroke-width: 3.5;
+}
+
+.routine-ring-track {
+  stroke: var(--panel-border);
+}
+
+.routine-ring-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 600ms cubic-bezier(0.3, 1.2, 0.5, 1);
+}
+
+.routine-ring b {
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-add {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  background: var(--base);
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.routine-add[aria-expanded="true"] {
+  transform: rotate(45deg);
+}
+
+.routine-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.routine-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routine-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.7rem;
+  background: var(--base);
+}
+
+.routine-tick {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border: 2px solid var(--panel-border);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.routine-tick:hover {
+  border-color: var(--accent);
+}
+
+.routine-tick svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.routine-tick path {
+  fill: none;
+  stroke: var(--button-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.routine-item.is-done .routine-tick {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.routine-item.is-done .routine-tick path {
+  stroke-dashoffset: 0;
+}
+
+.routine-name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  padding: 0.15rem 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.routine-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 200ms ease;
+}
+
+.routine-name small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.routine-item.is-done .routine-name span {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--accent);
+}
+
+/* Routines that aren't on today: quieter, no circle. */
+.routine-later > summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.routine-list.is-later {
+  margin-top: 0.4rem;
+}
+
+.routine-list.is-later .routine-item {
+  opacity: 0.7;
+  padding-left: 0.8rem;
+}
+
+.routine-empty {
+  padding: 0.75rem;
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.routine-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---- Adding or changing a routine ---- */
+.routine-form {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border-radius: 0.7rem;
+  background: var(--base);
+}
+
+.routine-form input {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.65rem;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.routine-form input:focus-visible,
+.routine-form button:focus-visible,
+.routine-tick:focus-visible,
+.routine-name:focus-visible,
+.routine-box:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.routine-repeat,
+.routine-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.routine-repeat button,
+.routine-weekdays button,
+.routine-step {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.routine-repeat button[aria-checked="true"],
+.routine-weekdays button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--button-text);
+}
+
+.routine-weekdays button {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+}
+
+.routine-every {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.routine-every b {
+  min-width: 1.6rem;
+  font-size: 1.2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-step {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+.routine-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.routine-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.routine-remove {
+  margin-left: auto;
+  padding: 0.4rem 0.2rem;
+  border: 0;
+  background: none;
+  color: var(--area-relationships);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.routine-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.routine-status:empty {
+  display: none;
+}
+
+/* ---- "Your stats": the month grid ---- */
+.routine-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.routine-month-name {
+  min-width: 8.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.routine-month-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.routine-month-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.routine-grid-box {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.routine-grid-weekdays,
+.routine-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(0.25rem, 1.2vw, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routine-grid-weekdays li {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+/* One box per day. --fill (0 to 1) is how much of that day's routines
+   were done; the colour rises from the bottom like water in a glass. */
+.routine-box {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1.5px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.routine-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0.55;
+  transform-origin: 50% 100%;
+  transform: scaleY(var(--fill, 0));
+}
+
+.routine-box.is-full {
+  border-color: var(--accent);
+}
+
+.routine-box.is-full::before {
+  opacity: 1;
+}
+
+.routine-box-day {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.3rem;
+  color: var(--muted);
+  font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-box.is-full .routine-box-day {
+  color: var(--button-text);
+}
+
+/* Nothing was on that day: a quiet box with a dot. */
+.routine-box.is-rest {
+  border-style: dashed;
+  background: transparent;
+}
+
+.routine-box.is-rest::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.3rem;
+  height: 0.3rem;
+  margin: -0.15rem 0 0 -0.15rem;
+  border-radius: 50%;
+  background: var(--panel-border);
+}
+
+.routine-box.is-future {
+  opacity: 0.4;
+  background: transparent;
+  cursor: default;
+}
+
+.routine-box.is-today {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.routine-box.is-blank {
+  visibility: hidden;
+}
+
+.routine-grid-info {
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes routine-tick-pop {
+    0% { transform: scale(1); }
+    35% { transform: scale(0.82); }
+    70% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes routine-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes routine-box-pop {
+    0% { opacity: 0; transform: scale(0.5); }
+    70% { opacity: 1; transform: scale(1.06); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes routine-fill {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(var(--fill, 0)); }
+  }
+
+  @keyframes routine-glow {
+    0% { box-shadow: 0 0 0 0 var(--accent); }
+    100% { box-shadow: 0 0 0 14px transparent; }
+  }
+
+  .routine-add {
+    transition: transform 260ms cubic-bezier(0.3, 1.4, 0.5, 1), border-color 160ms ease, color 160ms ease;
+  }
+
+  .routine-item.is-ticking .routine-tick {
+    animation: routine-tick-pop 420ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  .routine-item.is-ticking .routine-tick path {
+    animation: routine-draw 360ms ease-out 120ms both;
+  }
+
+  .routine-form:not([hidden]) {
+    animation: motion-rise 320ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  /* Everything done today: the card glows once. */
+  .routine-card.is-celebrating {
+    animation: routine-glow 900ms ease-out 2;
+  }
+
+  .routine-card.is-celebrating .routine-ring {
+    animation: motion-bump 520ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  /* The month pops in box by box, then each box fills up. */
+  .routine-grid.is-entering .routine-box {
+    animation: routine-box-pop 360ms cubic-bezier(0.3, 1.3, 0.5, 1) both;
+    animation-delay: calc(var(--i, 0) * 14ms);
+  }
+
+  .routine-grid.is-entering .routine-box::before {
+    animation: routine-fill 620ms cubic-bezier(0.3, 1.1, 0.5, 1) both;
+    animation-delay: calc(var(--i, 0) * 14ms + 260ms);
+  }
+
+  .routine-box:not(.is-future):hover {
+    transform: translateY(-2px);
+    transition: transform 140ms ease;
+  }
+}

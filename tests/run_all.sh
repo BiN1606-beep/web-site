@@ -7,8 +7,9 @@
 #
 # What it checks:
 #  1. JavaScript: every script on the site compiles, and the streak, freeze
-#     and reward math gives the right answers (Node). Lua: luacheck finds
-#     undefined and unused names in the server code.
+#     and reward math and the routine rhythms give the right answers
+#     (Node). Lua: luacheck finds undefined and unused names in the server
+#     code.
 #  2. Database: all migrations run with the real db/migrate.sh (PostgreSQL 16).
 #  3. Server: the real Lua code runs in OpenResty against that database, and
 #     tests/api/api_test.sh calls the API like the browser does.
@@ -48,7 +49,8 @@ step() {
 step "1/4 JavaScript and Lua checks"
 docker run --rm -v "$ROOT_FOR_DOCKER:/repo:ro" node:22-alpine sh -c '
     node --experimental-vm-modules --no-warnings /repo/tests/unit/syntax_check.mjs &&
-    node /repo/tests/unit/streak_test.mjs'
+    node /repo/tests/unit/streak_test.mjs &&
+    node /repo/tests/unit/routines_test.mjs'
 # luacheck finds names that are used but never defined (for example a
 # function a module forgot to borrow from another module) and leftovers
 # that are never used, before the server ever runs.
@@ -91,7 +93,7 @@ for _ in $(seq 1 90); do
     fi
     sleep 1
 done
-if ! docker exec "$WEB" sh /opt/mysite/tests/api/api_test.sh; then
+if ! docker exec "$WEB" sh -c 'sh /opt/mysite/tests/api/api_test.sh && sh /opt/mysite/tests/api/routines_test.sh'; then
     echo "--- server log:"
     docker logs "$WEB" 2>&1 | tail -30
     exit 1
