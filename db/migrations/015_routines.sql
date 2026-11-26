@@ -8,6 +8,9 @@
 --   every     every N days (every_days), counted from start_day, so
 --             "every 2 days" is every other day and "every 7 days" weekly
 --
+-- Each routine can also have a start and stop time and a place in your
+-- list (see the columns below).
+--
 -- start_day is the user's local date when the routine was made, and
 -- removed_on the date it was removed. Removing only sets removed_on, so the
 -- month grid in "Your stats" still shows the days you did it before.
@@ -24,6 +27,14 @@ CREATE TABLE public.routines (
     every_days smallint NOT NULL DEFAULT 1 CHECK (every_days BETWEEN 1 AND 30),
     start_day date NOT NULL,
     removed_on date,
+    -- Where it sits in your list: you can drag routines into any order.
+    position integer NOT NULL DEFAULT 0,
+    -- An optional time of day to start and to stop, as "HH:MM" (your own
+    -- local time). A stop time needs a start time; a stop earlier than the
+    -- start means it runs past midnight (22:30 to 06:30).
+    start_time text CHECK (start_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+    end_time text CHECK (end_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+    CHECK (end_time IS NULL OR (start_time IS NOT NULL AND end_time <> start_time)),
     created_at timestamptz NOT NULL DEFAULT now()
 );
 

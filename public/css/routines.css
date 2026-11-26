@@ -179,6 +179,101 @@
   text-decoration-color: var(--accent);
 }
 
+/* The start and stop time. It lights up while the routine is on, and a
+   thin bar along the bottom shows how much of the time has gone. */
+.routine-item {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.routine-time {
+  flex: none;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-item.is-soon .routine-time {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--panel-border);
+}
+
+.routine-item.is-now:not(.is-done) {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.routine-item.is-now:not(.is-done) .routine-time {
+  background: var(--accent);
+  color: var(--button-text);
+}
+
+.routine-item.is-now:not(.is-done)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--time-progress, 0));
+  transition: transform 600ms ease;
+}
+
+/* Past the stop time and still not done: the time turns warm. */
+.routine-item.is-over:not(.is-done) .routine-time {
+  color: var(--area-career);
+}
+
+/* Six dots to grab when dragging. */
+.routine-grip {
+  flex: none;
+  width: 1.6rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background:
+    radial-gradient(circle, var(--muted) 1.3px, transparent 1.6px) 0 0 / 0.45rem 0.45rem;
+  background-origin: content-box;
+  background-clip: content-box;
+  padding: 0.55rem 0.4rem;
+  opacity: 0.45;
+  cursor: grab;
+  touch-action: none;
+}
+
+.routine-grip:hover {
+  opacity: 0.9;
+}
+
+.routine-grip:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+  opacity: 0.9;
+}
+
+/* The routine being dragged floats above the others. */
+.routine-item.is-dragging {
+  z-index: 2;
+  box-shadow: 0 10px 24px var(--shadow), inset 0 0 0 1.5px var(--accent);
+  cursor: grabbing;
+  transition: box-shadow 160ms ease;
+}
+
+.routine-list.is-sorting {
+  touch-action: none;
+}
+
+.routine-list.is-sorting .routine-item:not(.is-dragging) {
+  transition: transform 160ms ease;
+}
+
 /* Routines that aren't on today: quieter, no circle. */
 .routine-later > summary {
   width: fit-content;
@@ -393,6 +488,59 @@
   display: none;
 }
 
+/* ---- Start and stop time in the form ---- */
+.routine-time-toggle {
+  width: fit-content;
+  padding: 0.3rem 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.routine-times {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.routine-times label {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.routine-times input {
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.routine-times-dash {
+  display: none;
+}
+
+.routine-time-clear {
+  margin-bottom: 0.25rem;
+}
+
+.routine-time-clear {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 /* ---- "Your stats": the month grid ---- */
 .routine-month-nav {
   display: flex;
@@ -581,6 +729,29 @@
 
   .routine-idea:hover {
     transform: translateY(-1px);
+  }
+
+  @keyframes routine-lift {
+    from { transform: scale(1); }
+    to { transform: scale(1.03); }
+  }
+
+  .routine-item.is-dragging {
+    animation: routine-lift 140ms ease-out;
+  }
+
+  /* While a routine is on, its time pill breathes softly. */
+  @keyframes routine-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.72; }
+  }
+
+  .routine-item.is-now:not(.is-done) .routine-time {
+    animation: routine-breathe 2.4s ease-in-out infinite;
+  }
+
+  .routine-times:not([hidden]) {
+    animation: motion-rise 260ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
   }
 
   .routine-form:not([hidden]) {

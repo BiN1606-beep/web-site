@@ -7,14 +7,16 @@
 -- the same data: a box per day, filled when that day's routines were done.
 --
 --   GET                                       -> { routines, checks, today }
---   POST { action = "add",    title, repeat, day }
---   POST { action = "edit",   id, title, repeat }
+--   POST { action = "add",    title, repeat, start_time, end_time, day }
+--   POST { action = "edit",   id, title, repeat, start_time, end_time }
+--   POST { action = "reorder", ids }           (your routines in the new order)
 --   POST { action = "remove", id, day }
 --   POST { action = "check",  id, day, done }  (done = false un-ticks)
 --   POST { action = "debug_reset" }            (debug accounts only)
 --
 -- "repeat" is { kind = "daily" } or { kind = "weekdays", days = {0..6} }
--- (0 = Monday) or { kind = "every", every = N }. See
+-- (0 = Monday) or { kind = "every", every = N }. start_time and end_time
+-- are "HH:MM" or left out (no time). See
 -- db/migrations/015_routines.sql for how they are stored.
 --
 -- Every POST answers with the same body as GET, so the page simply redraws
@@ -139,6 +141,34 @@ local function clean_repeat(value)
     return nil
 end
 
+-- A time of day as "HH:MM" (00:00-23:59), or nil.
+local function clean_time(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    local hour, minute = value:match("^(%d%d):(%d%d)$")
+    if not hour or tonumber(hour) > 23 or tonumber(minute) > 59 then
+        return nil
+    end
+    return value
+end
+
+-- The start and stop time from a request. Returns start, stop (either can
+-- be nil), or false when they don't make sense.
+local function clean_times(body)
+    local start = clean_time(body.start_time)
+    local stop = clean_time(body.end_time)
+    -- Something that isn't a time at all (rather than "no time") is refused.
+    if (body.start_time ~= nil and body.start_time ~= cjson.null and not start)
+        or (body.end_time ~= nil and body.end_time ~= cjson.null and not stop) then
+        return false
+    end
+    if stop and (not start or stop == start) then
+        return false
+    end
+    return start, stop
+end
+
 -- The repeat rule as the browser sends it.
 local function repeat_view(row)
     if row.repeat_kind == "weekdays" then
@@ -157,13 +187,13 @@ end
 
 local function load_routines(user_id)
     return database_query([[
-        SELECT id, title, repeat_kind, weekdays, every_days,
+        SELECT id, title, repeat_kind, weekdays, every_days, start_time, end_time,
                start_day::text AS start_day, removed_on::text AS removed_on
         FROM public.routines
         WHERE user_id = $1
           AND (removed_on IS NULL
                OR removed_on > (now() AT TIME ZONE 'UTC')::date - $2::int)
-        ORDER BY id
+        ORDER BY position, id
     ]], user_id, HISTORY_DAYS)
 end
 
@@ -190,6 +220,12 @@ local function routines_payload(user_id)
             start_day = row.start_day,
             removed_on = row.removed_on,
         }
+        if type(row.start_time) == "string" then
+            routines[#routines].start_time = row.start_time
+        end
+        if type(row.end_time) == "string" then
+            routines[#routines].end_time = row.end_time
+        end
     end
     local check_list = {}
     for _, check in ipairs(checks) do
@@ -293,6 +329,14 @@ local function handle_routines()
         if not kind then
             return respond(ngx.HTTP_BAD_REQUEST, { error = "Choose how often the routine repeats." })
         end
+        local start_time, end_time = clean_times(body)
+        if start_time == false then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Pick a start time, and a stop time that isn't the same." })
+        end
+        -- "" means no time; the SQL turns it into NULL (NULLIF), because
+        -- a nil in the middle of the query's values would get lost.
+        start_time = start_time or ""
+        end_time = end_time or ""
 
         if action == "add" then
             if not near_today(body.day) then
@@ -301,12 +345,14 @@ local function handle_routines()
             -- The count and the insert are one statement, so two quick
             -- clicks can't slip past the limit.
             local rows = database_query([[
-                INSERT INTO public.routines (user_id, title, repeat_kind, weekdays, every_days, start_day)
-                SELECT $1, $2, $3, $4, $5, $6::date
+                INSERT INTO public.routines (user_id, title, repeat_kind, weekdays, every_days, start_day,
+                                             start_time, end_time, position)
+                SELECT $1, $2, $3, $4, $5, $6::date, NULLIF($8, ''), NULLIF($9, ''),
+                       (SELECT COALESCE(max(position), 0) + 1 FROM public.routines WHERE user_id = $1)
                 WHERE (SELECT count(*) FROM public.routines
                        WHERE user_id = $1 AND removed_on IS NULL) < $7
                 RETURNING id
-            ]], user.id, title, kind, weekdays, every, body.day, MAX_ROUTINES)
+            ]], user.id, title, kind, weekdays, every, body.day, MAX_ROUTINES, start_time, end_time)
             if not rows then
                 return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save your routine." })
             end
@@ -321,15 +367,43 @@ local function handle_routines()
         end
         local rows = database_query([[
             UPDATE public.routines
-            SET title = $3, repeat_kind = $4, weekdays = $5, every_days = $6
+            SET title = $3, repeat_kind = $4, weekdays = $5, every_days = $6,
+                start_time = NULLIF($7, ''), end_time = NULLIF($8, '')
             WHERE id = $1 AND user_id = $2 AND removed_on IS NULL
             RETURNING id
-        ]], body.id, user.id, title, kind, weekdays, every)
+        ]], body.id, user.id, title, kind, weekdays, every, start_time, end_time)
         if not rows then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save your routine." })
         end
         if not rows[1] then
             return respond(ngx.HTTP_NOT_FOUND, { error = "That routine was not found." })
+        end
+        return reply_with_state(user.id)
+    end
+
+    -- Dragging routines into a new order. ids is the whole list, top first;
+    -- each routine gets its place in it. Ids that aren't yours are simply
+    -- not matched (the UPDATE only touches your own rows).
+    if action == "reorder" then
+        local ids = body.ids
+        if type(ids) ~= "table" or #ids < 1 or #ids > MAX_ROUTINES then
+            return respond(ngx.HTTP_BAD_REQUEST, { error = "Send your routines in their new order." })
+        end
+        local seen = {}
+        for _, id in ipairs(ids) do
+            if not valid_id(id) or seen[id] then
+                return respond(ngx.HTTP_BAD_REQUEST, { error = "Send your routines in their new order." })
+            end
+            seen[id] = true
+        end
+        local rows = database_query([[
+            UPDATE public.routines AS r
+            SET position = ordered.place
+            FROM unnest($2::bigint[]) WITH ORDINALITY AS ordered(id, place)
+            WHERE r.id = ordered.id AND r.user_id = $1
+        ]], user.id, "{" .. table.concat(ids, ",") .. "}")
+        if not rows then
+            return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not save the new order." })
         end
         return reply_with_state(user.id)
     end

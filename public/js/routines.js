@@ -3,7 +3,10 @@
 //
 // Two places show them:
 //  - the Today tab: a card with today's routines. Tap the circle when one is
-//    done; "+" adds a routine and tapping a routine's name changes it.
+//    done; "+" adds a routine and tapping a routine's name changes it. A
+//    routine can have a start and stop time; while it's on, it lights up
+//    and a bar shows how much of the time has gone. Hold a routine (or grab
+//    the dots on its right) and drag it up or down to change the order.
 //  - "Your stats" (my-stats.js calls renderRoutineGrid): a month of boxes,
 //    one per day. A box fills up as that day's routines get done, so a full
 //    box is a day where you did all of them.
@@ -136,6 +139,38 @@ const routineIdeas = (have, areas, turn = 0) => {
   return [...list.slice(start), ...list.slice(0, start)];
 };
 
+// Minutes since midnight for "HH:MM".
+const routineMinutes = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+
+// "07:00–07:30", or "07:00" with no stop time, or "" with no time.
+const routineTimeText = (routine) => {
+  if (!routine.start_time) return "";
+  return routine.end_time ? `${routine.start_time}–${routine.end_time}` : routine.start_time;
+};
+
+// Where "now" (minutes since midnight) is compared with the routine's time:
+// "soon" (within the hour before the start), "now" (between start and stop,
+// with progress 0-1), "over" (past the stop), or "" (no time, or later).
+// A stop before the start runs past midnight (22:30–06:30).
+const routineTimeState = (routine, now) => {
+  if (!routine.start_time) return { state: "", progress: 0 };
+  const start = routineMinutes(routine.start_time);
+  if (!routine.end_time) {
+    if (now >= start && now < start + 60) return { state: "now", progress: 0 };
+    if (now < start && now >= start - 60) return { state: "soon", progress: 0 };
+    return { state: now >= start ? "over" : "", progress: 0 };
+  }
+  const end = routineMinutes(routine.end_time);
+  const length = (end - start + 1440) % 1440;
+  const since = (now - start + 1440) % 1440;
+  if (since < length) return { state: "now", progress: since / length };
+  if (end > start) {
+    if (now >= end) return { state: "over", progress: 1 };
+    if (now >= start - 60) return { state: "soon", progress: 0 };
+  }
+  return { state: "", progress: 0 };
+};
+
 // ---- The page ----
 
 let routinesState = { routines: [], checks: [] };
@@ -211,10 +246,171 @@ const routineItem = (routine, today, checkSet, isDue) => {
   const rhythm = document.createElement("small");
   rhythm.textContent = routineRepeatText(routine.repeat);
   name.append(title, rhythm);
-  name.addEventListener("click", () => openRoutineForm(routine));
+  name.addEventListener("click", (event) => {
+    // The click that ends a drag isn't a tap on the name.
+    if (routineJustDragged) {
+      event.preventDefault();
+      return;
+    }
+    openRoutineForm(routine);
+  });
   item.append(name);
+
+  // The start and stop time, if it has one.
+  const timeText = routineTimeText(routine);
+  if (timeText) {
+    const time = document.createElement("span");
+    time.className = "routine-time";
+    time.textContent = timeText;
+    item.append(time);
+    if (isDue) {
+      const now = new Date();
+      const { state, progress } = routineTimeState(routine, now.getHours() * 60 + now.getMinutes());
+      if (state) item.classList.add(`is-${state}`);
+      item.style.setProperty("--time-progress", String(progress));
+    }
+  }
+
+  // The dots on the right: grab them to drag at once (holding anywhere
+  // else on the routine works too). Arrow keys move it for keyboards.
+  const grip = document.createElement("button");
+  grip.type = "button";
+  grip.className = "routine-grip";
+  grip.setAttribute("aria-label", `Move ${routine.title} (arrow up or down)`);
+  grip.addEventListener("keydown", (event) => {
+    const step = { ArrowUp: -1, ArrowDown: 1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const sibling = step < 0 ? item.previousElementSibling : item.nextElementSibling;
+    if (!sibling) return;
+    if (step < 0) sibling.before(item);
+    else sibling.after(item);
+    grip.focus();
+    saveRoutineOrder();
+  });
+  item.append(grip);
   return item;
 };
+
+// ---- Dragging into a new order ----
+
+let routineDrag = null; // the routine being dragged, while it is
+let routineJustDragged = false;
+const ROUTINE_HOLD_MS = 350;
+
+// The new order is the Today list, then the "Not today" list.
+const saveRoutineOrder = async () => {
+  const ids = [...routineList.children, ...routineLaterList.children].map((item) => Number(item.dataset.id));
+  // Show it straight away: sort the routines we have by the new order.
+  const place = new Map(ids.map((id, index) => [id, index]));
+  routinesState.routines.sort((a, b) => (place.get(a.id) ?? 999) - (place.get(b.id) ?? 999));
+  try {
+    await routineRequest({ action: "reorder", ids });
+  } catch (error) {
+    routineStatus.textContent = error.message;
+  }
+  renderRoutines();
+};
+
+const startRoutineDrag = (item, pointerY) => {
+  const rect = item.getBoundingClientRect();
+  routineDrag = { item, grab: pointerY - rect.top, moved: false };
+  item.classList.add("is-dragging");
+  item.parentElement.classList.add("is-sorting");
+  navigator.vibrate?.(12);
+};
+
+const moveRoutineDrag = (pointerY) => {
+  const { item, grab } = routineDrag;
+  // Swap with a neighbour once the finger passes its middle.
+  const previous = item.previousElementSibling;
+  const next = item.nextElementSibling;
+  if (previous) {
+    const box = previous.getBoundingClientRect();
+    if (pointerY < box.top + box.height / 2) {
+      previous.before(item);
+      routineDrag.moved = true;
+    }
+  }
+  if (next) {
+    const box = next.getBoundingClientRect();
+    if (pointerY > box.top + box.height / 2) {
+      next.after(item);
+      routineDrag.moved = true;
+    }
+  }
+  // Keep the routine under the finger: where it would sit, plus the shift.
+  item.style.transform = "none";
+  const natural = item.getBoundingClientRect().top;
+  item.style.transform = `translateY(${pointerY - grab - natural}px) scale(1.03)`;
+};
+
+const endRoutineDrag = () => {
+  if (!routineDrag) return;
+  const { item, moved } = routineDrag;
+  routineDrag = null;
+  item.style.transform = "";
+  item.classList.remove("is-dragging");
+  item.parentElement?.classList.remove("is-sorting");
+  // Swallow the click that follows letting go.
+  routineJustDragged = true;
+  window.setTimeout(() => {
+    routineJustDragged = false;
+  }, 0);
+  if (moved) saveRoutineOrder();
+};
+
+for (const list of [routineList, routineLaterList]) {
+  list.addEventListener("pointerdown", (event) => {
+    const item = event.target.closest(".routine-item");
+    if (!item || routineDrag || event.button > 0) return;
+    // The tick button is for ticking; everything else can start a drag.
+    if (event.target.closest(".routine-tick")) return;
+    const startY = event.clientY;
+    let lastY = startY;
+    let hold = null;
+    const onMove = (moveEvent) => {
+      lastY = moveEvent.clientY;
+      if (routineDrag) {
+        moveEvent.preventDefault();
+        moveRoutineDrag(lastY);
+      } else if (Math.abs(lastY - startY) > 8) {
+        // Moved before the hold finished: that's scrolling, not dragging.
+        window.clearTimeout(hold);
+      }
+    };
+    const onUp = () => {
+      window.clearTimeout(hold);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      endRoutineDrag();
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    if (event.target.closest(".routine-grip")) {
+      event.preventDefault();
+      startRoutineDrag(item, startY);
+    } else {
+      hold = window.setTimeout(() => startRoutineDrag(item, lastY), ROUTINE_HOLD_MS);
+    }
+  });
+}
+
+// While dragging on a phone, the page must not scroll under the finger.
+document.addEventListener("touchmove", (event) => {
+  if (routineDrag) event.preventDefault();
+}, { passive: false });
+// A long press shouldn't open the phone's copy menu.
+document.addEventListener("contextmenu", (event) => {
+  if (event.target.closest?.(".routine-item")) event.preventDefault();
+});
+
+// The "on now" glow and time bar move with the clock.
+window.setInterval(() => {
+  if (!routineDrag && routinesState.routines.some((routine) => routine.start_time)) renderRoutines();
+}, 30000);
 
 const renderRoutines = () => {
   const today = localDay();
@@ -371,6 +567,43 @@ document.querySelector("#routine-every-more").addEventListener("click", () => {
   showRoutineRepeat();
 });
 
+// ---- Start and stop time ----
+
+const routineStart = document.querySelector("#routine-start");
+const routineEnd = document.querySelector("#routine-end");
+
+const showRoutineTimes = (on) => {
+  document.querySelector("#routine-times").hidden = !on;
+  document.querySelector("#routine-time-add").hidden = on;
+};
+
+document.querySelector("#routine-time-add").addEventListener("click", () => {
+  showRoutineTimes(true);
+  // A sensible start: the next whole hour.
+  if (!routineStart.value) routineStart.value = `${String((new Date().getHours() + 1) % 24).padStart(2, "0")}:00`;
+  routineStart.focus();
+});
+
+document.querySelector("#routine-time-clear").addEventListener("click", () => {
+  routineStart.value = "";
+  routineEnd.value = "";
+  showRoutineTimes(false);
+});
+
+// Picking a start fills in a stop 30 minutes later, if there's none yet.
+routineStart.addEventListener("change", () => {
+  if (!routineStart.value || routineEnd.value) return;
+  const end = (routineMinutes(routineStart.value) + 30) % 1440;
+  routineEnd.value = `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
+});
+
+// The times to send: "HH:MM" or null.
+const routineTimesChoice = () => {
+  const start = /^\d\d:\d\d$/.test(routineStart.value) ? routineStart.value : null;
+  const end = start && /^\d\d:\d\d$/.test(routineEnd.value) && routineEnd.value !== start ? routineEnd.value : null;
+  return { start_time: start, end_time: end };
+};
+
 const openRoutineForm = (routine = null) => {
   routineEditing = routine;
   const rule = routine?.repeat || { kind: "daily" };
@@ -378,6 +611,9 @@ const openRoutineForm = (routine = null) => {
   routineRepeatKind = rule.kind;
   routineChosenDays = new Set(rule.kind === "weekdays" ? rule.days : [0, 2, 4]);
   routineEvery = rule.kind === "every" ? Math.max(2, rule.every) : 2;
+  routineStart.value = routine?.start_time || "";
+  routineEnd.value = routine?.end_time || "";
+  showRoutineTimes(Boolean(routine?.start_time));
   document.querySelector("#routine-save").textContent = routine ? "Save" : "Add";
   document.querySelector("#routine-remove").hidden = !routine;
   routineForm.hidden = false;
@@ -421,7 +657,7 @@ routineForm.addEventListener("submit", async (event) => {
   const save = document.querySelector("#routine-save");
   save.disabled = true;
   try {
-    const body = { title, repeat: routineRepeatChoice() };
+    const body = { title, repeat: routineRepeatChoice(), ...routineTimesChoice() };
     if (routineEditing) await routineRequest({ action: "edit", id: routineEditing.id, ...body });
     else await routineRequest({ action: "add", day: localDay(), ...body });
     closeRoutineForm();

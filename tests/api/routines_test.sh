@@ -76,12 +76,37 @@ jq -e --argjson id $GYM '.routines[] | select(.id == $id) | .title == "Gym sessi
 [ "$(r '{"action":"edit","id":"'$GYM'","title":"x","repeat":{"kind":"daily"}}')" = 404 ] || fail "string id"
 echo "edit ok"
 
+# Start and stop times.
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"start_time":"07:00","end_time":"07:45"}')" = 200 ] || { cat /tmp/rout; fail "edit times"; }
+jq -e --argjson id $GYM '.routines[] | select(.id == $id) | .start_time == "07:00" and .end_time == "07:45"' /tmp/rout >/dev/null || { cat /tmp/rout; fail "times saved"; }
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"start_time":"22:30","end_time":"06:30"}')" = 200 ] || fail "overnight times"
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"start_time":"24:00"}')" = 400 ] || fail "hour 24"
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"start_time":"7:00"}')" = 400 ] || fail "short time"
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"end_time":"08:00"}')" = 400 ] || fail "stop without start"
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"start_time":"08:00","end_time":"08:00"}')" = 400 ] || fail "same start and stop"
+[ "$(r '{"action":"edit","id":'$GYM',"title":"Gym session","repeat":{"kind":"daily"},"start_time":null,"end_time":null}')" = 200 ] || fail "clear times"
+jq -e --argjson id $GYM '.routines[] | select(.id == $id) | has("start_time") | not' /tmp/rout >/dev/null || { cat /tmp/rout; fail "times cleared"; }
+[ "$(r '{"action":"add","title":"Evening walk","repeat":{"kind":"daily"},"start_time":"19:00","day":"'$TODAY'"}')" = 200 ] || fail "add with time"
+WALK=$(jq -r .added /tmp/rout)
+jq -e '.routines[-1].title == "Evening walk" and .routines[-1].start_time == "19:00" and (.routines[-1] | has("end_time") | not)' /tmp/rout >/dev/null || { cat /tmp/rout; fail "new routine last, with time"; }
+echo "times ok"
+
+# Drag into a new order.
+[ "$(r '{"action":"reorder","ids":['$WALK','$CALL','$WATER','$GYM']}')" = 200 ] || { cat /tmp/rout; fail reorder; }
+jq -e --argjson a $WALK --argjson b $CALL --argjson c $WATER --argjson d $GYM '[.routines[].id] == [$a,$b,$c,$d]' /tmp/rout >/dev/null || { cat /tmp/rout; fail "new order"; }
+[ "$(r '{"action":"reorder","ids":[]}')" = 400 ] || fail "empty order"
+[ "$(r '{"action":"reorder","ids":['$WALK','$WALK']}')" = 400 ] || fail "repeated id"
+[ "$(r '{"action":"reorder","ids":["1"]}')" = 400 ] || fail "string id in order"
+echo "reorder ok"
+
 # Somebody else can't see, tick, change or remove your routines.
 curl -sS -b $J2 -o /tmp/rout $B/api/routines
 jq -e '.routines == [] and .checks == []' /tmp/rout >/dev/null || { cat /tmp/rout; fail "other user sees routines"; }
 [ "$(rpost $J2 '{"action":"check","id":'$WATER',"day":"'$TODAY'","done":false}')" = 404 ] || fail "other user ticks"
 [ "$(rpost $J2 '{"action":"edit","id":'$WATER',"title":"hacked","repeat":{"kind":"daily"}}')" = 404 ] || fail "other user edits"
 [ "$(rpost $J2 '{"action":"remove","id":'$WATER',"day":"'$TODAY'"}')" = 404 ] || fail "other user removes"
+[ "$(rpost $J2 '{"action":"reorder","ids":['$GYM','$WATER']}')" = 200 ] || fail "other user reorder call"
+[ "$(psql -tAc "SELECT position FROM routines WHERE id = $WATER")" = 3 ] || fail "other user reordered your routines"
 [ "$(psql -tAc "SELECT title FROM routines WHERE id = $WATER")" = "Drink water" ] || fail "other user changed it"
 [ "$(psql -tAc "SELECT count(*) FROM routine_checks WHERE routine_id = $WATER")" = 1 ] || fail "other user unticked"
 echo "only your own ok"

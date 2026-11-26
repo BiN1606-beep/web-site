@@ -12,8 +12,8 @@ const slice = (code, from, to) => {
 };
 const streak = slice(read("streak.js"), "const localDay = ", "// How many missed days");
 const routines = slice(read("routines.js"), "const ROUTINE_WEEKDAYS", "// ---- The page ----");
-const { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS } =
-  new Function(`${streak}${routines}; return { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS };`)();
+const { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS, routineTimeState, routineTimeText } =
+  new Function(`${streak}${routines}; return { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS, routineTimeState, routineTimeText };`)();
 
 // 2026-11-23 is a Monday, 2026-11-29 a Sunday.
 assert.equal(routineWeekday("2026-11-23"), 0);
@@ -76,5 +76,26 @@ assert.deepEqual(ideas.slice(0, 2).map((idea) => idea.area), ["Money", "Money"])
 assert.notEqual(routineIdeas([], [], 1)[0].title, routineIdeas([], [], 0)[0].title, "More ideas shows others");
 assert.deepEqual(routineIdeas(ROUTINE_IDEAS.map((idea) => idea.title), []), []);
 for (const idea of ROUTINE_IDEAS) assert.ok(idea.title.length <= 80 && routineRepeatText(idea.repeat), idea.title);
+
+// Start and stop times.
+const at = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+const morning = { start_time: "07:00", end_time: "07:30" };
+assert.equal(routineTimeText(morning), "07:00–07:30");
+assert.equal(routineTimeText({ start_time: "18:00" }), "18:00");
+assert.equal(routineTimeText({}), "");
+assert.deepEqual(routineTimeState({}, at("07:10")), { state: "", progress: 0 });
+assert.equal(routineTimeState(morning, at("05:30")).state, "");
+assert.equal(routineTimeState(morning, at("06:15")).state, "soon");
+assert.deepEqual(routineTimeState(morning, at("07:15")), { state: "now", progress: 0.5 });
+assert.equal(routineTimeState(morning, at("07:30")).state, "over");
+assert.equal(routineTimeState(morning, at("23:00")).state, "over");
+// Past midnight: 22:30 to 06:30.
+const sleep = { start_time: "22:30", end_time: "06:30" };
+assert.equal(routineTimeState(sleep, at("23:00")).state, "now");
+assert.deepEqual(routineTimeState(sleep, at("02:30")), { state: "now", progress: 0.5 });
+assert.equal(routineTimeState(sleep, at("12:00")).state, "");
+// Only a start: "now" for the first hour.
+assert.equal(routineTimeState({ start_time: "18:00" }, at("18:20")).state, "now");
+assert.equal(routineTimeState({ start_time: "18:00" }, at("19:20")).state, "over");
 
 console.log("routine tests passed");
