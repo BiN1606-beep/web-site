@@ -28,8 +28,9 @@ local network_style = saved_look.new({
     -- Sliders are numbers from 0 to 1.
     sliders = { "pull", "spread", "dots" },
     -- On/off switches. "autoplay" plays the timelapse when you open Osiris,
-    -- "together" grows all goal paths at the same time in the timelapse.
-    switches = { "curved", "names", "autoplay", "together" },
+    -- "together" grows all goal paths at the same time in the timelapse,
+    -- "follow" zooms in and follows the growth.
+    switches = { "curved", "names", "autoplay", "together", "follow" },
 })
 
 M.clean_style = network_style.clean

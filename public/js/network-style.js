@@ -7,7 +7,8 @@
 // - Curvy lines and goal names on or off.
 // - Timelapse: replay your network growing, pick its speed, and choose if
 //   it plays by itself each time you open Osiris (off by default), and if
-//   all paths grow at the same time (on by default) or in real order.
+//   all paths grow at the same time (on by default) or in real order, and
+//   if the view zooms in and follows the growth (on by default).
 // Every change shows at once. It is saved on your account
 // (POST /api/network-style, lua/osiris/network_style.lua), so it looks the
 // same on every device. GET /api/progress-tree sends it back with the goals.
@@ -27,6 +28,7 @@ const NETWORK_STYLE_DEFAULTS = {
   lapse: "normal",
   autoplay: false,
   together: true,
+  follow: true,
 };
 // Keep these in step with CHOICES in lua/osiris/network_style.lua.
 const STYLE_CHOICES = {
@@ -49,7 +51,7 @@ const cleanNetworkStyle = (style) => {
     const value = Number(style[key]);
     if (Number.isFinite(value) && value >= 0 && value <= 1) clean[key] = value;
   }
-  for (const key of ["curved", "names", "autoplay", "together"]) {
+  for (const key of ["curved", "names", "autoplay", "together", "follow"]) {
     if (typeof style[key] === "boolean") clean[key] = style[key];
   }
   return clean;
@@ -281,6 +283,8 @@ const LAPSE_DELAYS = { slow: 900, normal: 500, fast: 250, turbo: 110 };
 const timelapseStepDelay = () => LAPSE_DELAYS[networkStyle.lapse] ?? 500;
 // All goal paths grow side by side, or one step at a time in real order.
 const timelapseTogether = () => networkStyle.together;
+// The view zooms in and follows the growth, or shows the whole network.
+const timelapseFollow = () => networkStyle.follow;
 
 // js/network.js calls this while the timelapse plays: a number from 0 to 1
 // fills the bar on the play button, null means it has stopped.
@@ -450,7 +454,7 @@ const buildNetworkStylePanel = () => {
   lapseTop.append(play, speedRow);
   const lapseSwitches = document.createElement("div");
   lapseSwitches.className = "net-style-row is-switches";
-  for (const [key, label] of [["together", "All at once"], ["autoplay", "Play on open"]]) {
+  for (const [key, label] of [["together", "All at once"], ["follow", "Follow growth"], ["autoplay", "Play on open"]]) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "net-style-switch";
