@@ -1,0 +1,101 @@
+// Pulls the pure routine helpers out of public/js/routines.js (plus the day
+// helpers they use from streak.js) and checks them.
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+
+const read = (name) => readFileSync(new URL(`../../public/js/${name}`, import.meta.url), "utf8");
+const slice = (code, from, to) => {
+  const start = code.indexOf(from);
+  const end = code.indexOf(to);
+  assert.ok(start >= 0 && end > start, `${from} found`);
+  return code.slice(start, end);
+};
+const streak = slice(read("streak.js"), "const localDay = ", "// How many missed days");
+const routines = slice(read("routines.js"), "const ROUTINE_WEEKDAYS", "// ---- The page ----");
+const { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS, routineTimeState, routineTimeText } =
+  new Function(`${streak}${routines}; return { routineWeekday, routineIsDue, routineCheckSet, routineDayProgress, routineMonthDays, routineFullDayStreak, routineRepeatText, routineIdeas, ROUTINE_IDEAS, routineTimeState, routineTimeText };`)();
+
+// 2026-11-23 is a Monday, 2026-11-29 a Sunday.
+assert.equal(routineWeekday("2026-11-23"), 0);
+assert.equal(routineWeekday("2026-11-29"), 6);
+assert.equal(routineWeekday("1970-01-01"), 3);
+
+const daily = { id: 1, start_day: "2026-11-10", repeat: { kind: "daily" } };
+const mwf = { id: 2, start_day: "2026-11-01", repeat: { kind: "weekdays", days: [0, 2, 4] } };
+const every3 = { id: 3, start_day: "2026-11-20", repeat: { kind: "every", every: 3 } };
+const removed = { id: 4, start_day: "2026-11-01", removed_on: "2026-11-15", repeat: { kind: "daily" } };
+
+assert.equal(routineIsDue(daily, "2026-11-09"), false, "not before it was made");
+assert.equal(routineIsDue(daily, "2026-11-10"), true);
+assert.equal(routineIsDue(mwf, "2026-11-23"), true, "Monday");
+assert.equal(routineIsDue(mwf, "2026-11-24"), false, "Tuesday");
+assert.equal(routineIsDue(mwf, "2026-11-27"), true, "Friday");
+assert.deepEqual(["2026-11-20", "2026-11-21", "2026-11-23", "2026-11-26"].map((d) => routineIsDue(every3, d)), [true, false, true, true]);
+assert.equal(routineIsDue(removed, "2026-11-14"), true, "before removal");
+assert.equal(routineIsDue(removed, "2026-11-15"), false, "from the day it was removed");
+
+const all = [daily, mwf, every3, removed];
+const checks = routineCheckSet([
+  { routine_id: 1, day: "2026-11-23" }, { routine_id: 2, day: "2026-11-23" }, { routine_id: 3, day: "2026-11-23" },
+  { routine_id: 1, day: "2026-11-24" },
+  { routine_id: 1, day: "2026-11-25" },
+]);
+assert.deepEqual(routineDayProgress(all, checks, "2026-11-23"), { due: 3, done: 3 });
+assert.deepEqual(routineDayProgress(all, checks, "2026-11-24"), { due: 1, done: 1 });
+assert.deepEqual(routineDayProgress(all, checks, "2026-11-25"), { due: 2, done: 1 }, "Wednesday: daily + MWF");
+
+// Nov 2026 starts on a Sunday: 6 blanks, then 30 days.
+const nov = routineMonthDays(2026, 10);
+assert.equal(nov.filter((d) => d === null).length, 6);
+assert.equal(nov.length, 36);
+assert.equal(nov[6], "2026-11-01");
+assert.equal(nov.at(-1), "2026-11-30");
+assert.equal(routineMonthDays(2028, 1).filter(Boolean).length, 29, "leap year February");
+
+// Full days: 23 and 24 are full, 25 isn't (yesterday), so on the 26th the run is broken.
+assert.equal(routineFullDayStreak([daily, mwf], checks, "2026-11-24"), 2);
+assert.equal(routineFullDayStreak([daily, mwf], checks, "2026-11-25"), 2, "today still open");
+assert.equal(routineFullDayStreak([daily, mwf], checks, "2026-11-26"), 0);
+// A rest day doesn't break the run.
+const restChecks = routineCheckSet([{ routine_id: 2, day: "2026-11-23" }, { routine_id: 2, day: "2026-11-25" }]);
+assert.equal(routineFullDayStreak([mwf], restChecks, "2026-11-26"), 2);
+assert.equal(routineFullDayStreak([], restChecks, "2026-11-26"), 0);
+
+assert.equal(routineRepeatText({ kind: "daily" }), "Every day");
+assert.equal(routineRepeatText({ kind: "weekdays", days: [0, 1, 2, 3, 4] }), "Weekdays");
+assert.equal(routineRepeatText({ kind: "weekdays", days: [4, 0, 2] }), "Mon, Wed, Fri");
+assert.equal(routineRepeatText({ kind: "every", every: 2 }), "Every other day");
+assert.equal(routineRepeatText({ kind: "every", every: 7 }), "Once a week");
+assert.equal(routineRepeatText({ kind: "every", every: 3 }), "Every 3 days");
+
+// Ideas: none you already have, your goals' areas first, all short enough.
+let ideas = routineIdeas(["  drink 2 L of WATER "], ["Money"]);
+assert.equal(ideas.length, ROUTINE_IDEAS.length - 1);
+assert.ok(!ideas.some((idea) => idea.title === "Drink 2 l of water"));
+assert.deepEqual(ideas.slice(0, 2).map((idea) => idea.area), ["Money", "Money"]);
+assert.notEqual(routineIdeas([], [], 1)[0].title, routineIdeas([], [], 0)[0].title, "More ideas shows others");
+assert.deepEqual(routineIdeas(ROUTINE_IDEAS.map((idea) => idea.title), []), []);
+for (const idea of ROUTINE_IDEAS) assert.ok(idea.title.length <= 80 && routineRepeatText(idea.repeat), idea.title);
+
+// Start and stop times.
+const at = (time) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+const morning = { start_time: "07:00", end_time: "07:30" };
+assert.equal(routineTimeText(morning), "07:00–07:30");
+assert.equal(routineTimeText({ start_time: "18:00" }), "18:00");
+assert.equal(routineTimeText({}), "");
+assert.deepEqual(routineTimeState({}, at("07:10")), { state: "", progress: 0 });
+assert.equal(routineTimeState(morning, at("05:30")).state, "");
+assert.equal(routineTimeState(morning, at("06:15")).state, "soon");
+assert.deepEqual(routineTimeState(morning, at("07:15")), { state: "now", progress: 0.5 });
+assert.equal(routineTimeState(morning, at("07:30")).state, "over");
+assert.equal(routineTimeState(morning, at("23:00")).state, "over");
+// Past midnight: 22:30 to 06:30.
+const sleep = { start_time: "22:30", end_time: "06:30" };
+assert.equal(routineTimeState(sleep, at("23:00")).state, "now");
+assert.deepEqual(routineTimeState(sleep, at("02:30")), { state: "now", progress: 0.5 });
+assert.equal(routineTimeState(sleep, at("12:00")).state, "");
+// Only a start: "now" for the first hour.
+assert.equal(routineTimeState({ start_time: "18:00" }, at("18:20")).state, "now");
+assert.equal(routineTimeState({ start_time: "18:00" }, at("19:20")).state, "over");
+
+console.log("routine tests passed");

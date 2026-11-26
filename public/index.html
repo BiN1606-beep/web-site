@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="/css/charts.css">
     <link rel="stylesheet" href="/css/my-stats.css">
     <link rel="stylesheet" href="/css/devtools.css">
+    <link rel="stylesheet" href="/css/routines.css">
     <link rel="stylesheet" href="/css/motion.css">
   </head>
   <body>
@@ -217,6 +218,79 @@
                       <button class="save-button" id="checkin-button" type="submit">Check in</button>
                     </div>
                   </form>
+                </section>
+
+                <!-- Routines: things you want to do again and again, each with
+                     its own rhythm and maybe a time. Tap the circle when it's
+                     done today; hold one and drag it to change the order. The
+                     month grid in "Your stats" shows how it went
+                     (public/js/routines.js). -->
+                <section class="routine-card" id="routine-card" aria-labelledby="routine-title">
+                  <div class="routine-head">
+                    <span class="tree-step-label" id="routine-title">Routines</span>
+                    <span class="routine-ring" id="routine-ring" hidden>
+                      <svg viewBox="0 0 36 36" aria-hidden="true">
+                        <circle class="routine-ring-track" cx="18" cy="18" r="15.5"></circle>
+                        <circle class="routine-ring-fill" id="routine-ring-fill" cx="18" cy="18" r="15.5" pathLength="1"></circle>
+                      </svg>
+                      <b id="routine-ring-text">0/0</b>
+                    </span>
+                    <button class="routine-add" id="routine-add" type="button" aria-label="Add a routine" aria-expanded="false">+</button>
+                  </div>
+                  <ul class="routine-list" id="routine-list"></ul>
+                  <details class="routine-later" id="routine-later" hidden>
+                    <summary id="routine-later-summary">Not today</summary>
+                    <ul class="routine-list is-later" id="routine-later-list"></ul>
+                  </details>
+                  <button class="routine-empty" id="routine-empty" type="button" hidden>
+                    <span aria-hidden="true">+</span> Add a routine you want to keep
+                  </button>
+                  <!-- Ideas to start from, so an empty list doesn't feel
+                       like a blank page. Tap one to add it. -->
+                  <div class="routine-ideas-box" id="routine-empty-ideas" hidden>
+                    <span class="routine-ideas-label">Ideas</span>
+                    <div class="routine-ideas" id="routine-empty-ideas-list"></div>
+                  </div>
+                  <form class="routine-form" id="routine-form" hidden>
+                    <div class="routine-ideas-box" id="routine-form-ideas">
+                      <div class="routine-ideas-head">
+                        <span class="routine-ideas-label">Ideas</span>
+                        <button class="routine-ideas-more" id="routine-ideas-more" type="button">More ideas</button>
+                      </div>
+                      <div class="routine-ideas" id="routine-form-ideas-list"></div>
+                    </div>
+                    <input id="routine-name" type="text" maxlength="80" autocomplete="off" required
+                      aria-label="Routine" placeholder="Or write your own">
+                    <div class="routine-repeat" role="radiogroup" aria-label="How often">
+                      <button type="button" role="radio" data-repeat="daily" aria-checked="true">Every day</button>
+                      <button type="button" role="radio" data-repeat="weekdays" aria-checked="false">Some days</button>
+                      <button type="button" role="radio" data-repeat="every" aria-checked="false">Every few days</button>
+                    </div>
+                    <div class="routine-weekdays" id="routine-weekdays" role="group" aria-label="Which days" hidden></div>
+                    <div class="routine-every" id="routine-every" hidden>
+                      <span>Every</span>
+                      <button type="button" class="routine-step" id="routine-every-less" aria-label="Fewer days">&minus;</button>
+                      <b id="routine-every-count" aria-live="polite">2</b>
+                      <button type="button" class="routine-step" id="routine-every-more" aria-label="More days">+</button>
+                      <span id="routine-every-unit">days</span>
+                    </div>
+                    <!-- Optional: when to start and when to stop. -->
+                    <button class="routine-time-toggle" id="routine-time-add" type="button">
+                      <span aria-hidden="true">+</span> Add a time
+                    </button>
+                    <div class="routine-times" id="routine-times" hidden>
+                      <label>Start <input id="routine-start" type="time" step="300"></label>
+                      <span class="routine-times-dash" aria-hidden="true">&ndash;</span>
+                      <label>Stop <input id="routine-end" type="time" step="300"></label>
+                      <button class="routine-time-clear" id="routine-time-clear" type="button" aria-label="No time">&times;</button>
+                    </div>
+                    <div class="routine-form-actions">
+                      <button class="save-button" id="routine-save" type="submit">Add</button>
+                      <button class="profile-secondary-button" id="routine-cancel" type="button">Cancel</button>
+                      <button class="routine-remove" id="routine-remove" type="button" hidden>Remove</button>
+                    </div>
+                  </form>
+                  <p class="routine-status" id="routine-status" role="status" aria-live="polite"></p>
                 </section>
 
                 <div class="tree-actions">
@@ -593,6 +667,26 @@
           </div>
           <div class="chart-box" id="my-stats-chart"></div>
         </section>
+        <!-- Routines month grid: one box per day, filled as far as that
+             day's routines were done (public/js/routines.js). -->
+        <section class="my-stats-section" aria-labelledby="my-stats-routines-title">
+          <div class="chart-head">
+            <h3 id="my-stats-routines-title">Routines</h3>
+            <div class="routine-month-nav">
+              <button class="routine-month-button" id="routine-month-prev" type="button" aria-label="Previous month">&lsaquo;</button>
+              <span class="routine-month-name" id="routine-month-name"></span>
+              <button class="routine-month-button" id="routine-month-next" type="button" aria-label="Next month">&rsaquo;</button>
+            </div>
+          </div>
+          <div class="routine-grid-box">
+            <ol class="routine-grid-weekdays" aria-hidden="true">
+              <li>M</li><li>T</li><li>W</li><li>T</li><li>F</li><li>S</li><li>S</li>
+            </ol>
+            <ol class="routine-grid" id="routine-grid"></ol>
+          </div>
+          <p class="routine-grid-info" id="routine-grid-info" role="status" aria-live="polite"></p>
+          <div class="chart-tiles is-small" id="routine-grid-tiles"></div>
+        </section>
         <section class="my-stats-section" aria-labelledby="my-stats-goals-title">
           <h3 id="my-stats-goals-title">Your goals</h3>
           <ol class="chart-bars" id="my-stats-goals"></ol>
@@ -640,6 +734,7 @@
     <script src="/js/goals.js"></script>
     <script src="/js/lesson.js"></script>
     <script src="/js/evolve.js"></script>
+    <script src="/js/routines.js"></script>
     <script src="/js/charts.js"></script>
     <script src="/js/my-stats.js"></script>
     <script src="/js/review.js"></script>
