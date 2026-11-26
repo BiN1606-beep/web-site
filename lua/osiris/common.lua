@@ -119,6 +119,38 @@ local function current_user()
     return rows[1], false
 end
 
+-- Is this request really coming from an Osiris page? Protects against
+-- cross-site request forgery (CSRF): another website making your browser
+-- send a request to Osiris with your session cookie.
+--
+-- Osiris already has two other protections: the session cookie is
+-- SameSite=Lax (browsers leave it off most requests that other sites start),
+-- and every API that changes something only accepts a JSON body, which a
+-- plain HTML form on another site cannot send. This check is a third lock:
+-- browsers put the page's address in the Origin header of every POST, so a
+-- POST whose Origin is another site is refused.
+--
+-- Reading (GET) never changes anything, so it is always allowed. Tools like
+-- curl send no Origin header at all; they are allowed too, because a
+-- browser always sends one with a POST, and an attacker can't make your
+-- browser leave it out.
+local function same_origin_request()
+    local method = ngx.req.get_method()
+    if method == "GET" or method == "HEAD" then
+        return true
+    end
+    local origin = ngx.var.http_origin
+    if not origin then
+        local fetch_site = ngx.var.http_sec_fetch_site
+        return fetch_site == nil or fetch_site == "same-origin" or fetch_site == "none"
+    end
+    local host = ngx.var.http_host
+    if not host then
+        return false
+    end
+    return origin == ngx.var.scheme .. "://" .. host
+end
+
 local function read_json_body(max_bytes)
     local content_type = ngx.var.http_content_type
     local media_type = content_type and content_type:match("^%s*([^;]+)")
@@ -197,6 +229,7 @@ M.clear_cookie = clear_cookie
 M.database_query = database_query
 M.current_user = current_user
 M.read_json_body = read_json_body
+M.same_origin_request = same_origin_request
 M.utf8_character_count = utf8_character_count
 M.decode_json_value = decode_json_value
 M.SESSION_COOKIE = SESSION_COOKIE

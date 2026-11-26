@@ -13,16 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Fraunces (headings) and IBM Plex Sans (everything else); both free. -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-    <script>
-      if (document.cookie.split(";").some((cookie) => cookie.trim() === "background-theme=dark")) {
-        document.documentElement.classList.add("is-dark");
-      }
-
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        document.documentElement.classList.add("show-startup");
-      }
-    </script>
-    <!-- Your color theme and fonts, before the page is shown. -->
+    <!-- Light or dark, your color theme and fonts, before the page is shown. -->
     <script src="/js/appearance-boot.js"></script>
     <!-- The styles, split by part of the page. Order matters: later files
          can override earlier ones. -->
@@ -39,6 +30,7 @@
     <link rel="stylesheet" href="/css/network-style.css">
     <link rel="stylesheet" href="/css/steps.css">
     <link rel="stylesheet" href="/css/settings.css">
+    <link rel="stylesheet" href="/css/safety.css">
     <link rel="stylesheet" href="/css/appearance.css">
     <link rel="stylesheet" href="/css/tabs.css">
     <link rel="stylesheet" href="/css/lesson.css">
@@ -336,6 +328,32 @@
           <button class="save-button" id="settings-edit-profile" type="button" disabled>Edit Profile</button>
           <button class="save-button" id="sign-out" type="button">Sign out</button>
         </section>
+        <!-- Privacy and safety: what Osiris does to keep you safe, and the
+             two buttons that put you in control (js/account-safety.js). -->
+        <section class="settings-section safety-section" aria-labelledby="safety-title">
+          <h2 id="safety-title">Privacy and safety</h2>
+          <ul class="safety-list">
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Everything is sent encrypted (HTTPS)</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/></svg>Your password is scrambled, never stored</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>You choose what friends see (Community, Privacy)</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Goal chats go to our AI helper (Groq) only to plan your steps</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 8 8 8"/></svg>No ads. Your data is never sold</li>
+          </ul>
+          <p id="safety-status" role="status" aria-live="polite"></p>
+          <div class="safety-actions">
+            <button class="profile-secondary-button" id="sign-out-everywhere" type="button">Sign out everywhere</button>
+            <button class="profile-secondary-button danger-button" id="delete-account-open" type="button">Delete account</button>
+          </div>
+          <form class="delete-account-form" id="delete-account-form" hidden>
+            <p>This removes your account, goals, streaks, friends and shared trees for good.</p>
+            <label for="delete-account-confirm">Type your email to confirm</label>
+            <input id="delete-account-confirm" type="email" autocomplete="off" maxlength="254" required>
+            <div class="safety-actions">
+              <button class="profile-secondary-button" id="delete-account-cancel" type="button">Keep my account</button>
+              <button class="save-button danger-button" id="delete-account-submit" type="submit">Delete forever</button>
+            </div>
+          </form>
+        </section>
         <section class="settings-section" aria-labelledby="appearance-title">
           <h2 id="appearance-title">Appearance</h2>
           <div class="theme-setting">
@@ -597,7 +615,8 @@
     <!-- d3 (free, open source) runs the moving network graph: the physics
          that lets the dots float and settle, plus dragging and zooming.
          If it fails to load, the page falls back to the static tree. -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!-- d3 7.8.5, served from this site instead of a CDN (see js/d3.js). -->
+    <script src="/js/d3.js"></script>
     <!-- The page's scripts, in the order they must run. They are plain
          scripts (not modules) that share their top-level names. -->
     <script src="/js/shell.js"></script>
@@ -617,6 +636,7 @@
     <script src="/js/review.js"></script>
     <script src="/js/reminders.js"></script>
     <script src="/js/profile.js"></script>
+    <script src="/js/account-safety.js"></script>
     <script src="/js/panels.js"></script>
     <script src="/js/debug.js"></script>
     <script src="/js/demos.js"></script>

@@ -59,6 +59,9 @@ local function create_session(user_id, remember_me)
         cookie_options.max_age = SESSION_MAX_AGE
     end
     set_cookie(SESSION_COOKIE, rows[1].token, cookie_options)
+    -- Tidy up: sessions that ran out are useless, so remove them instead of
+    -- keeping them forever. A failure here doesn't matter for this sign-in.
+    database_query("DELETE FROM public.auth_sessions WHERE expires_at <= now()")
     return true
 end
 
@@ -95,6 +98,52 @@ local function handle_signup()
     })
 end
 
+-- Login protection (see db/migrations/015_login_security.sql): after
+-- MAX_LOGIN_FAILURES wrong passwords for one email within
+-- LOGIN_FAILURE_WINDOW, that email is paused for LOGIN_LOCK_TIME. nginx
+-- also limits how often one computer can try (auth_requests_v2 in
+-- nginx.conf); this catches guesses spread over many computers.
+local MAX_LOGIN_FAILURES = 10
+local LOGIN_FAILURE_WINDOW = "15 minutes"
+local LOGIN_LOCK_TIME = "15 minutes"
+local LOCKED_MESSAGE = "Too many wrong passwords for this email. Wait 15 minutes and try again."
+
+-- A bcrypt salt (cost 12, like real passwords) for emails without an
+-- account, so checking them takes as long as checking a real password.
+local DUMMY_BCRYPT_SALT = "$2a$12$Q9oLmisVH0TiX56Skr46hO"
+
+-- Counts one wrong password for an email. Returns true when that email is
+-- now paused. Old counts (outside the window) start over at 1.
+local function record_login_failure(email)
+    local rows = database_query([[
+        INSERT INTO public.auth_login_failures AS failure (email, failures, first_failed_at)
+        VALUES ($1, 1, now())
+        ON CONFLICT (email) DO UPDATE
+        SET failures = CASE
+                WHEN failure.first_failed_at < now() - $3::interval THEN 1
+                ELSE failure.failures + 1
+            END,
+            first_failed_at = CASE
+                WHEN failure.first_failed_at < now() - $3::interval THEN now()
+                ELSE failure.first_failed_at
+            END,
+            locked_until = CASE
+                WHEN failure.first_failed_at >= now() - $3::interval
+                     AND failure.failures + 1 >= $2
+                THEN now() + $4::interval
+                ELSE NULL
+            END
+        RETURNING locked_until IS NOT NULL AS locked
+    ]], email, MAX_LOGIN_FAILURES, LOGIN_FAILURE_WINDOW, LOGIN_LOCK_TIME)
+    -- Forget failures from long ago so the table stays small.
+    database_query([[
+        DELETE FROM public.auth_login_failures
+        WHERE first_failed_at < now() - interval '1 day'
+          AND (locked_until IS NULL OR locked_until < now())
+    ]])
+    return rows and rows[1] and (rows[1].locked == true or rows[1].locked == "t") or false
+end
+
 local function handle_login()
     if ngx.req.get_method() ~= "POST" then
         return respond(ngx.HTTP_NOT_ALLOWED, { error = "Only POST is supported." })
@@ -109,22 +158,47 @@ local function handle_login()
         return respond(ngx.HTTP_BAD_REQUEST, { error = "Remember me must be enabled or disabled." })
     end
 
-    local rows = database_query([[
-        SELECT id, email
-        FROM public.auth_users
-        WHERE email = $1 AND password_hash = crypt($2, password_hash)
-    ]], string.lower(body.email), body.password)
-    if not rows then
+    local email = string.lower(body.email)
+
+    -- Is this email paused after too many wrong passwords?
+    local lock = database_query([[
+        SELECT 1 FROM public.auth_login_failures
+        WHERE email = $1 AND locked_until > now()
+    ]], email)
+    if not lock then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Sign-in is temporarily unavailable." })
     end
-    if not rows[1] then
+    if lock[1] then
+        return respond(429, { error = LOCKED_MESSAGE })
+    end
+
+    -- Checks the password. The hashing (bcrypt) always runs, also when no
+    -- account has this email: then it runs against a made-up salt. That
+    -- way a wrong email takes as long as a wrong password, and the timing
+    -- doesn't tell anyone which emails have an account.
+    local rows = database_query([[
+        SELECT account.id, account.email,
+            crypt($2, COALESCE(account.password_hash, $3)) = account.password_hash AS password_ok
+        FROM (SELECT 1) AS always_one_row
+        LEFT JOIN public.auth_users AS account ON account.email = $1
+    ]], email, body.password, DUMMY_BCRYPT_SALT)
+    if not rows or not rows[1] then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Sign-in is temporarily unavailable." })
+    end
+    local account = rows[1]
+    if account.password_ok ~= true and account.password_ok ~= "t" then
+        local locked = record_login_failure(email)
+        if locked then
+            return respond(429, { error = LOCKED_MESSAGE })
+        end
         return respond(ngx.HTTP_UNAUTHORIZED, { error = "Email or password is incorrect." })
     end
-    if not create_session(rows[1].id, body.rememberMe == true) then
+    database_query("DELETE FROM public.auth_login_failures WHERE email = $1", email)
+    if not create_session(account.id, body.rememberMe == true) then
         return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not start your session." })
     end
     return respond(ngx.HTTP_OK, {
-        user = { email = rows[1].email },
+        user = { email = account.email },
     })
 end
 
@@ -133,15 +207,54 @@ local function handle_logout()
         return respond(ngx.HTTP_NOT_ALLOWED, { error = "Only POST is supported." })
     end
 
+    -- {"everywhere": true} signs out every device (for example a phone you
+    -- lost, or a shared computer), not only this browser.
+    local body = read_json_body() or {}
     local token = ngx.var.cookie_osiris_session
     if token and #token == 64 and token:match("^[%da-fA-F]+$") then
-        local rows = database_query([[
+        local rows = database_query(body.everywhere == true and [[
+            DELETE FROM public.auth_sessions
+            WHERE user_id = (
+                SELECT user_id FROM public.auth_sessions
+                WHERE token_hash = encode(digest($1, 'sha256'), 'hex')
+            )
+        ]] or [[
             DELETE FROM public.auth_sessions
             WHERE token_hash = encode(digest($1, 'sha256'), 'hex')
         ]], token)
         if not rows then
             return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not end your session." })
         end
+    end
+    clear_cookie(SESSION_COOKIE, "/")
+    return respond(ngx.HTTP_OK, { ok = true })
+end
+
+-- Deletes your account and everything in it: goals, check-ins, follows,
+-- shared trees, reminders and sessions (every table points at auth_users
+-- with ON DELETE CASCADE). To be sure it's you and not a slip of the
+-- finger, the browser must send your own email address back as "confirm".
+local function handle_delete_account()
+    if ngx.req.get_method() ~= "POST" then
+        return respond(ngx.HTTP_NOT_ALLOWED, { error = "Only POST is supported." })
+    end
+    local user, database_error = current_user()
+    if database_error then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Authentication is temporarily unavailable." })
+    end
+    if not user then
+        return respond(ngx.HTTP_UNAUTHORIZED, { error = "Please sign in to continue." })
+    end
+    local body = read_json_body()
+    if not body or type(body.confirm) ~= "string"
+        or string.lower(body.confirm:match("^%s*(.-)%s*$")) ~= string.lower(user.email) then
+        return respond(ngx.HTTP_BAD_REQUEST, { error = "Type your email address to confirm." })
+    end
+    local rows = database_query([[
+        DELETE FROM public.auth_users WHERE id = $1 RETURNING id
+    ]], user.id)
+    if not rows or not rows[1] then
+        return respond(ngx.HTTP_SERVICE_UNAVAILABLE, { error = "Could not delete your account. Nothing was removed." })
     end
     clear_cookie(SESSION_COOKIE, "/")
     return respond(ngx.HTTP_OK, { ok = true })
@@ -358,14 +471,40 @@ local function handle_google_callback()
         return google_error_redirect()
     end
 
+    -- Signs in, creates the account, or links Google to an account that
+    -- was made with the same email and a password.
+    --
+    -- Linking needs care: Osiris doesn't check email addresses at sign-up,
+    -- so someone could have made a password account with YOUR email before
+    -- you ever came here, hoping you'd later use it through Google. Google
+    -- has now proven the email is yours, so the first time Google is linked
+    -- the old password is removed and every old session is signed out.
+    -- From then on you sign in with Google (and nobody else has a way in).
     local rows = database_query([[
-        INSERT INTO public.auth_users (email, google_sub)
-        VALUES ($1, $2)
-        ON CONFLICT (email) DO UPDATE
-        SET google_sub = EXCLUDED.google_sub
-        WHERE public.auth_users.google_sub IS NULL
-           OR public.auth_users.google_sub = EXCLUDED.google_sub
-        RETURNING id
+        WITH before AS (
+            SELECT id FROM public.auth_users
+            WHERE email = $1 AND google_sub IS NULL
+        ),
+        linked AS (
+            INSERT INTO public.auth_users (email, google_sub)
+            VALUES ($1, $2)
+            ON CONFLICT (email) DO UPDATE
+            SET google_sub = EXCLUDED.google_sub,
+                password_hash = CASE
+                    WHEN public.auth_users.google_sub IS NULL THEN NULL
+                    ELSE public.auth_users.password_hash
+                END
+            WHERE public.auth_users.google_sub IS NULL
+               OR public.auth_users.google_sub = EXCLUDED.google_sub
+            RETURNING id
+        ),
+        signed_out AS (
+            DELETE FROM public.auth_sessions
+            WHERE user_id IN (SELECT id FROM before)
+              AND EXISTS (SELECT 1 FROM linked)
+            RETURNING user_id
+        )
+        SELECT id FROM linked
     ]], string.lower(userinfo.email), userinfo.sub)
     if not rows or not rows[1] then
         ngx.log(ngx.ERR, "Could not link the verified Google account")
@@ -386,6 +525,8 @@ M.create_session = create_session
 M.handle_signup = handle_signup
 M.handle_login = handle_login
 M.handle_logout = handle_logout
+M.handle_delete_account = handle_delete_account
+M.record_login_failure = record_login_failure
 M.profile_response = profile_response
 M.handle_profile = handle_profile
 M.handle_profile_skip = handle_profile_skip

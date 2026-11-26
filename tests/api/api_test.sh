@@ -217,4 +217,59 @@ jq -e '.style == null' /tmp/out >/dev/null || { cat /tmp/out; fail "appearance a
 echo "appearance ok"
 
 code=$(curl -sS -b $J -o /dev/null -w '%{http_code}' $B/); [ "$code" = 200 ] || fail "signed-in home $code"
+
+# --- Security ------------------------------------------------------------
+# Security headers on pages, files and API answers (lua/security_headers.lua).
+for path in /login /js/main.js /api/auth/me; do
+    curl -sS -I "$B$path" > /tmp/headers
+    for header in "content-security-policy: default-src 'self'; script-src 'self'" "x-frame-options: DENY" "x-content-type-options: nosniff" "referrer-policy:"; do
+        grep -qi "^$header" /tmp/headers || fail "$path is missing header $header"
+    done
+done
+# No page may run inline scripts: the CSP would block them.
+! grep -l '<script>' /opt/mysite/public/*.html || fail "inline <script> in a page (move it to public/js/)"
+echo "security headers ok"
+
+# A POST from another website is refused, even with a valid session (CSRF).
+code=$(curl -sS -b $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -H 'Origin: https://evil.example' -X POST $B/api/progress-tree -d '{"action":"checkin"}')
+[ "$code" = 403 ] || { cat /tmp/out; fail "cross-site POST got $code"; }
+code=$(curl -sS -b $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -H 'Sec-Fetch-Site: cross-site' -X POST $B/api/community -d '{"action":"mark_read"}')
+[ "$code" = 403 ] || fail "cross-site POST without Origin got $code"
+# The same request from the site itself still works.
+code=$(curl -sS -b $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -H "Origin: $B" -X POST $B/api/community -d '{"action":"mark_read"}')
+[ "$code" = 200 ] || { cat /tmp/out; fail "same-site POST got $code"; }
+echo "cross-site requests blocked ok"
+
+# Login lockout: 10 wrong passwords pause that email for 15 minutes, also
+# for the right password. Unknown emails behave the same way.
+login() { curl -sS -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/login -d "{\"email\":\"$1\",\"password\":\"$2\"}"; }
+[ "$(login nobody@test.se wrongpassword)" = 401 ] || fail "unknown email should be 401"
+for i in 1 2 3 4 5 6 7 8 9; do
+    [ "$(login friend@test.se wrongpassword)" = 401 ] || { cat /tmp/out; fail "wrong password $i"; }
+done
+[ "$(login friend@test.se wrongpassword)" = 429 ] || { cat /tmp/out; fail "10th wrong password should lock"; }
+[ "$(login friend@test.se averylongpassword2)" = 429 ] || fail "locked email let the right password in"
+psql -q -c "DELETE FROM auth_login_failures"
+[ "$(login friend@test.se averylongpassword2)" = 200 ] || { cat /tmp/out; fail "login after lock ended"; }
+echo "login lockout ok"
+
+# Sign out everywhere ends every session of the account.
+J3=/tmp/jar3
+curl -sS -c $J3 -o /dev/null -H 'Content-Type: application/json' -X POST $B/api/auth/login -d '{"email":"friend@test.se","password":"averylongpassword2"}'
+[ "$(curl -sS -b $J2 -o /dev/null -w '%{http_code}' $B/api/auth/me)" = 200 ] || fail "second session"
+code=$(curl -sS -b $J3 -c $J3 -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/logout -d '{"everywhere":true}')
+[ "$code" = 200 ] || { cat /tmp/out; fail "logout everywhere $code"; }
+[ "$(curl -sS -b $J2 -o /dev/null -w '%{http_code}' $B/api/auth/me)" = 401 ] || fail "other device still signed in"
+echo "sign out everywhere ok"
+
+# Delete account: needs your own email typed back, then removes everything.
+curl -sS -c $J3 -o /dev/null -H 'Content-Type: application/json' -X POST $B/api/auth/login -d '{"email":"friend@test.se","password":"averylongpassword2"}'
+del() { curl -sS -b $J3 -c $J3 -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/delete-account -d "$1"; }
+[ "$(del '{"confirm":"t@test.se"}')" = 400 ] || fail "deleted with someone else's email"
+[ "$(psql -tAc "SELECT count(*) FROM auth_users WHERE email='t@test.se'")" = 1 ] || fail "other account touched"
+[ "$(del '{"confirm":" Friend@Test.se "}')" = 200 ] || { cat /tmp/out; fail "delete account"; }
+[ "$(psql -tAc "SELECT count(*) FROM auth_users WHERE email='friend@test.se'")" = 0 ] || fail "account still there"
+[ "$(curl -sS -b $J3 -o /dev/null -w '%{http_code}' $B/api/auth/me)" = 401 ] || fail "session survived delete"
+echo "delete account ok"
+
 echo "ALL_API_TESTS_OK"

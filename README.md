@@ -11,6 +11,31 @@ passwords are stored as PostgreSQL `pgcrypto` bcrypt hashes. Session tokens
 are random, stored hashed in PostgreSQL, and sent only in HttpOnly, SameSite
 cookies.
 
+### Security
+
+- **Headers on every reply** (`lua/security_headers.lua`): HTTPS-only (HSTS),
+  a Content-Security-Policy that only runs script files from this site, no
+  framing by other sites, and more. Because of the CSP, pages must not
+  contain inline `<script>` blocks or `onclick=` attributes: put JavaScript
+  in a file under `public/js/` (the API tests check this). d3 is served from
+  `public/js/d3.js` instead of a CDN for the same reason.
+- **Cross-site requests**: every POST must come from an Osiris page (the
+  browser's `Origin` header), on top of SameSite cookies and JSON-only
+  bodies. See `same_origin_request` in `lua/osiris/common.lua`.
+- **Password guessing**: nginx limits each computer, and after 10 wrong
+  passwords for one email in 15 minutes that email is paused for 15 minutes
+  (`auth_login_failures`). Unknown emails take as long to check as real
+  ones, so sign-in doesn't reveal who has an account.
+- **Google linking**: the first time Google is linked to an email that
+  already had a password account, the old password and sessions are
+  removed, because sign-up doesn't verify emails and someone else could
+  have made that account first.
+- **You stay in control**: Settings > Privacy and safety has "Sign out
+  everywhere" and "Delete account" (deletes every row that belongs to you).
+- **Admin-only tools**: anything for the site owner (debug menu, `/api/stats`)
+  must check `is_progress_debug_user` on the server. Hiding a button is not
+  enough.
+
 Database migrations run automatically during deployment. The deploy process
 uses the PostgreSQL settings available in its environment (`PGHOST`,
 `PGDATABASE`, `PGUSER`, and `PGPASSWORD`) and requires `psql` on the server.
