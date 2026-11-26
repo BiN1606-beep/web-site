@@ -55,7 +55,7 @@ docker run --rm -v "$ROOT_FOR_DOCKER:/repo:ro" node:22-alpine sh -c '
 docker run --rm -v "$ROOT_FOR_DOCKER:/repo:ro" openresty/openresty:alpine-fat sh -c '
     luarocks install luacheck >/dev/null 2>&1 &&
     cd /repo/lua &&
-    luacheck auth.lua osiris/*.lua --std ngx_lua --codes --no-color --no-max-line-length --only 1 2 -q'
+    luacheck auth.lua security_headers.lua osiris/*.lua --std ngx_lua --codes --no-color --no-max-line-length --only 1 2 -q'
 
 step "2/4 Database migrations"
 docker network create "$NETWORK" >/dev/null
