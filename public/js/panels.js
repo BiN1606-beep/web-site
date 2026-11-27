@@ -45,6 +45,11 @@ for (const [dialog, dialogTrigger] of dialogs) {
     if (dialog === profileEditorDialog && isOnboarding) return;
     closePanel(dialog);
   });
+  closeOnOutsideTap(dialog, () => {
+    // The first profile setup has its own Skip button instead.
+    if (dialog === profileEditorDialog && isOnboarding) return;
+    closePanel(dialog);
+  });
   dialog.addEventListener("animationend", (event) => {
     // "sheet-down" is the phone version, where panels slide away downwards (css/phone.css).
     if (["collapse-out", "menu-slide-out", "sheet-down"].includes(event.animationName)) {

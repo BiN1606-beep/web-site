@@ -670,9 +670,7 @@ const openSharedNetwork = (tree) => {
     picture.sharedSimulation?.stop();
     dialog.remove();
   });
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) dialog.close();
-  });
+  closeOnOutsideTap(dialog, () => dialog.close());
   document.body.append(dialog);
   dialog.showModal();
   drawSharedTree(picture, tree, {

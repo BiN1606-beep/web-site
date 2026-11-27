@@ -129,9 +129,7 @@ const closeMyStats = () => {
 document.querySelector("#my-stats-close").addEventListener("click", closeMyStats);
 
 // A click on the dark area around the card closes it too.
-myStatsDialog.addEventListener("click", (event) => {
-  if (event.target === myStatsDialog) closeMyStats();
-});
+closeOnOutsideTap(myStatsDialog, closeMyStats);
 
 // Escape closes with the same animation.
 myStatsDialog.addEventListener("cancel", (event) => {

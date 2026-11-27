@@ -162,9 +162,11 @@
       </ol>
       <div class="install-sheet-arrow" aria-hidden="true">${ICONS.down}</div>`;
     dialog.querySelector(".install-sheet-close").addEventListener("click", () => dialog.close());
+    // A tap on the dimmed background closes the sheet (not one on its padding).
     dialog.addEventListener("click", (event) => {
-      // A tap on the dimmed background closes the sheet.
-      if (event.target === dialog) dialog.close();
+      if (event.target !== dialog) return;
+      const box = dialog.getBoundingClientRect();
+      if (event.clientY < box.top || event.clientX < box.left || event.clientX > box.right) dialog.close();
     });
     document.body.append(dialog);
     return dialog;

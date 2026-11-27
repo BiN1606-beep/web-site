@@ -205,6 +205,8 @@ lessonSecondary.addEventListener("click", () => {
 });
 
 lessonClose.addEventListener("click", closeLesson);
+// Tapping outside works like "Not yet": ticked tasks are kept.
+closeOnOutsideTap(lessonDialog, closeLesson);
 lessonStartButton.addEventListener("click", openLesson);
 
 // Called by renderProgressTree (goals.js) every time the server answers.

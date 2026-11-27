@@ -86,6 +86,29 @@ homeLauncher.setAttribute("aria-current", "page");
 launcherActions.append(homeLauncher);
 
 const launcher = launcherActions.querySelector(".launcher");
+
+// Tap (or click) outside a pop-up to close it; its X button still works too.
+// A tap on the dimmed area around a modal <dialog> reaches the dialog
+// itself, so we check that the tap landed outside the dialog's box (a tap
+// on the dialog's own padding is inside and must not close it). The press
+// has to start outside too, so selecting text inside and letting go
+// outside doesn't close anything.
+const closeOnOutsideTap = (dialog, close) => {
+  const isOutside = (event) => {
+    if (event.target !== dialog) return false;
+    const box = dialog.getBoundingClientRect();
+    return event.clientX < box.left || event.clientX > box.right
+      || event.clientY < box.top || event.clientY > box.bottom;
+  };
+  let pressedOutside = false;
+  dialog.addEventListener("pointerdown", (event) => {
+    pressedOutside = isOutside(event);
+  });
+  dialog.addEventListener("click", (event) => {
+    if (pressedOutside && isOutside(event)) close();
+    pressedOutside = false;
+  });
+};
 const panel = document.querySelector("#content-panel");
 const groqDialog = document.querySelector("#groq-panel");
 const openSharedTextDemoButton = document.querySelector("#open-shared-text-demo");
