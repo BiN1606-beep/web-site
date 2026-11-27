@@ -19,6 +19,7 @@ const openPanel = (dialog, trigger) => {
 
   dialog.showModal();
   activePanel = dialog;
+  homeLauncher.removeAttribute("aria-current");
   if (trigger?.getAttribute("aria-controls") === dialog.id) {
     trigger.setAttribute("aria-expanded", "true");
   }
@@ -45,7 +46,8 @@ for (const [dialog, dialogTrigger] of dialogs) {
     closePanel(dialog);
   });
   dialog.addEventListener("animationend", (event) => {
-    if (event.animationName === "collapse-out" || event.animationName === "menu-slide-out") {
+    // "sheet-down" is the phone version, where panels slide away downwards (css/phone.css).
+    if (["collapse-out", "menu-slide-out", "sheet-down"].includes(event.animationName)) {
       dialog.close();
     }
   });
@@ -55,7 +57,10 @@ for (const [dialog, dialogTrigger] of dialogs) {
     if (dialogTrigger?.getAttribute("aria-controls") === dialog.id) {
       dialogTrigger.setAttribute("aria-expanded", "false");
     }
-    if (activePanel === dialog) activePanel = null;
+    if (activePanel === dialog) {
+      activePanel = null;
+      homeLauncher.setAttribute("aria-current", "page");
+    }
 
     if (queuedPanel) {
       const nextPanel = queuedPanel;
@@ -67,6 +72,12 @@ for (const [dialog, dialogTrigger] of dialogs) {
     dialogTrigger?.focus();
   });
 }
+
+// The Home tab on phones: back to the network.
+homeLauncher.addEventListener("click", () => {
+  if (activePanel?.open) closePanel(activePanel);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 
 for (const [dialog, trigger] of dialogs) {
   trigger?.addEventListener("click", () => {

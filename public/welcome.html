@@ -4,13 +4,27 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
+    <!-- Osiris as a phone app: the manifest says how it looks when added to
+         the home screen; the Apple lines do the same for iPhone. -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15140f" media="(prefers-color-scheme: dark)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Osiris">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <meta name="description" content="Osiris turns a goal into a step-by-step path, keeps you showing up every day, and grows your progress into a living network.">
     <title>Osiris | Grow toward your goals</title>
-    <!-- This page is shown to visitors who are not signed in, so it has to
-         be self-contained: everything else on the site needs a session. -->
+    <!-- This page is shown to visitors who are not signed in, so it only
+         uses the public files: /js, /css and /icons. Everything else on the
+         site needs a session. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+    <!-- The "Get the app" chip (js/app-install.js). -->
+    <link rel="stylesheet" href="/css/install.css">
     <style>
       /* Same fonts and colors as the rest of the site (public/css/base.css). */
       :root {
@@ -325,5 +339,6 @@
     </div>
 
     <script src="/js/welcome-demo.js"></script>
+    <script src="/js/app-install.js"></script>
   </body>
 </html>

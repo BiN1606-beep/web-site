@@ -188,6 +188,31 @@ Set the limit no higher than the account's verified free quota. If the quota
 cannot be confirmed, leave `GROQ_FREE_QUOTA_CONFIRMED` unset; the endpoint
 remains disabled.
 
+## Osiris as a phone app
+
+Osiris is a PWA (progressive web app): on a phone it can be added to the
+home screen and then opens full screen like any other app, with its own
+icon. No app store is involved, and every deploy updates the app at once
+because it still loads from osiris-ai.se.
+
+- `public/manifest.webmanifest` and `public/icons/` give the app its name,
+  icon, colors and full-screen look. The Apple `<meta>` lines in the HTML
+  pages do the same for iPhone.
+- `public/js/app-install.js` registers the service worker, colors the
+  phone's status bar like the current theme, and shows the "Get the app"
+  chip on phones. On Android it opens the browser's own install prompt; on
+  iPhone (no prompt there) it shows three animated steps: Share, Add to Home
+  Screen, open. Settings → Osiris app opens the same flow.
+- `public/sw.js` shows `public/offline.html` when there is no internet. It
+  caches only that screen, so the rest of the site always loads fresh.
+- `public/css/phone.css` makes the home page phone-first: a tab bar at the
+  bottom, panels that slide up as sheets, room for the iPhone notch and
+  home bar, and no zoom-in when typing.
+
+To test on your own phone, open the site in Chrome (Android) or Safari
+(iPhone) and tap "Get the app". Wrapping it for the app stores (Capacitor)
+is a later step.
+
 ## Daily reminders
 
 Users can turn on a daily reminder under Settings → Daily reminder. On days they haven't

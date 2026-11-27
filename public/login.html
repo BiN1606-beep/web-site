@@ -4,6 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
+    <!-- Osiris as a phone app: the manifest says how it looks when added to
+         the home screen; the Apple lines do the same for iPhone. -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15140f" media="(prefers-color-scheme: dark)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Osiris">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <title>Sign in | Osiris</title>
     <!-- Same fonts and colors as the rest of the site (public/css/base.css). -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

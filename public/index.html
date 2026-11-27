@@ -2,11 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- viewport-fit=cover lets the page reach behind the iPhone notch and
+         home bar; css/phone.css keeps buttons clear of them. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Osiris</title>
-    <!-- Makes Osiris installable as an app (needed for reminders on iPhone). -->
+    <!-- Osiris as a phone app (js/app-install.js): the manifest says how it
+         looks when added to the home screen; the Apple lines do the same for
+         iPhone. The status bar color then follows your theme. -->
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#15140f">
+    <meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15140f" media="(prefers-color-scheme: dark)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Osiris">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,6 +49,8 @@
     <link rel="stylesheet" href="/css/devtools.css">
     <link rel="stylesheet" href="/css/routines.css">
     <link rel="stylesheet" href="/css/motion.css">
+    <link rel="stylesheet" href="/css/install.css">
+    <link rel="stylesheet" href="/css/phone.css">
   </head>
   <body>
     <div class="startup-screen" id="startup-screen">
@@ -404,6 +415,12 @@
           <button class="save-button" id="settings-edit-profile" type="button" disabled>Edit Profile</button>
           <button class="save-button" id="sign-out" type="button">Sign out</button>
         </section>
+        <!-- Add Osiris to the phone's home screen (js/app-install.js). -->
+        <section class="settings-section" aria-labelledby="app-title">
+          <h2 id="app-title">Osiris app</h2>
+          <p data-install-status role="status"></p>
+          <button class="save-button" type="button" data-install-open hidden>Add to home screen</button>
+        </section>
         <!-- Privacy and safety: what Osiris does to keep you safe, and the
              two buttons that put you in control (js/account-safety.js). -->
         <section class="settings-section safety-section" aria-labelledby="safety-title">
@@ -747,5 +764,6 @@
     <script src="/js/appearance.js"></script>
     <script src="/js/theme.js"></script>
     <script src="/js/main.js"></script>
+    <script src="/js/app-install.js"></script>
   </body>
 </html>
