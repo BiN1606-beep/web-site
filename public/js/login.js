@@ -17,7 +17,7 @@ let isSignup = false;
 // The rules for a new password. The server checks the same ones
 // (valid_password in lua/osiris/accounts.lua); old passwords made under
 // other rules still work for signing in.
-const PASSWORD_MIN = 5;
+const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 50;
 const PASSWORD_MAX_BYTES = 72; // bcrypt ignores anything after 72 bytes
 

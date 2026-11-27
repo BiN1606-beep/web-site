@@ -24,14 +24,14 @@ for check in "/css/base.css text/css" "/js/main.js application/javascript" "/sw.
 done
 echo "public pages ok"
 
-# Password rules for new accounts: 5 to 50 characters and at least one number.
+# Password rules for new accounts: 8 to 50 characters and at least one number.
 signup() { curl -sS -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d "{\"email\":\"$1\",\"password\":\"$2\"}"; }
-[ "$(signup short@test.se ab1d)" = 400 ] || fail "4 characters should be refused"
+[ "$(signup short@test.se abcdef1)" = 400 ] || fail "7 characters should be refused"
 [ "$(signup nonum@test.se abcdefgh)" = 400 ] || fail "a password without a number should be refused"
 [ "$(signup long@test.se "$(printf 'a%.0s' $(seq 50))1")" = 400 ] || fail "51 characters should be refused"
 # 20 emoji are 20 characters but 80 bytes, more than bcrypt can use.
 [ "$(signup emoji@test.se "1$(printf '\360\237\214\261%.0s' $(seq 20))")" = 400 ] || fail "over 72 bytes should be refused"
-[ "$(signup five@test.se abcd1)" = 201 ] || { cat /tmp/out; fail "5 characters with a number should work"; }
+[ "$(signup eight@test.se abcdefg1)" = 201 ] || { cat /tmp/out; fail "8 characters with a number should work"; }
 [ "$(signup fifty@test.se "$(printf 'a%.0s' $(seq 49))1")" = 201 ] || { cat /tmp/out; fail "50 characters should work"; }
 # Someone who signed up under older rules (no number) can still sign in.
 psql -q -v ON_ERROR_STOP=1 -c "INSERT INTO auth_users (email, password_hash) VALUES ('old@test.se', crypt('an old password without digits', gen_salt('bf', 4)))"
