@@ -586,6 +586,7 @@ const closeOrbDialog = () => {
 };
 
 orbChip.addEventListener("click", () => openOrbDialog(topazState?.orbs?.[0]?.id));
+closeOnOutsideTap(orbDialog, closeOrbDialog);
 orbDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeOrbDialog();
@@ -729,9 +730,7 @@ const closeTopazShop = () => {
 };
 
 topazChip.addEventListener("click", openTopazShop);
-topazShop.addEventListener("click", (event) => {
-  if (event.target === topazShop) closeTopazShop();
-});
+closeOnOutsideTap(topazShop, closeTopazShop);
 topazShop.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeTopazShop();
