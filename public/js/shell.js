@@ -65,6 +65,26 @@ for (const item of launcherItems) {
   launcherByDialog.set(item.dialogId, button);
 }
 
+// Home: only shown in the phone tab bar (css/phone.css). It closes any open
+// panel and scrolls back to the network. Added last so the "launcher" below
+// still points at Community; CSS moves it to the front of the bar.
+const homeLauncher = document.createElement("button");
+homeLauncher.className = "launcher launcher-home";
+homeLauncher.type = "button";
+homeLauncher.setAttribute("aria-current", "page");
+{
+  const icon = document.createElementNS(svgNamespace, "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  const roof = document.createElementNS(svgNamespace, "path");
+  roof.setAttribute("d", "M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5");
+  icon.append(roof);
+  const label = document.createElement("span");
+  label.textContent = "Home";
+  homeLauncher.append(icon, label);
+}
+launcherActions.append(homeLauncher);
+
 const launcher = launcherActions.querySelector(".launcher");
 const panel = document.querySelector("#content-panel");
 const groqDialog = document.querySelector("#groq-panel");

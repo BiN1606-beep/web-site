@@ -13,6 +13,7 @@ code=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' $B/other.html); c
 [ "$(curl -sS -o /dev/null -w "%{http_code}" $B/login)" = 200 ] || fail login
 [ "$(curl -sS -o /dev/null -w '%{http_code}' $B/sw.js)" = 200 ] || fail sw
 [ "$(curl -sS -o /dev/null -w '%{http_code}' $B/icons/icon-192.png)" = 200 ] || fail icon
+[ "$(curl -sS -o /dev/null -w '%{http_code}' $B/offline.html)" = 200 ] || fail "offline screen must load without a session"
 [ "$(curl -sS -o /dev/null -w "%{http_code}" $B/js/main.js)" = 200 ] || fail "scripts"
 [ "$(curl -sS -o /dev/null -w "%{http_code}" $B/css/base.css)" = 200 ] || fail "styles"
 curl -sS -I $B/manifest.webmanifest | grep -qi 'content-type: application/manifest+json' || fail manifest

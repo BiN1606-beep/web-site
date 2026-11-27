@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f5f2eb" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15140f" media="(prefers-color-scheme: dark)">
+    <title>Offline | Osiris</title>
+    <!-- Shown by the service worker (sw.js) when the phone has no internet.
+         It is kept in the phone's cache, so everything it needs is inside
+         this file, except the small script that notices when the internet
+         is back (js/offline.js, cached too). -->
+    <style>
+      :root {
+        color-scheme: light;
+        --base: #f5f2eb;
+        --surface: #ebe6db;
+        --text: #24221d;
+        --muted: #6b655a;
+        --accent: #2f6b4f;
+        --button-text: #fbfaf6;
+        --leaf: #4f8a3c;
+        --sun: #c98a1b;
+        --cloud: #dcd5c6;
+        font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --base: #15140f;
+          --surface: #221f19;
+          --text: #ece6d9;
+          --muted: #a8a091;
+          --accent: #8cc29f;
+          --button-text: #15140f;
+          --leaf: #9bcf86;
+          --sun: #e3b25c;
+          --cloud: #36322a;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+        background: var(--base);
+        color: var(--text);
+        text-align: center;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      main {
+        display: grid;
+        justify-items: center;
+        gap: 1.1rem;
+      }
+
+      .scene {
+        width: 220px;
+        height: 200px;
+      }
+
+      .scene .cloud {
+        fill: var(--cloud);
+        animation: drift 4s ease-in-out infinite alternate;
+      }
+
+      .scene .signal {
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 4;
+        stroke-linecap: round;
+      }
+
+      .scene .signal-slash {
+        stroke: var(--sun);
+      }
+
+      .scene .pot {
+        fill: var(--sun);
+      }
+
+      .scene .stem {
+        fill: none;
+        stroke: var(--leaf);
+        stroke-width: 4;
+        stroke-linecap: round;
+      }
+
+      .scene .leaf {
+        fill: var(--leaf);
+      }
+
+      .sprout {
+        transform-origin: 110px 170px;
+        animation: sleepy 2.8s ease-in-out infinite;
+      }
+
+      .zz {
+        fill: var(--muted);
+        font: 700 14px system-ui, sans-serif;
+        animation: float-z 2.8s ease-in-out infinite;
+      }
+
+      .zz:nth-of-type(2) {
+        animation-delay: 1.4s;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      button {
+        min-width: 11rem;
+        min-height: 3.2rem;
+        margin-top: 0.4rem;
+        padding: 0 1.6rem;
+        border: 0;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--button-text);
+        font: 600 1.05rem system-ui, sans-serif;
+        box-shadow: 0 5px 0 color-mix(in srgb, var(--accent) 60%, black);
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+      }
+
+      button:active {
+        transform: translateY(4px);
+        box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, black);
+      }
+
+      button:focus-visible {
+        outline: 3px solid var(--sun);
+        outline-offset: 4px;
+      }
+
+      /* Internet is back: the sprout wakes up and grows before the page reloads. */
+      .is-back .sprout {
+        animation: wake 700ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+      }
+
+      .is-back .zz,
+      .is-back .signal-slash {
+        opacity: 0;
+        transition: opacity 200ms ease;
+      }
+
+      @keyframes drift {
+        to { transform: translateX(10px); }
+      }
+
+      @keyframes sleepy {
+        0%, 100% { transform: rotate(-4deg) scaleY(0.96); }
+        50% { transform: rotate(4deg) scaleY(1); }
+      }
+
+      @keyframes float-z {
+        0% { opacity: 0; transform: translate(0, 6px); }
+        40% { opacity: 1; }
+        100% { opacity: 0; transform: translate(12px, -18px); }
+      }
+
+      @keyframes wake {
+        from { transform: scale(1); }
+        to { transform: scale(1.25); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg class="scene" viewBox="0 0 220 200" aria-hidden="true">
+        <!-- A cloud with crossed-out signal bars, and a sleepy sprout in a pot. -->
+        <g class="cloud">
+          <circle cx="70" cy="48" r="22"></circle>
+          <circle cx="98" cy="38" r="28"></circle>
+          <circle cx="128" cy="50" r="20"></circle>
+          <rect x="48" y="48" width="100" height="22" rx="11"></rect>
+        </g>
+        <path class="signal" d="M86 60 a18 18 0 0 1 24 0 M80 53 a28 28 0 0 1 36 0"></path>
+        <path class="signal signal-slash" d="M80 46 L118 70"></path>
+        <text class="zz" x="140" y="112">z</text>
+        <text class="zz" x="150" y="100">z</text>
+        <g class="sprout">
+          <path class="stem" d="M110 168 V128"></path>
+          <path class="leaf" d="M110 134 C110 116 124 108 140 110 C138 126 126 134 110 134 Z"></path>
+          <path class="leaf" d="M110 142 C110 128 98 120 84 122 C86 136 96 142 110 142 Z"></path>
+        </g>
+        <path class="pot" d="M86 162 H134 L128 192 H92 Z"></path>
+      </svg>
+      <h1>No internet</h1>
+      <p>Your progress is safe. Osiris opens again as soon as you are back online.</p>
+      <button id="offline-retry" type="button">Try again</button>
+    </main>
+    <script src="/js/offline.js"></script>
+  </body>
+</html>
