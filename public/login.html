@@ -214,6 +214,121 @@
         stroke-linejoin: round;
       }
 
+      /* Password checklist on "Create account": a circle per rule that pops
+         into a filled tick when the rule is met, or a cross when it is
+         broken (too long). */
+      .password-rules {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem 1.1rem;
+        margin: -0.2rem 0 0.1rem;
+        padding: 0;
+        list-style: none;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .password-rules[hidden],
+      .password-rules li[hidden] {
+        display: none;
+      }
+
+      .password-rules li {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: color 0.2s ease;
+      }
+
+      .tick {
+        display: grid;
+        width: 1.15rem;
+        height: 1.15rem;
+        place-items: center;
+        border: 2px solid var(--border);
+        border-radius: 50%;
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+
+      .tick svg {
+        width: 0.8rem;
+        height: 0.8rem;
+        fill: none;
+        stroke: var(--button-text);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tick-check {
+        stroke-dasharray: 20;
+        stroke-dashoffset: 20;
+        transition: stroke-dashoffset 0.25s ease 0.05s;
+      }
+
+      .tick-cross {
+        display: none;
+      }
+
+      .password-rules li.met {
+        color: var(--text);
+      }
+
+      .password-rules li.met .tick {
+        border-color: var(--accent);
+        background: var(--accent);
+        animation: tick-pop 0.3s ease;
+      }
+
+      .password-rules li.met .tick-check {
+        stroke-dashoffset: 0;
+      }
+
+      .password-rules li.broken {
+        color: var(--error);
+      }
+
+      .password-rules li.broken .tick {
+        border-color: var(--error);
+        background: var(--error);
+      }
+
+      .password-rules li.broken .tick-check {
+        display: none;
+      }
+
+      .password-rules li.broken .tick-cross {
+        display: inline;
+      }
+
+      /* Pressing "Create account" before every rule is met gives the
+         unmet rules a little shake. */
+      .password-rules.nudge li:not(.met) {
+        color: var(--error);
+        animation: rule-shake 0.4s ease;
+      }
+
+      .password-rules.nudge li:not(.met) .tick {
+        border-color: var(--error);
+      }
+
+      @keyframes tick-pop {
+        50% { transform: scale(1.25); }
+      }
+
+      @keyframes rule-shake {
+        20%, 60% { transform: translateX(-4px); }
+        40%, 80% { transform: translateX(4px); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .password-rules *,
+        .password-rules li {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
       #status {
         min-height: 1.5em;
         color: var(--error);
@@ -231,8 +346,15 @@
         <label for="email">Email</label>
         <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
         <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="72" required>
-        <p>Passwords must contain at least 12 characters and no more than 72 bytes.</p>
+        <input id="password" name="password" type="password" autocomplete="current-password" maxlength="72" required aria-describedby="password-rules">
+        <!-- Only shown when creating an account: each rule ticks off live as
+             you type (public/js/login.js). The server checks the same rules
+             (valid_password in lua/osiris/accounts.lua). -->
+        <ul class="password-rules" id="password-rules" aria-label="Password needs" aria-live="polite" hidden>
+          <li data-rule="length"><span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="tick-check" d="m6 12.5 4 4 8-9"/><path class="tick-cross" d="m8 8 8 8M16 8l-8 8"/></svg></span><span class="rule-text">8–50 characters</span></li>
+          <li data-rule="number"><span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="tick-check" d="m6 12.5 4 4 8-9"/><path class="tick-cross" d="m8 8 8 8M16 8l-8 8"/></svg></span><span class="rule-text">A number</span></li>
+          <li data-rule="bytes" hidden><span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="tick-check" d="m6 12.5 4 4 8-9"/><path class="tick-cross" d="m8 8 8 8M16 8l-8 8"/></svg></span><span class="rule-text">Fewer emoji or special letters</span></li>
+        </ul>
         <label class="remember-me" id="remember-me-label" for="remember-me">
           <input id="remember-me" name="rememberMe" type="checkbox">
           Remember me for 6 months

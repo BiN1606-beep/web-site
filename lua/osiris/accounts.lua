@@ -26,11 +26,25 @@ local function valid_email(email)
         and email:match("^[%w%._%+%-]+@[%w%-%.]+%.[%a]+$") ~= nil
 end
 
+-- Password rules for NEW passwords (sign-up): 8 to 50 characters and at
+-- least one number. These rules are only checked when a password is made,
+-- so people who signed up under older rules can still sign in.
+-- public/js/login.js shows the same rules as a live checklist.
+local PASSWORD_MIN_CHARACTERS = 8
+local PASSWORD_MAX_CHARACTERS = 50
+-- bcrypt only looks at the first 72 bytes of a password. 50 normal letters
+-- fit easily, but 50 emoji do not, so such a password is turned away
+-- instead of being quietly cut short.
+local PASSWORD_MAX_BYTES = 72
+
 local function valid_password(password)
-    return type(password) == "string"
-        and #password <= 72
-        and not password:find("%z")
-        and (utf8_character_count(password) or 0) >= 12
+    if type(password) ~= "string" or #password > PASSWORD_MAX_BYTES or password:find("%z") then
+        return false
+    end
+    local characters = utf8_character_count(password) or 0
+    return characters >= PASSWORD_MIN_CHARACTERS
+        and characters <= PASSWORD_MAX_CHARACTERS
+        and password:find("%d") ~= nil
 end
 
 local function create_session(user_id, remember_me)
@@ -73,7 +87,7 @@ local function handle_signup()
     local body = read_json_body()
     if not body or not valid_email(body.email) or not valid_password(body.password) then
         return respond(ngx.HTTP_BAD_REQUEST, {
-            error = "Enter a valid email and a password with at least 12 characters and no more than 72 bytes.",
+            error = "Enter a valid email and a password with 8 to 50 characters and at least one number.",
         })
     end
 

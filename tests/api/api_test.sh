@@ -24,6 +24,21 @@ for check in "/css/base.css text/css" "/js/main.js application/javascript" "/sw.
 done
 echo "public pages ok"
 
+# Password rules for new accounts: 8 to 50 characters and at least one number.
+signup() { curl -sS -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d "{\"email\":\"$1\",\"password\":\"$2\"}"; }
+[ "$(signup short@test.se abcdef1)" = 400 ] || fail "7 characters should be refused"
+[ "$(signup nonum@test.se abcdefgh)" = 400 ] || fail "a password without a number should be refused"
+[ "$(signup long@test.se "$(printf 'a%.0s' $(seq 50))1")" = 400 ] || fail "51 characters should be refused"
+# 20 emoji are 20 characters but 80 bytes, more than bcrypt can use.
+[ "$(signup emoji@test.se "1$(printf '\360\237\214\261%.0s' $(seq 20))")" = 400 ] || fail "over 72 bytes should be refused"
+[ "$(signup eight@test.se abcdefg1)" = 201 ] || { cat /tmp/out; fail "8 characters with a number should work"; }
+[ "$(signup fifty@test.se "$(printf 'a%.0s' $(seq 49))1")" = 201 ] || { cat /tmp/out; fail "50 characters should work"; }
+# Someone who signed up under older rules (no number) can still sign in.
+psql -q -v ON_ERROR_STOP=1 -c "INSERT INTO auth_users (email, password_hash) VALUES ('old@test.se', crypt('an old password without digits', gen_salt('bf', 4)))"
+code=$(curl -sS -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/login -d '{"email":"old@test.se","password":"an old password without digits"}')
+[ "$code" = 200 ] || { cat /tmp/out; fail "old password should still sign in ($code)"; }
+echo "password rules ok"
+
 code=$(curl -sS -c $J -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"t@test.se","password":"averylongpassword1"}')
 [ "$code" = 201 ] || { cat /tmp/out; fail "signup $code"; }
 psql -q -v ON_ERROR_STOP=1 -c "INSERT INTO user_progress_trees (user_id, tree_data, completed_count, is_active) SELECT id, '{\"goal\":\"G\",\"area\":\"Health\",\"summary\":\"s\",\"steps\":[{\"title\":\"s1\",\"description\":\"d\",\"why\":\"w\"},{\"title\":\"s2\",\"description\":\"d\",\"why\":\"w\",\"how\":[\"a\",\"b\"]},{\"title\":\"s3\",\"description\":\"d\",\"why\":\"w\"}]}', 0, true FROM auth_users WHERE email='t@test.se'"

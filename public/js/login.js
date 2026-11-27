@@ -11,14 +11,49 @@ const rememberMeLabel = document.querySelector("#remember-me-label");
 const rememberMe = document.querySelector("#remember-me");
 const switchMode = document.querySelector("#switch-mode");
 const status = document.querySelector("#status");
+const passwordRules = document.querySelector("#password-rules");
 let isSignup = false;
+
+// The rules for a new password. The server checks the same ones
+// (valid_password in lua/osiris/accounts.lua); old passwords made under
+// other rules still work for signing in.
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 50;
+const PASSWORD_MAX_BYTES = 72; // bcrypt ignores anything after 72 bytes
+
+// Ticks each rule in the checklist on or off and returns true when all are met.
+const checkPassword = () => {
+  const value = password.value;
+  const characters = [...value].length; // counts an emoji as one character
+  const bytes = new TextEncoder().encode(value).length;
+  const states = {
+    length: characters > PASSWORD_MAX ? "broken" : characters >= PASSWORD_MIN ? "met" : "",
+    number: /[0-9]/.test(value) ? "met" : "",
+    bytes: bytes > PASSWORD_MAX_BYTES ? "broken" : "met",
+  };
+  for (const item of passwordRules.querySelectorAll("li")) {
+    const state = states[item.dataset.rule];
+    item.classList.toggle("met", state === "met");
+    item.classList.toggle("broken", state === "broken");
+  }
+  // The emoji rule only shows up when it is broken, which is rare.
+  passwordRules.querySelector('[data-rule="bytes"]').hidden = states.bytes !== "broken";
+  return Object.values(states).every((state) => state === "met");
+};
+
+password.addEventListener("input", () => {
+  passwordRules.classList.remove("nudge");
+  if (isSignup) checkPassword();
+});
 
 const updateMode = () => {
   heading.textContent = isSignup ? "Create your account" : "Sign in";
   submit.textContent = isSignup ? "Create account" : "Sign in";
   switchMode.textContent = isSignup ? "Already have an account? Sign in" : "Create an account";
   password.autocomplete = isSignup ? "new-password" : "current-password";
-  password.minLength = isSignup ? 12 : 1;
+  passwordRules.hidden = !isSignup;
+  passwordRules.classList.remove("nudge");
+  if (isSignup) checkPassword();
   rememberMeLabel.hidden = isSignup;
   status.textContent = "";
 };
@@ -30,6 +65,15 @@ switchMode.addEventListener("click", () => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (isSignup && !checkPassword()) {
+    // Restart the shake even if it just played.
+    passwordRules.classList.remove("nudge");
+    void passwordRules.offsetWidth;
+    passwordRules.classList.add("nudge");
+    status.textContent = "";
+    password.focus();
+    return;
+  }
   submit.disabled = true;
   status.textContent = isSignup ? "Creating your account..." : "Signing in...";
   try {
