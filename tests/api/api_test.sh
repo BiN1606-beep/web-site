@@ -328,4 +328,23 @@ del() { curl -sS -b $J3 -c $J3 -o /tmp/out -w '%{http_code}' -H 'Content-Type: a
 [ "$(curl -sS -b $J3 -o /dev/null -w '%{http_code}' $B/api/auth/me)" = 401 ] || fail "session survived delete"
 echo "delete account ok"
 
+# "Describe your own": an interview answer the user wrote themselves is
+# checked on the server (2-160 characters, no control characters), and a
+# picked answer must still be one of the listed choices.
+J4=/tmp/jar4
+curl -sS -c $J4 -o /dev/null -H 'Content-Type: application/json' -X POST $B/api/auth/signup -d '{"email":"own@test.se","password":"averylongpassword4"}'
+own() { curl -sS -b $J4 -c $J4 -o /tmp/out -w '%{http_code}' -H 'Content-Type: application/json' -X POST "$B/api/progress-tree" -d "$1"; }
+[ "$(own '{"action":"start_new"}')" = 200 ] || { cat /tmp/out; fail "start interview"; }
+[ "$(own '{"action":"interview_answer","choice":"Run a marathon"}')" = 400 ] || fail "unlisted answer without custom accepted"
+[ "$(own '{"action":"interview_answer","choice":"x","custom":true}')" = 400 ] || fail "1-character own answer accepted"
+[ "$(own '{"action":"interview_answer","choice":"   ","custom":true}')" = 400 ] || fail "blank own answer accepted"
+[ "$(own '{"action":"interview_answer","choice":"run\u0007 fast","custom":true}')" = 400 ] || fail "control character accepted"
+[ "$(own "{\"action\":\"interview_answer\",\"choice\":\"$(printf 'a%.0s' $(seq 161))\",\"custom\":true}")" = 400 ] || fail "161-character own answer accepted"
+[ "$(own '{"action":"interview_answer","choice":123,"custom":true}')" = 400 ] || fail "number as own answer accepted"
+# A good answer passes the check and goes on to the AI coach (not set up
+# in tests), so only the check's own messages must be absent.
+own '{"action":"interview_answer","choice":"  Run my first\n10 km race  ","custom":true}' >/dev/null || true
+! grep -q 'Write your answer\|not one of the available' /tmp/out || { cat /tmp/out; fail "valid own answer refused"; }
+echo "own interview answers ok"
+
 echo "ALL_API_TESTS_OK"
