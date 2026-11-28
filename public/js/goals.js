@@ -28,7 +28,108 @@ const renderTreeConversation = (conversation = []) => {
     button.addEventListener("click", () => sendTreeAnswer(choice));
     treeInterviewChoices.append(button);
   }
+  if (choices.length > 0) treeInterviewChoices.append(...buildOwnAnswer());
   treeChat.scrollTop = treeChat.scrollHeight;
+};
+
+// "Describe your own": a button under the choices. Tapping it slides a
+// small text field out right below, so the user can write the answer in
+// their own words when no choice fits. The server checks the text again.
+const OWN_ANSWER_MAX = 160;
+
+const pencilIcon = () => {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add("tree-own-icon");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", "M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4");
+  svg.append(path);
+  return svg;
+};
+
+const buildOwnAnswer = () => {
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "tree-interview-choice tree-own-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-controls", "tree-own-answer");
+  const label = document.createElement("span");
+  label.textContent = "Describe your own";
+  toggle.append(pencilIcon(), label);
+
+  // The outer box animates its height; the form inside keeps its size.
+  const drawer = document.createElement("div");
+  drawer.className = "tree-own-drawer";
+  drawer.id = "tree-own-answer";
+  const form = document.createElement("form");
+  form.className = "tree-own-form";
+  form.noValidate = true;
+  // A one-line textarea that grows as the user writes, so a long goal
+  // stays readable. Enter sends, like a chat app.
+  const input = document.createElement("textarea");
+  input.rows = 1;
+  input.className = "tree-own-input";
+  input.maxLength = OWN_ANSWER_MAX;
+  input.autocomplete = "off";
+  input.enterKeyHint = "send";
+  input.placeholder = "In your own words...";
+  input.setAttribute("aria-label", "Your own answer");
+  input.tabIndex = -1;
+  const count = document.createElement("span");
+  count.className = "tree-own-count";
+  count.setAttribute("aria-hidden", "true");
+  const send = document.createElement("button");
+  send.type = "submit";
+  send.className = "tree-own-send";
+  send.setAttribute("aria-label", "Send your answer");
+  send.textContent = "\u2192";
+  send.disabled = true;
+  send.tabIndex = -1;
+  form.append(input, count, send);
+  drawer.append(form);
+
+  const refresh = () => {
+    input.style.height = "auto";
+    input.style.height = `${input.scrollHeight}px`;
+    const length = input.value.trim().length;
+    send.disabled = length < 2;
+    // The counter only shows near the limit, to keep the field calm.
+    count.textContent = input.value.length > OWN_ANSWER_MAX - 30
+      ? String(OWN_ANSWER_MAX - input.value.length)
+      : "";
+  };
+  const setOpen = (open) => {
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.classList.toggle("is-open", open);
+    drawer.classList.toggle("is-open", open);
+    input.tabIndex = open ? 0 : -1;
+    send.tabIndex = open ? 0 : -1;
+    if (open) {
+      input.focus({ preventScroll: true });
+      drawer.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  };
+  toggle.addEventListener("click", () => setOpen(!drawer.classList.contains("is-open")));
+  input.addEventListener("input", refresh);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = input.value.trim().replace(/\s+/g, " ");
+    if (text.length < 2) {
+      form.classList.remove("is-shaking");
+      void form.offsetWidth;
+      form.classList.add("is-shaking");
+      return;
+    }
+    sendTreeAnswer(text, { custom: true });
+  });
+  return [toggle, drawer];
 };
 
 const updateTreeChecklist = () => {
@@ -215,14 +316,16 @@ const startNewProgressTree = async () => {
   }
 };
 
-const sendTreeAnswer = async (choice) => {
+const sendTreeAnswer = async (choice, { custom = false } = {}) => {
   const answerNumber = (progressTreeState?.conversation || [])
     .filter((message) => message.role === "user").length + 1;
-  const choiceButtons = [...treeInterviewChoices.querySelectorAll("button")];
+  const choiceButtons = [...treeInterviewChoices.querySelectorAll("button, input")];
   for (const button of choiceButtons) button.disabled = true;
   treeChatStatus.textContent = `Saving answer ${Math.min(answerNumber, 10)} of 10...`;
   try {
-    const result = await postProgressTree({ action: "interview_answer", choice });
+    const body = { action: "interview_answer", choice };
+    if (custom) body.custom = true;
+    const result = await postProgressTree(body);
     if (result.created) {
       treeAssistantOpen = false;
       treeAssistant.hidden = true;
